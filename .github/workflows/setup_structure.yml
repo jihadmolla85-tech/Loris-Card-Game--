@@ -1,1 +1,47 @@
 
+
+name: Setup LORIS Architecture
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create folders
+        run: |
+          folders=(
+            lib/app
+            lib/core/constants
+            lib/core/utils
+            lib/game/models
+            lib/game/engine
+            lib/game/rules
+            lib/game/ai
+            lib/screens/home
+            lib/screens/game
+            lib/screens/profile
+            lib/screens/settings
+            lib/widgets
+            lib/services
+            test/game
+          )
+
+          for folder in "${folders[@]}"; do
+            mkdir -p "$folder"
+            touch "$folder/README.md"
+          done
+
+      - name: Commit structure
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Create LORIS project architecture" || echo "No changes"
+          git push
