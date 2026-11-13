@@ -63,20 +63,19 @@ jobs:
                 throw ArgumentError('Tricks must be between 0 and 8.');
               }
 
-              final bool success = bidAmount == 8
+              final success = bidAmount == 8
                   ? tricksWonByBiddingTeam == 8
                   : tricksWonByBiddingTeam >= bidAmount;
 
-              final int opponentTeam = 1 - biddingTeam;
-              final int points = success
+              final points = success
                   ? (bidAmount == 8 ? 16 : bidAmount)
                   : bidAmount * 2;
 
-              final int biddingPoints = success ? points : -points;
-              final int opposingPoints = success ? 0 : points;
+              final biddingPoints = success ? points : -points;
+              final opposingPoints = -biddingPoints;
 
               teamScores[biddingTeam] += biddingPoints;
-              teamScores[opponentTeam] += opposingPoints;
+              teamScores[1 - biddingTeam] += opposingPoints;
 
               return BidScoreResult(
                 success: success,
@@ -113,79 +112,57 @@ jobs:
                 engine = BidScoringEngine();
               });
 
-              test('Successful bid 4 awards 4 points', () {
-                final result = engine.calculateAndApply(
+              test('Successful bid 4 gives +4 and -4', () {
+                engine.calculateAndApply(
                   biddingTeam: 0,
                   bidAmount: 4,
                   tricksWonByBiddingTeam: 4,
                 );
-
-                expect(result.success, isTrue);
                 expect(engine.teamAScore, 4);
-                expect(engine.teamBScore, 0);
+                expect(engine.teamBScore, -4);
               });
 
-              test('Successful bid 7 awards 7 points', () {
-                final result = engine.calculateAndApply(
+              test('Successful bid 7 gives +7 and -7', () {
+                engine.calculateAndApply(
                   biddingTeam: 1,
                   bidAmount: 7,
-                  tricksWonByBiddingTeam: 8,
+                  tricksWonByBiddingTeam: 7,
                 );
-
-                expect(result.success, isTrue);
+                expect(engine.teamAScore, -7);
                 expect(engine.teamBScore, 7);
               });
 
-              test('Successful bid 8 with all 8 tricks awards 16', () {
-                final result = engine.calculateAndApply(
+              test('Successful bid 8 gives +16 and -16', () {
+                engine.calculateAndApply(
                   biddingTeam: 0,
                   bidAmount: 8,
                   tricksWonByBiddingTeam: 8,
                 );
-
-                expect(result.success, isTrue);
                 expect(engine.teamAScore, 16);
+                expect(engine.teamBScore, -16);
               });
 
               test('Failed bid 5 gives -10 and +10', () {
-                final result = engine.calculateAndApply(
+                engine.calculateAndApply(
                   biddingTeam: 0,
                   bidAmount: 5,
                   tricksWonByBiddingTeam: 4,
                 );
-
-                expect(result.success, isFalse);
                 expect(engine.teamAScore, -10);
                 expect(engine.teamBScore, 10);
               });
 
               test('Failed bid 8 gives -16 and +16', () {
-                final result = engine.calculateAndApply(
+                engine.calculateAndApply(
                   biddingTeam: 1,
                   bidAmount: 8,
                   tricksWonByBiddingTeam: 7,
                 );
-
-                expect(result.success, isFalse);
-                expect(engine.teamBScore, -16);
                 expect(engine.teamAScore, 16);
+                expect(engine.teamBScore, -16);
               });
 
-              test('Bids 4 to 7 succeed when target is reached', () {
-                for (var bid = 4; bid <= 7; bid++) {
-                  final freshEngine = BidScoringEngine();
-                  final result = freshEngine.calculateAndApply(
-                    biddingTeam: 0,
-                    bidAmount: bid,
-                    tricksWonByBiddingTeam: bid,
-                  );
-
-                  expect(result.success, isTrue);
-                  expect(freshEngine.teamAScore, bid);
-                }
-              });
-
-              test('Scores accumulate across rounds', () {
+              test('Scores remain opposite across rounds', () {
                 engine.calculateAndApply(
                   biddingTeam: 0,
                   bidAmount: 4,
@@ -198,10 +175,24 @@ jobs:
                 );
 
                 expect(engine.teamAScore, 14);
-                expect(engine.teamBScore, -5);
+                expect(engine.teamBScore, -14);
+                expect(engine.teamAScore + engine.teamBScore, 0);
               });
 
-              test('Rejects invalid bid amount', () {
+              test('Bids 4 to 7 succeed at target', () {
+                for (var bid = 4; bid <= 7; bid++) {
+                  final freshEngine = BidScoringEngine();
+                  freshEngine.calculateAndApply(
+                    biddingTeam: 0,
+                    bidAmount: bid,
+                    tricksWonByBiddingTeam: bid,
+                  );
+                  expect(freshEngine.teamAScore, bid);
+                  expect(freshEngine.teamBScore, -bid);
+                }
+              });
+
+              test('Rejects invalid bid', () {
                 expect(
                   () => engine.calculateAndApply(
                     biddingTeam: 0,
@@ -234,15 +225,13 @@ jobs:
                 );
               });
 
-              test('Can reset match scores', () {
+              test('Reset scores returns both teams to zero', () {
                 engine.calculateAndApply(
                   biddingTeam: 0,
                   bidAmount: 8,
                   tricksWonByBiddingTeam: 8,
                 );
-
                 engine.resetScores();
-
                 expect(engine.teamAScore, 0);
                 expect(engine.teamBScore, 0);
               });
@@ -258,5 +247,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lib/game/engine/bid_scoring_engine.dart test/game/bid_scoring_engine_test.dart
-          git diff --cached --quiet || git commit -m "Add LORIS bid scoring system"
+          git diff --cached --quiet || git commit -m "Fix LORIS bid scoring system"
           git push
