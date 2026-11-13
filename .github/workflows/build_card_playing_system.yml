@@ -360,11 +360,10 @@ jobs:
             });
           }
           EOF
-
       - name: Run Tests
         run: |
           flutter pub get
-          flutter test
+          flutter test --reporter expanded
 
       - name: Commit Changes
         run: |
