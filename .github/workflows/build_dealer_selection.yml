@@ -1,0 +1,185 @@
+
+name: Build LORIS Dealer Selection
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Dealer Selection System
+        run: |
+          cat > lib/game/engine/initial_dealer_selector.dart <<'EOF'
+          import 'dart:math';
+
+          import '../models/loris_card.dart';
+
+          class DealerSelectionResult {
+            final int dealerIndex;
+            final Card jackCard;
+            final List<Card> drawnCards;
+            final List<Card> shuffledDeck;
+
+            const DealerSelectionResult({
+              required this.dealerIndex,
+              required this.jackCard,
+              required this.drawnCards,
+              required this.shuffledDeck,
+            });
+          }
+
+          class InitialDealerSelector {
+            static DealerSelectionResult select({
+              required List<Card> deck,
+              required int playerCount,
+              required int firstPlayerIndex,
+              Random? random,
+            }) {
+              if (playerCount != 4 && playerCount != 6) {
+                throw ArgumentError('Player count must be 4 or 6.');
+              }
+
+              if (deck.length != playerCount * 8) {
+                throw ArgumentError('Invalid deck size.');
+              }
+
+              if (firstPlayerIndex < 0 ||
+                  firstPlayerIndex >= playerCount) {
+                throw ArgumentError('Invalid starting player.');
+              }
+
+              final drawnCards = <Card>[];
+
+              for (var i = 0; i < deck.length; i++) {
+                final card = deck[i];
+                final currentPlayer =
+                    (firstPlayerIndex + i) % playerCount;
+
+                drawnCards.add(card);
+
+                if (!card.isLoris && card.rank == 11) {
+                  final shuffledDeck = List<Card>.from(deck);
+                  shuffledDeck.shuffle(random ?? Random());
+
+                  return DealerSelectionResult(
+                    dealerIndex: currentPlayer,
+                    jackCard: card,
+                    drawnCards: List.unmodifiable(drawnCards),
+                    shuffledDeck: List.unmodifiable(shuffledDeck),
+                  );
+                }
+              }
+
+              throw StateError('No Jack found in the deck.');
+            }
+          }
+          EOF
+
+      - name: Create Dealer Selection Tests
+        run: |
+          cat > test/game/initial_dealer_selector_test.dart <<'EOF'
+          import 'dart:math';
+
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:loris_card_game/game/models/loris_card.dart';
+          import 'package:loris_card_game/game/models/loris_deck.dart';
+          import 'package:loris_card_game/game/engine/initial_dealer_selector.dart';
+
+          List<Card> orderedDeck(PlayerCount count, int jackPosition) {
+            final deck = LorisDeck.create(count, random: Random(10));
+            final jacks = deck.where((c) => c.rank == 11).toList();
+            final others = deck.where((c) => c.rank != 11).toList();
+
+            return [
+              ...others.take(jackPosition),
+              jacks.first,
+              ...others.skip(jackPosition),
+              ...jacks.skip(1),
+            ];
+          }
+
+          void main() {
+            group('Initial Dealer Selection', () {
+              test('4-player game selects the first player who gets Jack', () {
+                final deck = orderedDeck(PlayerCount.four, 6);
+
+                final result = InitialDealerSelector.select(
+                  deck: deck,
+                  playerCount: 4,
+                  firstPlayerIndex: 1,
+                  random: Random(20),
+                );
+
+                expect(result.dealerIndex, 3);
+                expect(result.jackCard.rank, 11);
+                expect(result.drawnCards.length, 7);
+              });
+
+              test('6-player game selects the correct dealer', () {
+                final deck = orderedDeck(PlayerCount.six, 7);
+
+                final result = InitialDealerSelector.select(
+                  deck: deck,
+                  playerCount: 6,
+                  firstPlayerIndex: 4,
+                  random: Random(21),
+                );
+
+                expect(result.dealerIndex, 5);
+                expect(result.jackCard.rank, 11);
+                expect(result.drawnCards.length, 8);
+              });
+
+              test('all cards return and are shuffled', () {
+                final deck = orderedDeck(PlayerCount.four, 6);
+
+                final result = InitialDealerSelector.select(
+                  deck: deck,
+                  playerCount: 4,
+                  firstPlayerIndex: 0,
+                  random: Random(22),
+                );
+
+                expect(result.shuffledDeck.length, 32);
+                expect(result.shuffledDeck.toSet(), deck.toSet());
+              });
+
+              test('invalid deck size is rejected', () {
+                expect(
+                  () => InitialDealerSelector.select(
+                    deck: [],
+                    playerCount: 4,
+                    firstPlayerIndex: 0,
+                  ),
+                  throwsArgumentError,
+                );
+              });
+            });
+          }
+          EOF
+
+      - name: Run Tests
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Commit Changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib test
+          git commit -m "Add LORIS initial dealer selection" || exit 0
+          git push
