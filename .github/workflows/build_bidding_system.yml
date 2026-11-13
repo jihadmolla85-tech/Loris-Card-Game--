@@ -1,0 +1,248 @@
+
+name: Build LORIS Bidding System
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Bidding Engine
+        run: |
+          cat > lib/game/engine/bidding_engine.dart <<'EOF'
+          enum BidAction { bid, pass }
+
+          class BidRecord {
+            final int playerIndex;
+            final BidAction action;
+            final int? amount;
+
+            const BidRecord({
+              required this.playerIndex,
+              required this.action,
+              this.amount,
+            });
+          }
+
+          class BiddingEngine {
+            final int playerCount;
+            final int dealerIndex;
+            final List<BidRecord> history = [];
+
+            int? highestBid;
+            int? highestBidder;
+
+            late int currentPlayerIndex;
+
+            BiddingEngine({
+              required this.playerCount,
+              required this.dealerIndex,
+            }) {
+              if (playerCount != 4 && playerCount != 6) {
+                throw ArgumentError('Player count must be 4 or 6.');
+              }
+
+              if (dealerIndex < 0 || dealerIndex >= playerCount) {
+                throw ArgumentError('Invalid dealer index.');
+              }
+
+              currentPlayerIndex = (dealerIndex + 1) % playerCount;
+            }
+
+            bool get isComplete => history.length == playerCount;
+
+            bool get everyonePassed =>
+                isComplete && highestBid == null;
+
+            bool get hasWinner =>
+                isComplete && highestBidder != null;
+
+            int get remainingPlayers => playerCount - history.length;
+
+            void submitBid(int? amount) {
+              if (isComplete) {
+                throw StateError('Bidding is already complete.');
+              }
+
+              if (amount != null) {
+                if (amount < 4 || amount > 8) {
+                  throw ArgumentError('Bid must be between 4 and 8.');
+                }
+
+                if (highestBid != null && amount <= highestBid!) {
+                  throw ArgumentError('New bid must be higher.');
+                }
+              }
+
+              history.add(
+                BidRecord(
+                  playerIndex: currentPlayerIndex,
+                  action: amount == null ? BidAction.pass : BidAction.bid,
+                  amount: amount,
+                ),
+              );
+
+              if (amount != null) {
+                highestBid = amount;
+                highestBidder = currentPlayerIndex;
+              }
+
+              if (!isComplete) {
+                currentPlayerIndex =
+                    (currentPlayerIndex + 1) % playerCount;
+              }
+            }
+          }
+          EOF
+
+      - name: Create Bidding Tests
+        run: |
+          cat > test/game/bidding_engine_test.dart <<'EOF'
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:loris_card_game/game/engine/bidding_engine.dart';
+
+          void main() {
+            group('LORIS Bidding Engine', () {
+              test('bidding starts from dealer right', () {
+                final game = BiddingEngine(
+                  playerCount: 4,
+                  dealerIndex: 0,
+                );
+
+                expect(game.currentPlayerIndex, 1);
+              });
+
+              test('players act only once in order', () {
+                final game = BiddingEngine(
+                  playerCount: 4,
+                  dealerIndex: 0,
+                );
+
+                game.submitBid(4);
+                expect(game.currentPlayerIndex, 2);
+
+                game.submitBid(null);
+                expect(game.currentPlayerIndex, 3);
+
+                game.submitBid(5);
+                expect(game.currentPlayerIndex, 0);
+
+                game.submitBid(null);
+
+                expect(game.isComplete, true);
+                expect(game.highestBid, 5);
+                expect(game.highestBidder, 3);
+              });
+
+              test('pass cannot be taken back', () {
+                final game = BiddingEngine(
+                  playerCount: 4,
+                  dealerIndex: 0,
+                );
+
+                game.submitBid(null);
+                game.submitBid(4);
+                game.submitBid(null);
+                game.submitBid(5);
+
+                expect(game.isComplete, true);
+                expect(game.history.length, 4);
+              });
+
+              test('all pass means redeal', () {
+                final game = BiddingEngine(
+                  playerCount: 4,
+                  dealerIndex: 0,
+                );
+
+                for (var i = 0; i < 4; i++) {
+                  game.submitBid(null);
+                }
+
+                expect(game.everyonePassed, true);
+                expect(game.highestBidder, null);
+              });
+
+              test('bid must be between 4 and 8', () {
+                final game = BiddingEngine(
+                  playerCount: 4,
+                  dealerIndex: 0,
+                );
+
+                expect(() => game.submitBid(3), throwsArgumentError);
+                expect(() => game.submitBid(9), throwsArgumentError);
+              });
+
+              test('equal or lower bid is rejected', () {
+                final game = BiddingEngine(
+                  playerCount: 4,
+                  dealerIndex: 0,
+                );
+
+                game.submitBid(5);
+
+                expect(() => game.submitBid(5), throwsArgumentError);
+                expect(() => game.submitBid(4), throwsArgumentError);
+              });
+
+              test('6-player bidding completes after six actions', () {
+                final game = BiddingEngine(
+                  playerCount: 6,
+                  dealerIndex: 2,
+                );
+
+                expect(game.currentPlayerIndex, 3);
+
+                game.submitBid(4);
+                game.submitBid(null);
+                game.submitBid(6);
+                game.submitBid(null);
+                game.submitBid(null);
+                game.submitBid(null);
+
+                expect(game.isComplete, true);
+                expect(game.highestBid, 6);
+                expect(game.highestBidder, 5);
+              });
+
+              test('cannot act after bidding completes', () {
+                final game = BiddingEngine(
+                  playerCount: 4,
+                  dealerIndex: 0,
+                );
+
+                for (var i = 0; i < 4; i++) {
+                  game.submitBid(null);
+                }
+
+                expect(() => game.submitBid(4), throwsStateError);
+              });
+            });
+          }
+          EOF
+
+      - name: Run Tests
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Commit Changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib test
+          git commit -m "Add LORIS bidding system" || exit 0
+          git push
