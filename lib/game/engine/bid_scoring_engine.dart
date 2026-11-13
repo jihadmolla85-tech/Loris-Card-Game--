@@ -1,4 +1,3 @@
-
 class BidScoreResult {
   final bool success;
   final int biddingTeam;
@@ -38,16 +37,16 @@ class BidScoringEngine {
       throw ArgumentError('Tricks must be between 0 and 8.');
     }
 
-    final bool success = bidAmount == 8
+    final success = bidAmount == 8
         ? tricksWonByBiddingTeam == 8
         : tricksWonByBiddingTeam >= bidAmount;
 
-    final int points = success
+    final points = success
         ? (bidAmount == 8 ? 16 : bidAmount)
         : bidAmount * 2;
 
-    final int biddingPoints = success ? points : -points;
-    final int opposingPoints = -biddingPoints;
+    final biddingPoints = success ? points : -points;
+    final opposingPoints = -biddingPoints;
 
     teamScores[biddingTeam] += biddingPoints;
     teamScores[1 - biddingTeam] += opposingPoints;
@@ -63,7 +62,6 @@ class BidScoringEngine {
   }
 
   int get teamAScore => teamScores[0];
-
   int get teamBScore => teamScores[1];
 
   void resetScores() {

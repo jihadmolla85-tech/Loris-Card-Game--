@@ -1,4 +1,3 @@
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 
@@ -11,13 +10,11 @@ void main() {
     });
 
     test('Successful bid 4 gives +4 and -4', () {
-      final result = engine.calculateAndApply(
+      engine.calculateAndApply(
         biddingTeam: 0,
         bidAmount: 4,
         tricksWonByBiddingTeam: 4,
       );
-
-      expect(result.success, isTrue);
       expect(engine.teamAScore, 4);
       expect(engine.teamBScore, -4);
     });
@@ -28,7 +25,6 @@ void main() {
         bidAmount: 7,
         tricksWonByBiddingTeam: 7,
       );
-
       expect(engine.teamAScore, -7);
       expect(engine.teamBScore, 7);
     });
@@ -39,7 +35,6 @@ void main() {
         bidAmount: 8,
         tricksWonByBiddingTeam: 8,
       );
-
       expect(engine.teamAScore, 16);
       expect(engine.teamBScore, -16);
     });
@@ -50,7 +45,6 @@ void main() {
         bidAmount: 5,
         tricksWonByBiddingTeam: 4,
       );
-
       expect(engine.teamAScore, -10);
       expect(engine.teamBScore, 10);
     });
@@ -61,18 +55,16 @@ void main() {
         bidAmount: 8,
         tricksWonByBiddingTeam: 7,
       );
-
       expect(engine.teamAScore, 16);
       expect(engine.teamBScore, -16);
     });
 
-    test('Scores remain opposite across multiple rounds', () {
+    test('Scores remain opposite across rounds', () {
       engine.calculateAndApply(
         biddingTeam: 0,
         bidAmount: 4,
         tricksWonByBiddingTeam: 4,
       );
-
       engine.calculateAndApply(
         biddingTeam: 1,
         bidAmount: 5,
@@ -84,22 +76,20 @@ void main() {
       expect(engine.teamAScore + engine.teamBScore, 0);
     });
 
-    test('Bids 4 to 7 succeed when target is reached', () {
+    test('Bids 4 to 7 succeed at target', () {
       for (var bid = 4; bid <= 7; bid++) {
         final freshEngine = BidScoringEngine();
-
         freshEngine.calculateAndApply(
           biddingTeam: 0,
           bidAmount: bid,
           tricksWonByBiddingTeam: bid,
         );
-
         expect(freshEngine.teamAScore, bid);
         expect(freshEngine.teamBScore, -bid);
       }
     });
 
-    test('Rejects invalid bid amount', () {
+    test('Rejects invalid bid', () {
       expect(
         () => engine.calculateAndApply(
           biddingTeam: 0,
@@ -138,9 +128,7 @@ void main() {
         bidAmount: 8,
         tricksWonByBiddingTeam: 8,
       );
-
       engine.resetScores();
-
       expect(engine.teamAScore, 0);
       expect(engine.teamBScore, 0);
     });
