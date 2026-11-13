@@ -1,0 +1,337 @@
+
+name: Build LORIS Card Playing System
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Card Playing Engine
+        run: |
+          cat > lib/game/engine/trick_engine.dart <<'EOF'
+          import '../models/loris_card.dart';
+
+          class TrickPlay {
+            final int playerIndex;
+            final Card card;
+
+            const TrickPlay({
+              required this.playerIndex,
+              required this.card,
+            });
+          }
+
+          class TrickEngine {
+            final List<List<Card>> hands;
+            final int playerCount;
+            final int dealerIndex;
+            final Suit trumpSuit;
+            final List<TrickPlay> plays = [];
+
+            TrickEngine({
+              required this.hands,
+              required this.dealerIndex,
+              required this.trumpSuit,
+            }) : playerCount = hands.length {
+              if (playerCount != 4 && playerCount != 6) {
+                throw ArgumentError('Player count must be 4 or 6.');
+              }
+
+              if (hands.any((hand) => hand.length != 8)) {
+                throw ArgumentError('Each player must start with 8 cards.');
+              }
+
+              if (dealerIndex < 0 || dealerIndex >= playerCount) {
+                throw ArgumentError('Invalid dealer index.');
+              }
+            }
+
+            int get firstPlayerIndex => (dealerIndex + 1) % playerCount;
+
+            int get currentPlayerIndex =>
+                (firstPlayerIndex + plays.length) % playerCount;
+
+            bool get isComplete => plays.length == playerCount;
+
+            Suit get ledSuit {
+              if (plays.isEmpty) {
+                throw StateError('No card has been played.');
+              }
+
+              return plays.first.card.suit!;
+            }
+
+            void playCard(int playerIndex, Card card) {
+              if (isComplete) {
+                throw StateError('Trick is already complete.');
+              }
+
+              if (playerIndex != currentPlayerIndex) {
+                throw StateError('It is not this player turn.');
+              }
+
+              final hand = hands[playerIndex];
+
+              if (!hand.contains(card)) {
+                throw ArgumentError('Card is not in player hand.');
+              }
+
+              if (plays.isNotEmpty && !card.isLoris) {
+                final requiredSuit = ledSuit;
+
+                final hasLedSuit = hand.any(
+                  (c) => !c.isLoris && c.suit == requiredSuit,
+                );
+
+                if (hasLedSuit && card.suit != requiredSuit) {
+                  throw ArgumentError('You must follow the led suit.');
+                }
+              }
+
+              hand.remove(card);
+
+              plays.add(
+                TrickPlay(
+                  playerIndex: playerIndex,
+                  card: card,
+                ),
+              );
+            }
+
+            int get winnerIndex {
+              if (!isComplete) {
+                throw StateError('Trick is not complete yet.');
+              }
+
+              final lorisPlay = plays.where(
+                (play) => play.card.isLoris,
+              );
+
+              if (lorisPlay.isNotEmpty) {
+                return lorisPlay.first.playerIndex;
+              }
+
+              final trumpPlays = plays.where(
+                (play) => play.card.suit == trumpSuit,
+              ).toList();
+
+              final candidates = trumpPlays.isNotEmpty
+                  ? trumpPlays
+                  : plays.where(
+                      (play) => play.card.suit == ledSuit,
+                    ).toList();
+
+              candidates.sort(
+                (a, b) => b.card.rank!.compareTo(a.card.rank!),
+              );
+
+              return candidates.first.playerIndex;
+            }
+          }
+          EOF
+
+      - name: Create Card Playing Tests
+        run: |
+          cat > test/game/trick_engine_test.dart <<'EOF'
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:loris_card_game/game/models/loris_card.dart';
+          import 'package:loris_card_game/game/engine/trick_engine.dart';
+
+          Card card(Suit suit, int rank) =>
+              Card.normal(suit: suit, rank: rank);
+
+          void main() {
+            group('LORIS Trick Engine', () {
+              late List<List<Card>> hands;
+
+              setUp(() {
+                hands = [
+                  [card(Suit.hearts, 10), card(Suit.spades, 8),
+                    card(Suit.clubs, 9), card(Suit.diamonds, 9),
+                    card(Suit.hearts, 7), card(Suit.spades, 9),
+                    card(Suit.clubs, 10), card(Suit.diamonds, 10)],
+                  [card(Suit.hearts, 12), card(Suit.spades, 7),
+                    card(Suit.clubs, 8), card(Suit.diamonds, 8),
+                    card(Suit.hearts, 8), card(Suit.spades, 10),
+                    card(Suit.clubs, 11), card(Suit.diamonds, 11)],
+                  [card(Suit.hearts, 14), card(Suit.spades, 11),
+                    card(Suit.clubs, 7), card(Suit.diamonds, 7),
+                    card(Suit.hearts, 9), card(Suit.spades, 12),
+                    card(Suit.clubs, 12), card(Suit.diamonds, 12)],
+                  [card(Suit.hearts, 11), card(Suit.spades, 13),
+                    card(Suit.clubs, 13), card(Suit.diamonds, 13),
+                    card(Suit.hearts, 13), card(Suit.spades, 14),
+                    card(Suit.clubs, 14), card(Suit.diamonds, 14)],
+                ];
+              });
+
+              test('first player is dealer right', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                expect(game.firstPlayerIndex, 1);
+                expect(game.currentPlayerIndex, 1);
+              });
+
+              test('players must follow led suit when available', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                game.playCard(1, card(Suit.hearts, 12));
+
+                expect(
+                  () => game.playCard(2, card(Suit.spades, 11)),
+                  throwsArgumentError,
+                );
+              });
+
+              test('player without led suit may play another suit', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                game.playCard(1, card(Suit.hearts, 12));
+
+                hands[2].removeWhere((c) => c.suit == Suit.hearts);
+
+                game.playCard(2, card(Suit.spades, 11));
+
+                expect(game.plays.length, 2);
+              });
+
+              test('LORIS may be played at any time', () {
+                hands[2].add(Card.loris(replacesRank: 7));
+
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                game.playCard(1, card(Suit.hearts, 12));
+                game.playCard(2, Card.loris(replacesRank: 7));
+
+                expect(game.plays.length, 2);
+              });
+
+              test('LORIS always wins the trick', () {
+                hands[2].add(Card.loris(replacesRank: 7));
+
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                game.playCard(1, card(Suit.hearts, 12));
+                game.playCard(2, Card.loris(replacesRank: 7));
+                game.playCard(3, card(Suit.hearts, 13));
+                game.playCard(0, card(Suit.spades, 8));
+
+                expect(game.winnerIndex, 2);
+              });
+
+              test('highest trump wins when trump is played', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                game.playCard(1, card(Suit.hearts, 12));
+                game.playCard(2, card(Suit.spades, 11));
+                game.playCard(3, card(Suit.hearts, 13));
+                game.playCard(0, card(Suit.spades, 8));
+
+                expect(game.winnerIndex, 2);
+              });
+
+              test('highest led suit wins without trump', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                game.playCard(1, card(Suit.hearts, 12));
+                game.playCard(2, card(Suit.hearts, 14));
+                game.playCard(3, card(Suit.hearts, 13));
+                game.playCard(0, card(Suit.hearts, 10));
+
+                expect(game.winnerIndex, 2);
+              });
+
+              test('cards are removed after being played', () {
+                final playedCard = card(Suit.hearts, 12);
+
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                game.playCard(1, playedCard);
+
+                expect(hands[1].contains(playedCard), false);
+              });
+
+              test('cannot play out of turn', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                expect(
+                  () => game.playCard(0, card(Suit.hearts, 10)),
+                  throwsStateError,
+                );
+              });
+
+              test('winner unavailable before trick completes', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.spades,
+                );
+
+                expect(() => game.winnerIndex, throwsStateError);
+              });
+            });
+          }
+          EOF
+
+      - name: Run Tests
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Commit Changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib test
+          git commit -m "Add LORIS card playing and trick engine" || exit 0
+          git push
