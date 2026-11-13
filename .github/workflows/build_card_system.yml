@@ -1,0 +1,254 @@
+
+name: Build LORIS Card System
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Card Model
+        run: |
+          cat > lib/game/models/loris_card.dart <<'EOF'
+          enum Suit { clubs, diamonds, hearts, spades }
+
+          enum PlayerCount {
+            four(4),
+            six(6);
+
+            const PlayerCount(this.value);
+            final int value;
+          }
+
+          class Card {
+            final Suit? suit;
+            final int? rank;
+            final bool isLoris;
+            final int? replacesRank;
+
+            const Card.normal({
+              required Suit this.suit,
+              required int this.rank,
+            })  : isLoris = false,
+                  replacesRank = null,
+                  assert(rank >= 3 && rank <= 14);
+
+            const Card.loris({required this.replacesRank})
+                : suit = null,
+                  rank = null,
+                  isLoris = true;
+
+            String get displayName {
+              if (isLoris) return 'LORIS';
+              const names = {
+                11: 'J',
+                12: 'Q',
+                13: 'K',
+                14: 'A',
+              };
+              return names[rank] ?? '$rank';
+            }
+
+            @override
+            bool operator ==(Object other) =>
+                other is Card &&
+                other.suit == suit &&
+                other.rank == rank &&
+                other.isLoris == isLoris &&
+                other.replacesRank == replacesRank;
+
+            @override
+            int get hashCode =>
+                Object.hash(suit, rank, isLoris, replacesRank);
+
+            @override
+            String toString() =>
+                isLoris ? 'LORIS' : '${displayName}_${suit!.name}';
+          }
+          EOF
+
+      - name: Create Deck System
+        run: |
+          cat > lib/game/models/loris_deck.dart <<'EOF'
+          import 'dart:math';
+
+          import 'loris_card.dart';
+
+          class LorisDeck {
+            static List<Card> create(
+              PlayerCount playerCount, {
+              Random? random,
+            }) {
+              final lowestRank = playerCount == PlayerCount.four ? 7 : 3;
+              final cards = <Card>[];
+
+              for (final suit in Suit.values) {
+                for (var rank = lowestRank; rank <= 14; rank++) {
+                  if (suit == Suit.spades && rank == lowestRank) {
+                    continue;
+                  }
+
+                  cards.add(Card.normal(suit: suit, rank: rank));
+                }
+              }
+
+              cards.add(Card.loris(replacesRank: lowestRank));
+              cards.shuffle(random ?? Random());
+
+              return cards;
+            }
+          }
+          EOF
+
+      - name: Create Card Dealer
+        run: |
+          cat > lib/game/engine/card_dealer.dart <<'EOF'
+          import '../models/loris_card.dart';
+
+          class CardDealer {
+            static List<List<Card>> deal({
+              required List<Card> deck,
+              required int playerCount,
+              required int firstPlayerIndex,
+            }) {
+              if (playerCount != 4 && playerCount != 6) {
+                throw ArgumentError('Player count must be 4 or 6.');
+              }
+
+              if (deck.length != playerCount * 8) {
+                throw ArgumentError('Deck must contain 8 cards per player.');
+              }
+
+              if (firstPlayerIndex < 0 ||
+                  firstPlayerIndex >= playerCount) {
+                throw ArgumentError('Invalid first player index.');
+              }
+
+              final hands = List.generate(
+                playerCount,
+                (_) => <Card>[],
+              );
+
+              for (var i = 0; i < deck.length; i++) {
+                final player = (firstPlayerIndex + i) % playerCount;
+                hands[player].add(deck[i]);
+              }
+
+              return hands;
+            }
+          }
+          EOF
+
+      - name: Create Card Tests
+        run: |
+          cat > test/game/card_system_test.dart <<'EOF'
+          import 'dart:math';
+
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:loris_card_game/game/models/loris_card.dart';
+          import 'package:loris_card_game/game/models/loris_deck.dart';
+          import 'package:loris_card_game/game/engine/card_dealer.dart';
+
+          void main() {
+            group('LORIS Deck', () {
+              test('4 players receive a 32-card deck', () {
+                final deck = LorisDeck.create(
+                  PlayerCount.four,
+                  random: Random(1),
+                );
+
+                expect(deck.length, 32);
+                expect(deck.where((c) => c.isLoris).length, 1);
+                expect(
+                  deck.where((c) => c.replacesRank == 7).length,
+                  1,
+                );
+              });
+
+              test('6 players receive a 48-card deck', () {
+                final deck = LorisDeck.create(
+                  PlayerCount.six,
+                  random: Random(2),
+                );
+
+                expect(deck.length, 48);
+                expect(deck.where((c) => c.isLoris).length, 1);
+                expect(
+                  deck.where((c) => c.replacesRank == 3).length,
+                  1,
+                );
+              });
+
+              test('all cards are unique', () {
+                final deck = LorisDeck.create(
+                  PlayerCount.four,
+                  random: Random(3),
+                );
+
+                expect(deck.toSet().length, deck.length);
+              });
+            });
+
+            group('Card Dealing', () {
+              test('4 players get 8 cards each', () {
+                final deck = LorisDeck.create(
+                  PlayerCount.four,
+                  random: Random(4),
+                );
+
+                final hands = CardDealer.deal(
+                  deck: deck,
+                  playerCount: 4,
+                  firstPlayerIndex: 1,
+                );
+
+                expect(hands.length, 4);
+                expect(hands.every((hand) => hand.length == 8), true);
+                expect(hands[1].first, deck.first);
+              });
+
+              test('6 players get 8 cards each', () {
+                final deck = LorisDeck.create(
+                  PlayerCount.six,
+                  random: Random(5),
+                );
+
+                final hands = CardDealer.deal(
+                  deck: deck,
+                  playerCount: 6,
+                  firstPlayerIndex: 2,
+                );
+
+                expect(hands.length, 6);
+                expect(hands.every((hand) => hand.length == 8), true);
+                expect(hands[2].first, deck.first);
+              });
+            });
+          }
+          EOF
+
+      - name: Run Tests
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Commit Card System
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib test
+          git commit -m "Build LORIS card system" || exit 0
+          git push
