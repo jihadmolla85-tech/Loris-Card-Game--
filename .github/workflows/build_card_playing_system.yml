@@ -20,6 +20,11 @@ jobs:
         with:
           channel: stable
 
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
       - name: Create Trick Engine
         run: |
           cat > lib/game/engine/trick_engine.dart <<'EOF'
@@ -40,7 +45,10 @@ jobs:
             final int playerCount;
             final int dealerIndex;
             final Suit trumpSuit;
+
             final List<TrickPlay> plays = [];
+
+            int completedTricks = 0;
 
             TrickEngine({
               required this.hands,
@@ -60,12 +68,14 @@ jobs:
               }
             }
 
-            int get firstPlayerIndex => (dealerIndex + 1) % playerCount;
+            int get firstPlayerIndex =>
+                (dealerIndex + 1) % playerCount;
 
             int get currentPlayerIndex =>
                 (firstPlayerIndex + plays.length) % playerCount;
 
-            bool get isComplete => plays.length == playerCount;
+            bool get isComplete =>
+                plays.length == playerCount;
 
             Suit get ledSuit {
               if (plays.isEmpty) {
@@ -74,8 +84,9 @@ jobs:
 
               final firstCard = plays.first.card;
 
-              if (firstCard.isLoris || firstCard.suit == null) {
-                throw StateError('LORIS was led; no led suit exists.');
+              // LORIS as the first card means Spades is led.
+              if (firstCard.isLoris) {
+                return Suit.spades;
               }
 
               return firstCard.suit!;
@@ -96,9 +107,7 @@ jobs:
                 throw ArgumentError('Card is not in player hand.');
               }
 
-              if (plays.isNotEmpty &&
-                  !plays.first.card.isLoris &&
-                  !card.isLoris) {
+              if (plays.isNotEmpty && !card.isLoris) {
                 final requiredSuit = ledSuit;
 
                 final hasLedSuit = hand.any(
@@ -106,7 +115,9 @@ jobs:
                 );
 
                 if (hasLedSuit && card.suit != requiredSuit) {
-                  throw ArgumentError('You must follow the led suit.');
+                  throw ArgumentError(
+                    'You must follow the led suit.',
+                  );
                 }
               }
 
@@ -125,15 +136,12 @@ jobs:
                 throw StateError('Trick is not complete yet.');
               }
 
-              final lorisPlay = plays.where(
-                (play) => play.card.isLoris,
-              );
-
-              if (lorisPlay.isNotEmpty) {
-                return lorisPlay.first.playerIndex;
+              // LORIS always wins.
+              for (final play in plays) {
+                if (play.card.isLoris) {
+                  return play.playerIndex;
+                }
               }
-
-              final led = plays.first.card.suit!;
 
               final trumpPlays = plays.where(
                 (play) => play.card.suit == trumpSuit,
@@ -142,7 +150,7 @@ jobs:
               final candidates = trumpPlays.isNotEmpty
                   ? trumpPlays
                   : plays.where(
-                      (play) => play.card.suit == led,
+                      (play) => play.card.suit == ledSuit,
                     ).toList();
 
               candidates.sort(
@@ -150,6 +158,18 @@ jobs:
               );
 
               return candidates.first.playerIndex;
+            }
+
+            // Start the next trick without restoring played cards.
+            void resetTrick() {
+              if (!isComplete) {
+                throw StateError(
+                  'Cannot reset before trick is complete.',
+                );
+              }
+
+              completedTricks++;
+              plays.clear();
             }
           }
           EOF
@@ -224,7 +244,7 @@ jobs:
                 expect(game.currentPlayerIndex, 1);
               });
 
-              test('players must follow led suit when available', () {
+              test('players must follow led suit', () {
                 final game = TrickEngine(
                   hands: hands,
                   dealerIndex: 0,
@@ -247,7 +267,10 @@ jobs:
                 );
 
                 game.playCard(1, card(Suit.hearts, 12));
-                hands[2].removeWhere((c) => c.suit == Suit.hearts);
+
+                hands[2].removeWhere(
+                  (c) => c.suit == Suit.hearts,
+                );
 
                 game.playCard(2, card(Suit.spades, 11));
 
@@ -295,8 +318,13 @@ jobs:
                   trumpSuit: Suit.spades,
                 );
 
-                hands[2].removeWhere((c) => c.suit == Suit.hearts);
-                hands[0].removeWhere((c) => c.suit == Suit.hearts);
+                hands[2].removeWhere(
+                  (c) => c.suit == Suit.hearts,
+                );
+
+                hands[0].removeWhere(
+                  (c) => c.suit == Suit.hearts,
+                );
 
                 game.playCard(1, card(Suit.hearts, 12));
                 game.playCard(2, card(Suit.spades, 11));
@@ -321,6 +349,57 @@ jobs:
                 expect(game.winnerIndex, 2);
               });
 
+              test('LORIS first means Spades is led', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.hearts,
+                );
+
+                final loris = Card.loris(replacesRank: 7);
+                hands[1].add(loris);
+
+                game.playCard(1, loris);
+
+                expect(game.ledSuit, Suit.spades);
+              });
+
+              test('Spades must be followed after first LORIS', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.hearts,
+                );
+
+                final loris = Card.loris(replacesRank: 7);
+                hands[1].add(loris);
+
+                game.playCard(1, loris);
+
+                expect(
+                  () => game.playCard(2, card(Suit.hearts, 14)),
+                  throwsArgumentError,
+                );
+              });
+
+              test('LORIS wins even when it leads the trick', () {
+                final game = TrickEngine(
+                  hands: hands,
+                  dealerIndex: 0,
+                  trumpSuit: Suit.hearts,
+                );
+
+                final loris = Card.loris(replacesRank: 7);
+                hands[1].add(loris);
+
+                game.playCard(1, loris);
+                game.playCard(2, card(Suit.spades, 11));
+                game.playCard(3, card(Suit.spades, 13));
+                game.playCard(0, card(Suit.spades, 8));
+
+                expect(game.winnerIndex, 1);
+              });
+
               test('cards are removed after being played', () {
                 final playedCard = card(Suit.hearts, 12);
 
@@ -343,7 +422,10 @@ jobs:
                 );
 
                 expect(
-                  () => game.playCard(0, card(Suit.hearts, 10)),
+                  () => game.playCard(
+                    0,
+                    card(Suit.hearts, 10),
+                  ),
                   throwsStateError,
                 );
               });
@@ -355,12 +437,16 @@ jobs:
                   trumpSuit: Suit.spades,
                 );
 
-                expect(() => game.winnerIndex, throwsStateError);
+                expect(
+                  () => game.winnerIndex,
+                  throwsStateError,
+                );
               });
             });
           }
           EOF
-      - name: Run Tests
+
+      - name: Run Flutter Tests
         run: |
           flutter pub get
           flutter test --reporter expanded
@@ -370,5 +456,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lib test
-          git commit -m "Fix LORIS trick engine tests" || exit 0
+          git commit -m "Improve LORIS trick engine and tests" || exit 0
           git push
