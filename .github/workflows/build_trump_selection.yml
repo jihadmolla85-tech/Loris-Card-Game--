@@ -1,0 +1,233 @@
+
+name: Build LORIS Trump Selection
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create Trump Selection Engine
+        run: |
+          cat > lib/game/engine/trump_selection_engine.dart <<'EOF'
+          import '../models/loris_card.dart';
+
+          class TrumpSelectionResult {
+            final Suit trumpSuit;
+            final int cardOwnerIndex;
+            final Card selectedCard;
+            final bool revealedToEveryone;
+            final bool bidderHasTrumpSuit;
+
+            const TrumpSelectionResult({
+              required this.trumpSuit,
+              required this.cardOwnerIndex,
+              required this.selectedCard,
+              required this.revealedToEveryone,
+              required this.bidderHasTrumpSuit,
+            });
+          }
+
+          class TrumpSelectionEngine {
+            static TrumpSelectionResult select({
+              required List<List<Card>> hands,
+              required int bidderIndex,
+              required int highestBidderIndex,
+              required int cardOwnerIndex,
+              required Card selectedCard,
+            }) {
+              final playerCount = hands.length;
+
+              if (playerCount != 4 && playerCount != 6) {
+                throw ArgumentError('Player count must be 4 or 6.');
+              }
+
+              if (bidderIndex < 0 || bidderIndex >= playerCount ||
+                  cardOwnerIndex < 0 || cardOwnerIndex >= playerCount) {
+                throw ArgumentError('Invalid player index.');
+              }
+
+              if (bidderIndex != highestBidderIndex) {
+                throw StateError('Only the highest bidder can select trump.');
+              }
+
+              // Teams sit alternately: A-B-A-B-A-B.
+              final sameTeam =
+                  bidderIndex % 2 == cardOwnerIndex % 2;
+
+              if (!sameTeam) {
+                throw ArgumentError('Card must belong to the bidder or a teammate.');
+              }
+
+              if (!hands[cardOwnerIndex].contains(selectedCard)) {
+                throw ArgumentError('Selected card is not in the owner hand.');
+              }
+
+              if (selectedCard.isLoris || selectedCard.suit == null) {
+                throw ArgumentError('LORIS cannot be used to select trump.');
+              }
+
+              final trumpSuit = selectedCard.suit!;
+
+              final bidderHasTrumpSuit = hands[bidderIndex].any(
+                (card) => !card.isLoris && card.suit == trumpSuit,
+              );
+
+              return TrumpSelectionResult(
+                trumpSuit: trumpSuit,
+                cardOwnerIndex: cardOwnerIndex,
+                selectedCard: selectedCard,
+                revealedToEveryone: cardOwnerIndex != bidderIndex,
+                bidderHasTrumpSuit: bidderHasTrumpSuit,
+              );
+            }
+          }
+          EOF
+
+      - name: Create Trump Selection Tests
+        run: |
+          cat > test/game/trump_selection_engine_test.dart <<'EOF'
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:loris_card_game/game/models/loris_card.dart';
+          import 'package:loris_card_game/game/engine/trump_selection_engine.dart';
+
+          void main() {
+            final ownCard = Card.normal(suit: Suit.hearts, rank: 10);
+            final teammateCard = Card.normal(suit: Suit.spades, rank: 12);
+            final opponentCard = Card.normal(suit: Suit.clubs, rank: 11);
+            final loris = Card.loris(replacesRank: 7);
+
+            late List<List<Card>> hands;
+
+            setUp(() {
+              hands = [
+                [ownCard, Card.normal(suit: Suit.hearts, rank: 9)],
+                [opponentCard],
+                [teammateCard, Card.normal(suit: Suit.spades, rank: 9)],
+                [Card.normal(suit: Suit.diamonds, rank: 10)],
+              ];
+            });
+
+            test('own card selects trump without revealing it', () {
+              final result = TrumpSelectionEngine.select(
+                hands: hands,
+                bidderIndex: 0,
+                highestBidderIndex: 0,
+                cardOwnerIndex: 0,
+                selectedCard: ownCard,
+              );
+
+              expect(result.trumpSuit, Suit.hearts);
+              expect(result.revealedToEveryone, false);
+              expect(result.cardOwnerIndex, 0);
+              expect(result.bidderHasTrumpSuit, true);
+            });
+
+            test('teammate card is revealed to everyone', () {
+              final result = TrumpSelectionEngine.select(
+                hands: hands,
+                bidderIndex: 0,
+                highestBidderIndex: 0,
+                cardOwnerIndex: 2,
+                selectedCard: teammateCard,
+              );
+
+              expect(result.trumpSuit, Suit.spades);
+              expect(result.revealedToEveryone, true);
+              expect(result.cardOwnerIndex, 2);
+              expect(result.bidderHasTrumpSuit, false);
+            });
+
+            test('selected card remains in owner hand', () {
+              TrumpSelectionEngine.select(
+                hands: hands,
+                bidderIndex: 0,
+                highestBidderIndex: 0,
+                cardOwnerIndex: 2,
+                selectedCard: teammateCard,
+              );
+
+              expect(hands[2].contains(teammateCard), true);
+            });
+
+            test('opponent card cannot be selected', () {
+              expect(
+                () => TrumpSelectionEngine.select(
+                  hands: hands,
+                  bidderIndex: 0,
+                  highestBidderIndex: 0,
+                  cardOwnerIndex: 1,
+                  selectedCard: opponentCard,
+                ),
+                throwsArgumentError,
+              );
+            });
+
+            test('only highest bidder can select trump', () {
+              expect(
+                () => TrumpSelectionEngine.select(
+                  hands: hands,
+                  bidderIndex: 0,
+                  highestBidderIndex: 2,
+                  cardOwnerIndex: 0,
+                  selectedCard: ownCard,
+                ),
+                throwsStateError,
+              );
+            });
+
+            test('LORIS cannot select trump', () {
+              hands[0].add(loris);
+
+              expect(
+                () => TrumpSelectionEngine.select(
+                  hands: hands,
+                  bidderIndex: 0,
+                  highestBidderIndex: 0,
+                  cardOwnerIndex: 0,
+                  selectedCard: loris,
+                ),
+                throwsArgumentError,
+              );
+            });
+
+            test('card not in selected owner hand is rejected', () {
+              expect(
+                () => TrumpSelectionEngine.select(
+                  hands: hands,
+                  bidderIndex: 0,
+                  highestBidderIndex: 0,
+                  cardOwnerIndex: 0,
+                  selectedCard: teammateCard,
+                ),
+                throwsArgumentError,
+              );
+            });
+          }
+          EOF
+
+      - name: Run Tests
+        run: |
+          flutter pub get
+          flutter test
+
+      - name: Commit Changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib test
+          git commit -m "Add LORIS trump selection system" || exit 0
+          git push
