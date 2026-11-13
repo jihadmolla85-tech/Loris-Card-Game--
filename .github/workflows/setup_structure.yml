@@ -10,10 +10,15 @@ permissions:
 jobs:
   structure:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Create folders
+        shell: bash
         run: |
           folders=(
             lib/app
@@ -42,5 +47,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "Create LORIS project architecture" || echo "No changes"
+          git commit -m "Create LORIS project architecture" || exit 0
           git push
