@@ -127,6 +127,43 @@ void main() {
         controller.getNextDealerIndex(isRedeal: true),
         3,
       );
-    });
+    test('Handles an 8 bid without enabling 16 Call', () {
+      final hands = List.generate(4, (player) {
+        return List.generate(8, (i) {
+          final rank = (player == 1 || player == 3)
+              ? 14 - i
+              : 7 + i;
+
+          return Card.normal(
+            suit: Suit.clubs,
+            rank: rank,
+          );
+        });
+      });
+
+      controller = GameRoundController(
+        hands: hands,
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 8,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+
+      expect(
+        () => controller.call16(callerPlayerIndex: 0),
+        throwsStateError,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(controller.isRoundEnded, isTrue);
+      expect(controller.isRoundScored, isTrue);
+      expect(matchScore.teamAScore, -16);
+      expect(matchScore.teamBScore, 16);
+    });    });
   });
 }
