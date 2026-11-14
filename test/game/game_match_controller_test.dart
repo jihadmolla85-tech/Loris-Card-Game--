@@ -1,3 +1,4 @@
+
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -43,6 +44,18 @@ void main() {
             if (!(suit == Suit.spades && rank == 7))
               Card.normal(suit: suit, rank: rank),
         Card.loris(replacesRank: 7),
+      ];
+    }
+
+    List<Card> createSixPlayerDeck() {
+      final ranks = List.generate(12, (i) => i + 3);
+
+      return [
+        for (final suit in Suit.values)
+          for (final rank in ranks)
+            if (!(suit == Suit.spades && rank == 3))
+              Card.normal(suit: suit, rank: rank),
+        Card.loris(replacesRank: 3),
       ];
     }
 
@@ -206,6 +219,37 @@ void main() {
       expect(match.hasStarted, isTrue);
       expect(match.currentRound.dealerIndex, 3);
       expect(match.nextPlayerIndex, 0);
+    });
+
+    test('Starts a six-player round by dealing cards automatically', () {
+      final sixPlayerMatch = GameMatchController(
+        initialDealerIndex: 5,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+        dealController: DealController(
+          shuffleEngine: DeckShuffleEngine(
+            random: Random(42),
+          ),
+          redealController: RedealController(
+            validationEngine: RedealValidationEngine(),
+          ),
+          deckValidationEngine: DeckValidationEngine(),
+        ),
+      );
+
+      final hands = sixPlayerMatch.startRoundWithDeal(
+        deck: createSixPlayerDeck(),
+        playerCount: 6,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      expect(hands.length, 6);
+      expect(hands.every((hand) => hand.length == 8), isTrue);
+      expect(sixPlayerMatch.hasStarted, isTrue);
+      expect(sixPlayerMatch.currentRound.dealerIndex, 5);
+      expect(sixPlayerMatch.nextPlayerIndex, 0);
     });
 
     test('Supports a six-player match', () {
