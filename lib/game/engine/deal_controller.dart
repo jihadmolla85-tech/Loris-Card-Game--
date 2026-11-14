@@ -2,6 +2,7 @@
 import '../models/loris_card.dart';
 import 'card_dealer.dart';
 import 'deck_shuffle_engine.dart';
+import 'deck_validation_engine.dart';
 import 'redeal_controller.dart';
 import 'redeal_validation_engine.dart';
 
@@ -9,10 +10,12 @@ class DealController {
   DealController({
     required this.shuffleEngine,
     required this.redealController,
+    required this.deckValidationEngine,
   });
 
   final DeckShuffleEngine shuffleEngine;
   final RedealController redealController;
+  final DeckValidationEngine deckValidationEngine;
 
   List<Card>? _originalDeck;
   List<List<Card>>? _currentHands;
@@ -31,12 +34,15 @@ class DealController {
     required int playerCount,
     required int dealerIndex,
   }) {
-    if (playerCount != 4 && playerCount != 6) {
-      throw ArgumentError('Player count must be 4 or 6.');
-    }
+    final validation = deckValidationEngine.validate(
+      deck: deck,
+      playerCount: playerCount,
+    );
 
-    if (deck.length != playerCount * 8) {
-      throw ArgumentError('Invalid deck size.');
+    if (!validation.isValid) {
+      throw ArgumentError(
+        'Invalid deck: ${validation.errors.join(', ')}',
+      );
     }
 
     if (dealerIndex < 0 || dealerIndex >= playerCount) {
