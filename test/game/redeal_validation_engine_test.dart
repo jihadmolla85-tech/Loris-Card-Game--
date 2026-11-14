@@ -12,18 +12,24 @@ void main() {
     });
 
     List<Card> normalHand() {
-      return List.generate(
-        8,
-        (i) => Card.normal(Suit.clubs, 10 + (i % 5)),
-      );
-    }
+  return List.generate(
+    8,
+    (i) => Card.normal(
+      suit: Suit.clubs,
+      rank: 10 + (i % 5),
+    ),
+  );
+}
 
     List<Card> lowHand() {
-      return List.generate(
-        8,
-        (i) => Card.normal(Suit.clubs, 7 + (i % 3)),
-      );
-    }
+  return List.generate(
+    8,
+    (i) => Card.normal(
+      suit: Suit.clubs,
+      rank: 7 + (i % 3),
+    ),
+  );
+}
 
     List<List<Card>> validHands(int count) {
       return List.generate(count, (_) => normalHand());
