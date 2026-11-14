@@ -16,17 +16,23 @@ class GameRoundController {
     required this.matchScoreEngine,
     required this.bidScoringEngine,
   }) {
+    if (bidAmount < 4 || bidAmount > 8) {
+      throw ArgumentError('Bid must be between 4 and 8.');
+    }
+
     trickEngine = TrickEngine(
       hands: hands,
       dealerIndex: dealerIndex,
       trumpSuit: trumpSuit,
     );
 
-    sixteenCallEngine = SixteenCallEngine(
-      playerCount: hands.length,
-      biddingTeam: biddingTeam,
-      bidAmount: bidAmount,
-    );
+    if (bidAmount < 8) {
+      sixteenCallEngine = SixteenCallEngine(
+        playerCount: hands.length,
+        biddingTeam: biddingTeam,
+        bidAmount: bidAmount,
+      );
+    }
   }
 
   final int dealerIndex;
@@ -36,7 +42,10 @@ class GameRoundController {
   final BidScoringEngine bidScoringEngine;
 
   late final TrickEngine trickEngine;
-  late final SixteenCallEngine sixteenCallEngine;
+  late final SixteenCallEngine? sixteenCallEngine;
+
+  int completedTricks = 0;
+  int biddingTeamTricks = 0;
 
   bool isRoundScored = false;
 
@@ -44,7 +53,8 @@ class GameRoundController {
       isRoundEnded ? null : trickEngine.currentPlayerIndex;
 
   bool get isRoundEnded =>
-      isRoundScored || sixteenCallEngine.isRoundEnded;
+      isRoundScored ||
+      (sixteenCallEngine?.isRoundEnded ?? completedTricks == 8);
 
   MatchWinner get matchWinner =>
       matchScoreEngine.checkWinner();
@@ -63,10 +73,15 @@ class GameRoundController {
     }
 
     final winnerIndex = trickEngine.winnerIndex;
+    completedTricks++;
 
-    sixteenCallEngine.recordTrickWinner(winnerIndex);
+    if (winnerIndex % 2 == biddingTeam) {
+      biddingTeamTricks++;
+    }
 
-    if (sixteenCallEngine.isRoundEnded) {
+    sixteenCallEngine?.recordTrickWinner(winnerIndex);
+
+    if (isRoundEnded) {
       _applyRoundScore();
     } else {
       trickEngine.resetTrick();
@@ -82,7 +97,13 @@ class GameRoundController {
       throw StateError('The round has ended.');
     }
 
-    sixteenCallEngine.call16(
+    final engine = sixteenCallEngine;
+
+    if (engine == null) {
+      throw StateError('16 Call is not allowed on an 8 bid.');
+    }
+
+    engine.call16(
       callerPlayerIndex: callerPlayerIndex,
     );
   }
@@ -93,21 +114,21 @@ class GameRoundController {
     int teamAPoints;
     int teamBPoints;
 
-    if (sixteenCallEngine.status ==
-            SixteenCallStatus.succeeded ||
-        sixteenCallEngine.status ==
-            SixteenCallStatus.failed) {
+    final engine = sixteenCallEngine;
+
+    if (engine != null &&
+        (engine.status == SixteenCallStatus.succeeded ||
+         engine.status == SixteenCallStatus.failed)) {
       teamAPoints = biddingTeam == 0
-          ? sixteenCallEngine.biddingTeamPoints
-          : sixteenCallEngine.opposingTeamPoints;
+          ? engine.biddingTeamPoints
+          : engine.opposingTeamPoints;
 
       teamBPoints = -teamAPoints;
     } else {
       final result = bidScoringEngine.calculateAndApply(
         biddingTeam: biddingTeam,
         bidAmount: bidAmount,
-        tricksWonByBiddingTeam:
-            sixteenCallEngine.biddingTeamTricks,
+        tricksWonByBiddingTeam: biddingTeamTricks,
       );
 
       teamAPoints = result.biddingTeam == 0
