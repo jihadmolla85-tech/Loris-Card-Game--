@@ -1,3 +1,4 @@
+
 import '../models/loris_card.dart';
 
 class TrickPlay {
@@ -18,24 +19,54 @@ class TrickEngine {
 
   final List<TrickPlay> plays = [];
 
-  int completedTricks = 0;
+  int completedTricks;
 
   TrickEngine({
     required this.hands,
     required this.dealerIndex,
     required this.trumpSuit,
-  }) : playerCount = hands.length {
+    int completedTricks = 0,
+    List<TrickPlay> initialPlays = const [],
+  })  : playerCount = hands.length,
+        completedTricks = completedTricks {
     if (playerCount != 4 && playerCount != 6) {
       throw ArgumentError('Player count must be 4 or 6.');
-    }
-
-    if (hands.any((hand) => hand.length != 8)) {
-      throw ArgumentError('Each player must start with 8 cards.');
     }
 
     if (dealerIndex < 0 || dealerIndex >= playerCount) {
       throw ArgumentError('Invalid dealer index.');
     }
+
+    if (completedTricks < 0 || completedTricks > 8) {
+      throw ArgumentError('Invalid completed tricks count.');
+    }
+
+    if (initialPlays.length >= playerCount) {
+      throw ArgumentError('Invalid saved trick plays.');
+    }
+
+    final playedByPlayers = <int>{};
+
+    for (var i = 0; i < initialPlays.length; i++) {
+      final play = initialPlays[i];
+      final expectedPlayer = (dealerIndex + 1 + i) % playerCount;
+
+      if (play.playerIndex != expectedPlayer ||
+          !playedByPlayers.add(play.playerIndex)) {
+        throw ArgumentError('Invalid saved trick play order.');
+      }
+    }
+
+    for (var i = 0; i < playerCount; i++) {
+      final expectedCards =
+          8 - completedTricks - (playedByPlayers.contains(i) ? 1 : 0);
+
+      if (hands[i].length != expectedCards) {
+        throw ArgumentError('Invalid saved hand for player $i.');
+      }
+    }
+
+    plays.addAll(initialPlays);
   }
 
   int get firstPlayerIndex =>
@@ -54,7 +85,6 @@ class TrickEngine {
 
     final firstCard = plays.first.card;
 
-    // LORIS as the first card means Spades is led.
     if (firstCard.isLoris) {
       return Suit.spades;
     }
@@ -106,7 +136,6 @@ class TrickEngine {
       throw StateError('Trick is not complete yet.');
     }
 
-    // LORIS always wins.
     for (final play in plays) {
       if (play.card.isLoris) {
         return play.playerIndex;
@@ -130,7 +159,6 @@ class TrickEngine {
     return candidates.first.playerIndex;
   }
 
-  // Start the next trick without restoring played cards.
   void resetTrick() {
     if (!isComplete) {
       throw StateError(
