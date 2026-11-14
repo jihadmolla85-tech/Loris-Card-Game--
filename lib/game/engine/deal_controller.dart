@@ -89,10 +89,11 @@ class DealController {
   }
 
   List<List<Card>> redeal() {
-    if (!redealController.shouldRedeal) {
-      throw StateError('Redeal is not required.');
-    }
-
-    return _performDeal();
+  if (!redealController.shouldRedeal) {
+    throw StateError('Redeal is not required.');
   }
+
+  redealController.reset();
+
+  return _performDeal();
 }
