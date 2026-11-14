@@ -171,6 +171,35 @@ void main() {
       );
     });
 
+    test('Rejects deck with missing LORIS', () {
+      final invalidDeck = createDeck(4)
+          .where((card) => !card.isLoris)
+          .toList();
+
+      expect(
+        () => controller.deal(
+          deck: invalidDeck,
+          playerCount: 4,
+          dealerIndex: 0,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('Rejects deck with duplicate cards', () {
+      final invalidDeck = createDeck(4);
+      invalidDeck[1] = invalidDeck[0];
+
+      expect(
+        () => controller.deal(
+          deck: invalidDeck,
+          playerCount: 4,
+          dealerIndex: 0,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('Throws when validating before dealing', () {
       expect(
         () => controller.validateDeal(
