@@ -164,5 +164,57 @@ void main() {
 
       expect(match.dealerIndex, 0);
     });
+
+    test('Supports a six-player match', () {
+      final sixPlayerMatch = GameMatchController(
+        initialDealerIndex: 5,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+
+      final hands = List.generate(
+        6,
+        (_) => List.generate(
+          8,
+          (i) => Card.normal(
+            suit: Suit.clubs,
+            rank: 7 + i,
+          ),
+        ),
+      );
+
+      sixPlayerMatch.startRound(
+        hands: hands,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      expect(sixPlayerMatch.currentRound.dealerIndex, 5);
+      expect(sixPlayerMatch.nextPlayerIndex, 0);
+    });
+
+    test('Rejects an invalid player count', () {
+      final invalidHands = List.generate(
+        5,
+        (_) => List.generate(
+          8,
+          (i) => Card.normal(
+            suit: Suit.clubs,
+            rank: 7 + i,
+          ),
+        ),
+      );
+
+      expect(
+        () => match.startRound(
+          hands: invalidHands,
+          trumpSuit: Suit.spades,
+          biddingTeam: 0,
+          bidAmount: 4,
+        ),
+        throwsArgumentError,
+      );
+    });
   });
 }
