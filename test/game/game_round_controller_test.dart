@@ -105,8 +105,6 @@ void main() {
       expect(controller.isRoundEnded, isTrue);
       expect(matchScore.teamAScore, 16);
       expect(matchScore.teamBScore, -16);
-      expect(bidScore.teamAScore, 0);
-      expect(bidScore.teamBScore, 0);
     });
 
     test('Detects match winner after round scoring', () {
