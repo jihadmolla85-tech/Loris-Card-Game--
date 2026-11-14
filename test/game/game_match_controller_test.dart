@@ -1,0 +1,168 @@
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:loris_card_game/game/engine/game_match_controller.dart';
+import 'package:loris_card_game/game/engine/match_score_engine.dart';
+import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
+import 'package:loris_card_game/game/models/loris_card.dart';
+
+void main() {
+  group('LORIS Game Match Controller', () {
+    late MatchScoreEngine matchScore;
+    late BidScoringEngine bidScore;
+    late GameMatchController match;
+
+    List<List<Card>> createHands({
+      bool teamBWins = false,
+    }) {
+      return List.generate(4, (player) {
+        return List.generate(8, (i) {
+          final rank = teamBWins
+              ? (player == 3 ? 14 - i : 7 + i)
+              : (player == 0 ? 14 - i : 7 + i);
+
+          return Card.normal(
+            suit: Suit.clubs,
+            rank: rank,
+          );
+        });
+      });
+    }
+
+    setUp(() {
+      matchScore = MatchScoreEngine();
+      bidScore = BidScoringEngine();
+
+      match = GameMatchController(
+        initialDealerIndex: 3,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+    });
+
+    void playOneTrick() {
+      final round = match.currentRound;
+
+      for (var i = 0; i < 4; i++) {
+        final player = round.trickEngine.currentPlayerIndex;
+        final card = round.trickEngine.hands[player].first;
+
+        match.playCard(player, card);
+      }
+
+      match.completeTrick();
+    }
+
+    test('Starts with the initial dealer', () {
+      expect(match.dealerIndex, 3);
+      expect(match.hasStarted, isFalse);
+      expect(match.nextPlayerIndex, isNull);
+    });
+
+    test('Starts a new round using the current dealer', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      expect(match.hasStarted, isTrue);
+      expect(match.currentRound.dealerIndex, 3);
+      expect(match.nextPlayerIndex, 0);
+    });
+
+    test('Prevents starting another round before current round ends', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      expect(
+        () => match.startRound(
+          hands: createHands(),
+          trumpSuit: Suit.spades,
+          biddingTeam: 0,
+          bidAmount: 4,
+        ),
+        throwsStateError,
+      );
+    });
+
+    test('Keeps the dealer when the dealer team score is below 1', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(match.dealerIndex, 3);
+    });
+
+    test('Rotates dealer when dealer team reaches at least 1 point', () {
+      match.startRound(
+        hands: createHands(teamBWins: true),
+        trumpSuit: Suit.spades,
+        biddingTeam: 1,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(matchScore.teamBScore, 4);
+      expect(match.dealerIndex, 0);
+    });
+
+    test('Detects match winner and prevents another round', () {
+      matchScore.teamAScore = 28;
+      matchScore.teamBScore = -28;
+
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(match.isMatchOver, isTrue);
+      expect(match.matchWinner, MatchWinner.teamA);
+
+      expect(
+        () => match.startRound(
+          hands: createHands(),
+          trumpSuit: Suit.spades,
+          biddingTeam: 0,
+          bidAmount: 4,
+        ),
+        throwsStateError,
+      );
+    });
+
+    test('Does not advance dealer more than once', () {
+      match.startRound(
+        hands: createHands(teamBWins: true),
+        trumpSuit: Suit.spades,
+        biddingTeam: 1,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(match.dealerIndex, 0);
+    });
+  });
+}
