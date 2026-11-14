@@ -302,101 +302,65 @@ void main() {
         ),
         throwsArgumentError,
       );
-   test('Redeals when everyone passes', () {
-  final firstHands = match.startRoundWithDeal(
-    deck: createDeck(),
-    playerCount: 4,
-    trumpSuit: Suit.spades,
-    biddingTeam: 0,
-    bidAmount: 4,
-  );
+    });
 
-  final newHands = match.validateAndRedeal(
-    everyonePassed: true,
-    bidderHasTrumpSuit: true,
-  );
+    test('Redeals when everyone passes', () {
+      final firstHands = match.startRoundWithDeal(
+        deck: createDeck(),
+        playerCount: 4,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
 
-  expect(newHands.length, 4);
-  expect(newHands.every((hand) => hand.length == 8), isTrue);
-  expect(match.dealerIndex, 3);
-  expect(matchScore.teamAScore, 0);
-  expect(matchScore.teamBScore, 0);
-  expect(identical(firstHands, newHands), isFalse);
-});
+      final newHands = match.validateAndRedeal(
+        everyonePassed: true,
+        bidderHasTrumpSuit: true,
+      );
 
-test('Keeps the same deal when redeal is not required', () {
-  final hands = match.startRoundWithDeal(
-    deck: createDeck(),
-    playerCount: 4,
-    trumpSuit: Suit.spades,
-    biddingTeam: 0,
-    bidAmount: 4,
-  );
+      expect(newHands.length, 4);
+      expect(newHands.every((hand) => hand.length == 8), isTrue);
+      expect(match.dealerIndex, 3);
+      expect(matchScore.teamAScore, 0);
+      expect(matchScore.teamBScore, 0);
+      expect(identical(firstHands, newHands), isFalse);
+    });
 
-  final result = match.validateAndRedeal(
-    everyonePassed: false,
-    bidderHasTrumpSuit: true,
-  );
+    test('Keeps the same deal when redeal is not required', () {
+      final hands = match.startRoundWithDeal(
+        deck: createDeck(),
+        playerCount: 4,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
 
-  expect(identical(result, hands), isTrue);
-  expect(match.dealerIndex, 3);
-});test('Redeals when everyone passes', () {
-  final firstHands = match.startRoundWithDeal(
-    deck: createDeck(),
-    playerCount: 4,
-    trumpSuit: Suit.spades,
-    biddingTeam: 0,
-    bidAmount: 4,
-  );
+      final result = match.validateAndRedeal(
+        everyonePassed: false,
+        bidderHasTrumpSuit: true,
+      );
 
-  final newHands = match.validateAndRedeal(
-    everyonePassed: true,
-    bidderHasTrumpSuit: true,
-  );
+      expect(identical(result, hands), isTrue);
+      expect(match.dealerIndex, 3);
+    });
 
-  expect(newHands.length, 4);
-  expect(newHands.every((hand) => hand.length == 8), isTrue);
-  expect(match.dealerIndex, 3);
-  expect(matchScore.teamAScore, 0);
-  expect(matchScore.teamBScore, 0);
-  expect(identical(firstHands, newHands), isFalse);
-});
+    test('Redeals when bidder has no trump suit', () {
+      match.startRoundWithDeal(
+        deck: createDeck(),
+        playerCount: 4,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
 
-test('Keeps the same deal when redeal is not required', () {
-  final hands = match.startRoundWithDeal(
-    deck: createDeck(),
-    playerCount: 4,
-    trumpSuit: Suit.spades,
-    biddingTeam: 0,
-    bidAmount: 4,
-  );
+      final newHands = match.validateAndRedeal(
+        everyonePassed: false,
+        bidderHasTrumpSuit: false,
+      );
 
-  final result = match.validateAndRedeal(
-    everyonePassed: false,
-    bidderHasTrumpSuit: true,
-  );
-
-  expect(identical(result, hands), isTrue);
-  expect(match.dealerIndex, 3);
-});
-
-test('Redeals when bidder has no trump suit', () {
-  match.startRoundWithDeal(
-    deck: createDeck(),
-    playerCount: 4,
-    trumpSuit: Suit.spades,
-    biddingTeam: 0,
-    bidAmount: 4,
-  );
-
-  final newHands = match.validateAndRedeal(
-    everyonePassed: false,
-    bidderHasTrumpSuit: false,
-  );
-
-  expect(newHands.length, 4);
-  expect(newHands.every((hand) => hand.length == 8), isTrue);
-  expect(match.dealerIndex, 3);
-});
+      expect(newHands.length, 4);
+      expect(newHands.every((hand) => hand.length == 8), isTrue);
+      expect(match.dealerIndex, 3);
+    });
   });
 }
