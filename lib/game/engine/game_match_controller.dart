@@ -3,6 +3,10 @@ import 'game_round_controller.dart';
 import 'match_score_engine.dart';
 import 'bid_scoring_engine.dart';
 import 'deal_controller.dart';
+import 'sixteen_call_engine.dart';
+import 'trick_engine.dart';
+import 'game_state_snapshot.dart';
+import 'game_save_service.dart';
 import '../models/loris_card.dart';
 
 class GameMatchController {
@@ -160,7 +164,6 @@ class GameMatchController {
 
     final newHands = controller.redeal();
 
-    // Redeal starts a fresh bidding cycle.
     _currentRound = null;
     _dealerAdvanced = false;
 
@@ -214,5 +217,168 @@ class GameMatchController {
     }
 
     return winnerIndex;
+  }
+
+  GameStateSnapshot createSnapshot() {
+    final round = _currentRound;
+    final controller = dealController;
+
+    final hands = round?.trickEngine.hands ??
+        controller?.currentHands ??
+        <List<Card>>[];
+
+    final sixteen = round?.sixteenCallEngine;
+    final redeal = controller?.redealController.lastResult;
+
+    return GameStateSnapshot(
+      dealerIndex: dealerIndex,
+      dealerAdvanced: _dealerAdvanced,
+      teamAScore: matchScoreEngine.teamAScore,
+      teamBScore: matchScoreEngine.teamBScore,
+      playerCount: hands.isNotEmpty
+          ? hands.length
+          : controller?.playerCount,
+      originalDeck: controller?.originalDeck ?? const [],
+      hands: hands
+          .map((hand) => List<Card>.from(hand))
+          .toList(),
+      trumpSuit: round?.trickEngine.trumpSuit,
+      biddingTeam: round?.biddingTeam,
+      bidAmount: round?.bidAmount,
+      trickPlays: round?.trickEngine.plays
+              .map((play) => SnapshotTrickPlay(
+                    playerIndex: play.playerIndex,
+                    card: play.card,
+                  ))
+              .toList() ??
+          const [],
+      completedTricks: round?.completedTricks ?? 0,
+      biddingTeamTricks: round?.biddingTeamTricks ?? 0,
+      isRoundScored: round?.isRoundScored ?? false,
+      sixteenCallStatus: sixteen?.status.name ?? 'notCalled',
+      sixteenCompletedTricks: sixteen?.completedTricks ?? 0,
+      sixteenBiddingTeamTricks:
+          sixteen?.biddingTeamTricks ?? 0,
+      sixteenLastTrickWinnerIndex:
+          sixteen?.lastTrickWinnerIndex,
+      sixteenCallerIndex: sixteen?.callerIndex,
+      sixteenBiddingTeamPoints:
+          sixteen?.biddingTeamPoints ?? 0,
+      sixteenOpposingTeamPoints:
+          sixteen?.opposingTeamPoints ?? 0,
+      redealShouldRedeal: redeal?.shouldRedeal ?? false,
+      redealReasons: redeal?.reasons
+              .map((reason) => reason.name)
+              .toList() ??
+          const [],
+      redealDealerIndex: redeal?.sameDealerIndex,
+    );
+  }
+
+  void restoreSnapshot(GameStateSnapshot snapshot) {
+    if (snapshot.version != 1) {
+      throw FormatException(
+        'Unsupported save version: ${snapshot.version}',
+      );
+    }
+
+    if (snapshot.dealerIndex < 0 ||
+        snapshot.dealerIndex >= 6) {
+      throw const FormatException('Invalid saved dealer index.');
+    }
+
+    dealerIndex = snapshot.dealerIndex;
+    _dealerAdvanced = snapshot.dealerAdvanced;
+
+    matchScoreEngine.teamAScore = snapshot.teamAScore;
+    matchScoreEngine.teamBScore = snapshot.teamBScore;
+
+    final controller = dealController;
+
+    if (snapshot.playerCount != null &&
+        snapshot.hands.isNotEmpty &&
+        controller != null) {
+      if (snapshot.originalDeck.isNotEmpty) {
+        controller.restoreDeal(
+          originalDeck: snapshot.originalDeck,
+          hands: snapshot.hands,
+          dealerIndex: snapshot.dealerIndex,
+          playerCount: snapshot.playerCount!,
+        );
+      }
+
+      if (snapshot.redealDealerIndex != null) {
+        controller.redealController.restoreResult(
+          shouldRedeal: snapshot.redealShouldRedeal,
+          reasons: snapshot.redealReasons,
+          dealerIndex: snapshot.redealDealerIndex!,
+        );
+      }
+    }
+
+    _currentRound = null;
+
+    if (snapshot.hands.isEmpty ||
+        snapshot.trumpSuit == null ||
+        snapshot.biddingTeam == null ||
+        snapshot.bidAmount == null) {
+      return;
+    }
+
+    final restoredStatus = SixteenCallStatus.values.firstWhere(
+      (status) => status.name == snapshot.sixteenCallStatus,
+      orElse: () => SixteenCallStatus.notCalled,
+    );
+
+    final restoredPlays = snapshot.trickPlays
+        .map((play) => TrickPlay(
+              playerIndex: play.playerIndex,
+              card: play.card,
+            ))
+        .toList();
+
+    _currentRound = GameRoundController(
+      hands: snapshot.hands
+          .map((hand) => List<Card>.from(hand))
+          .toList(),
+      dealerIndex: snapshot.dealerIndex,
+      trumpSuit: snapshot.trumpSuit!,
+      biddingTeam: snapshot.biddingTeam!,
+      bidAmount: snapshot.bidAmount!,
+      matchScoreEngine: matchScoreEngine,
+      bidScoringEngine: bidScoringEngine,
+      restoredCompletedTricks: snapshot.completedTricks,
+      restoredBiddingTeamTricks: snapshot.biddingTeamTricks,
+      restoredIsRoundScored: snapshot.isRoundScored,
+      initialTrickPlays: restoredPlays,
+      restoredSixteenCallStatus: restoredStatus,
+      restoredSixteenCompletedTricks:
+          snapshot.sixteenCompletedTricks,
+      restoredSixteenBiddingTeamTricks:
+          snapshot.sixteenBiddingTeamTricks,
+      restoredSixteenLastTrickWinnerIndex:
+          snapshot.sixteenLastTrickWinnerIndex,
+      restoredSixteenCallerIndex:
+          snapshot.sixteenCallerIndex,
+      restoredSixteenBiddingTeamPoints:
+          snapshot.sixteenBiddingTeamPoints,
+      restoredSixteenOpposingTeamPoints:
+          snapshot.sixteenOpposingTeamPoints,
+    );
+  }
+
+  Future<void> saveGame(GameSaveService service) async {
+    await service.save(createSnapshot());
+  }
+
+  Future<bool> resumeGame(GameSaveService service) async {
+    final snapshot = await service.load();
+
+    if (snapshot == null) {
+      return false;
+    }
+
+    restoreSnapshot(snapshot);
+    return true;
   }
 }
