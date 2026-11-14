@@ -1,3 +1,4 @@
+
 import '../models/loris_card.dart';
 
 class CardDealer {
@@ -24,9 +25,19 @@ class CardDealer {
       (_) => <Card>[],
     );
 
-    for (var i = 0; i < deck.length; i++) {
-      final player = (firstPlayerIndex + i) % playerCount;
-      hands[player].add(deck[i]);
+    var deckIndex = 0;
+
+    // Two rounds of dealing, four cards per player each time.
+    for (var round = 0; round < 2; round++) {
+      for (var card = 0; card < 4; card++) {
+        for (var offset = 0; offset < playerCount; offset++) {
+          final playerIndex =
+              (firstPlayerIndex + offset) % playerCount;
+
+          hands[playerIndex].add(deck[deckIndex]);
+          deckIndex++;
+        }
+      }
     }
 
     return hands;
