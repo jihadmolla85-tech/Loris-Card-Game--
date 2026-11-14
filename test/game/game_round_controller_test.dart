@@ -83,10 +83,10 @@ void main() {
       }
 
       expect(
-        () => controller.playCard(0, Card.normal(
-          suit: Suit.clubs,
-          rank: 7,
-        )),
+        () => controller.playCard(
+          0,
+          Card.normal(suit: Suit.clubs, rank: 7),
+        ),
         throwsStateError,
       );
     });
@@ -105,8 +105,6 @@ void main() {
       expect(controller.isRoundEnded, isTrue);
       expect(matchScore.teamAScore, 16);
       expect(matchScore.teamBScore, -16);
-
-      // 16 Call points must not be added to Bid Scoring again.
       expect(bidScore.teamAScore, 0);
       expect(bidScore.teamBScore, 0);
     });
@@ -127,6 +125,8 @@ void main() {
         controller.getNextDealerIndex(isRedeal: true),
         3,
       );
+    });
+
     test('Handles an 8 bid without enabling 16 Call', () {
       final hands = List.generate(4, (player) {
         return List.generate(8, (i) {
@@ -164,6 +164,6 @@ void main() {
       expect(controller.isRoundScored, isTrue);
       expect(matchScore.teamAScore, -16);
       expect(matchScore.teamBScore, 16);
-    });    });
+    });
   });
 }
