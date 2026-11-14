@@ -16,6 +16,18 @@ class GameRoundController {
     required this.matchScoreEngine,
     required this.bidScoringEngine,
   }) {
+    if (hands.length != 4 && hands.length != 6) {
+      throw ArgumentError('Player count must be 4 or 6.');
+    }
+
+    if (dealerIndex < 0 || dealerIndex >= hands.length) {
+      throw ArgumentError('Invalid dealer index.');
+    }
+
+    if (biddingTeam != 0 && biddingTeam != 1) {
+      throw ArgumentError('Team must be 0 or 1.');
+    }
+
     if (bidAmount < 4 || bidAmount > 8) {
       throw ArgumentError('Bid must be between 4 and 8.');
     }
@@ -27,12 +39,12 @@ class GameRoundController {
     );
 
     sixteenCallEngine = bidAmount < 8
-    ? SixteenCallEngine(
-        playerCount: hands.length,
-        biddingTeam: biddingTeam,
-        bidAmount: bidAmount,
-      )
-    : null;
+        ? SixteenCallEngine(
+            playerCount: hands.length,
+            biddingTeam: biddingTeam,
+            bidAmount: bidAmount,
+          )
+        : null;
   }
 
   final int dealerIndex;
@@ -68,11 +80,16 @@ class GameRoundController {
   }
 
   int completeTrick() {
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
+    }
+
     if (!trickEngine.isComplete) {
       throw StateError('Trick is not complete.');
     }
 
     final winnerIndex = trickEngine.winnerIndex;
+
     completedTricks++;
 
     if (winnerIndex % 2 == biddingTeam) {
@@ -118,7 +135,7 @@ class GameRoundController {
 
     if (engine != null &&
         (engine.status == SixteenCallStatus.succeeded ||
-         engine.status == SixteenCallStatus.failed)) {
+            engine.status == SixteenCallStatus.failed)) {
       teamAPoints = biddingTeam == 0
           ? engine.biddingTeamPoints
           : engine.opposingTeamPoints;
@@ -138,6 +155,9 @@ class GameRoundController {
       teamBPoints = -teamAPoints;
     }
 
+    // Only MatchScoreEngine stores the match score.
+    // BidScoringEngine currently also updates its own teamScores,
+    // which should be removed in a later cleanup.
     matchScoreEngine.applyRoundScore(
       teamAPoints: teamAPoints,
       teamBPoints: teamBPoints,
