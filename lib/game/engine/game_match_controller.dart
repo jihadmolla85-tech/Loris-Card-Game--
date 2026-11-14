@@ -2,6 +2,7 @@
 import 'game_round_controller.dart';
 import 'match_score_engine.dart';
 import 'bid_scoring_engine.dart';
+import 'deal_controller.dart';
 import '../models/loris_card.dart';
 
 class GameMatchController {
@@ -9,6 +10,7 @@ class GameMatchController {
     required int initialDealerIndex,
     required this.matchScoreEngine,
     required this.bidScoringEngine,
+    this.dealController,
   }) : dealerIndex = initialDealerIndex {
     if (initialDealerIndex < 0 || initialDealerIndex >= 6) {
       throw ArgumentError('Invalid initial dealer index.');
@@ -19,6 +21,7 @@ class GameMatchController {
 
   final MatchScoreEngine matchScoreEngine;
   final BidScoringEngine bidScoringEngine;
+  final DealController? dealController;
 
   GameRoundController? _currentRound;
   bool _dealerAdvanced = false;
@@ -63,6 +66,10 @@ class GameMatchController {
       throw ArgumentError('Player count must be 4 or 6.');
     }
 
+    if (dealerIndex >= hands.length) {
+      throw ArgumentError('Invalid dealer index for player count.');
+    }
+
     _currentRound = GameRoundController(
       hands: hands,
       dealerIndex: dealerIndex,
@@ -74,6 +81,43 @@ class GameMatchController {
     );
 
     _dealerAdvanced = false;
+  }
+
+  List<List<Card>> startRoundWithDeal({
+    required List<Card> deck,
+    required int playerCount,
+    required Suit trumpSuit,
+    required int biddingTeam,
+    required int bidAmount,
+  }) {
+    final controller = dealController;
+
+    if (controller == null) {
+      throw StateError('DealController has not been configured.');
+    }
+
+    if (playerCount != 4 && playerCount != 6) {
+      throw ArgumentError('Player count must be 4 or 6.');
+    }
+
+    if (dealerIndex >= playerCount) {
+      throw ArgumentError('Invalid dealer index for player count.');
+    }
+
+    final hands = controller.deal(
+      deck: deck,
+      playerCount: playerCount,
+      dealerIndex: dealerIndex,
+    );
+
+    startRound(
+      hands: hands,
+      trumpSuit: trumpSuit,
+      biddingTeam: biddingTeam,
+      bidAmount: bidAmount,
+    );
+
+    return hands;
   }
 
   void playCard(int playerIndex, Card card) {
