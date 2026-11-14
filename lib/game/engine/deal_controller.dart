@@ -1,3 +1,4 @@
+
 import '../models/loris_card.dart';
 import 'card_dealer.dart';
 import 'deck_shuffle_engine.dart';
@@ -57,7 +58,6 @@ class DealController {
     final dealer = _dealerIndex!;
 
     final shuffledDeck = shuffleEngine.shuffle(deck);
-
     final firstPlayerIndex = (dealer + 1) % players;
 
     _currentHands = CardDealer.deal(
@@ -89,11 +89,12 @@ class DealController {
   }
 
   List<List<Card>> redeal() {
-  if (!redealController.shouldRedeal) {
-    throw StateError('Redeal is not required.');
+    if (!redealController.shouldRedeal) {
+      throw StateError('Redeal is not required.');
+    }
+
+    redealController.reset();
+
+    return _performDeal();
   }
-
-  redealController.reset();
-
-  return _performDeal();
 }
