@@ -1,3 +1,4 @@
+
 class BidScoreResult {
   final bool success;
   final int biddingTeam;
@@ -19,7 +20,7 @@ class BidScoreResult {
 class BidScoringEngine {
   final List<int> teamScores = [0, 0];
 
-  BidScoreResult calculateAndApply({
+  BidScoreResult calculate({
     required int biddingTeam,
     required int bidAmount,
     required int tricksWonByBiddingTeam,
@@ -46,10 +47,6 @@ class BidScoringEngine {
         : bidAmount * 2;
 
     final biddingPoints = success ? points : -points;
-    final opposingPoints = -biddingPoints;
-
-    teamScores[biddingTeam] += biddingPoints;
-    teamScores[1 - biddingTeam] += opposingPoints;
 
     return BidScoreResult(
       success: success,
@@ -57,8 +54,25 @@ class BidScoringEngine {
       bidAmount: bidAmount,
       tricksWon: tricksWonByBiddingTeam,
       biddingTeamPoints: biddingPoints,
-      opposingTeamPoints: opposingPoints,
+      opposingTeamPoints: -biddingPoints,
     );
+  }
+
+  BidScoreResult calculateAndApply({
+    required int biddingTeam,
+    required int bidAmount,
+    required int tricksWonByBiddingTeam,
+  }) {
+    final result = calculate(
+      biddingTeam: biddingTeam,
+      bidAmount: bidAmount,
+      tricksWonByBiddingTeam: tricksWonByBiddingTeam,
+    );
+
+    teamScores[biddingTeam] += result.biddingTeamPoints;
+    teamScores[1 - biddingTeam] += result.opposingTeamPoints;
+
+    return result;
   }
 
   int get teamAScore => teamScores[0];
