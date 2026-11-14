@@ -1,4 +1,3 @@
-
 class BidScoreResult {
   final bool success;
   final int biddingTeam;
@@ -18,7 +17,9 @@ class BidScoreResult {
 }
 
 class BidScoringEngine {
-  BidScoreResult calculate({
+  final List<int> teamScores = [0, 0];
+
+  BidScoreResult calculateAndApply({
     required int biddingTeam,
     required int bidAmount,
     required int tricksWonByBiddingTeam,
@@ -47,6 +48,9 @@ class BidScoringEngine {
     final biddingPoints = success ? points : -points;
     final opposingPoints = -biddingPoints;
 
+    teamScores[biddingTeam] += biddingPoints;
+    teamScores[1 - biddingTeam] += opposingPoints;
+
     return BidScoreResult(
       success: success,
       biddingTeam: biddingTeam,
@@ -55,5 +59,13 @@ class BidScoringEngine {
       biddingTeamPoints: biddingPoints,
       opposingTeamPoints: opposingPoints,
     );
+  }
+
+  int get teamAScore => teamScores[0];
+  int get teamBScore => teamScores[1];
+
+  void resetScores() {
+    teamScores[0] = 0;
+    teamScores[1] = 0;
   }
 }
