@@ -26,13 +26,13 @@ class GameRoundController {
       trumpSuit: trumpSuit,
     );
 
-    if (bidAmount < 8) {
-      sixteenCallEngine = SixteenCallEngine(
+    sixteenCallEngine = bidAmount < 8
+    ? SixteenCallEngine(
         playerCount: hands.length,
         biddingTeam: biddingTeam,
         bidAmount: bidAmount,
-      );
-    }
+      )
+    : null;
   }
 
   final int dealerIndex;
