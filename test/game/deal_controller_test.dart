@@ -186,8 +186,6 @@ void main() {
       );
     });
 
-    });
-
     test('Rejects deck with duplicate cards', () {
       final invalidDeck = createDeck(4);
       invalidDeck[1] = invalidDeck[0];
