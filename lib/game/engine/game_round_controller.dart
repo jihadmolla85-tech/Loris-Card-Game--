@@ -19,8 +19,7 @@ class BidScoreResult {
 
 class BidScoringEngine {
   final List<int> teamScores = [0, 0];
-
-  /// Calculates the round score without changing the stored scores.
+// MatchScoreEngine is the single source of truth for match scores..
   BidScoreResult calculate({
     required int biddingTeam,
     required int bidAmount,
