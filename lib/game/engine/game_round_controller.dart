@@ -31,7 +31,7 @@ class GameRoundController {
 
   final int dealerIndex;
   final int biddingTeam;
-
+  final int bidAmount;
   final MatchScoreEngine matchScoreEngine;
   final BidScoringEngine bidScoringEngine;
 
