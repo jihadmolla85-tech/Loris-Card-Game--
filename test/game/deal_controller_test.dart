@@ -1,3 +1,6 @@
+
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loris_card_game/game/engine/deal_controller.dart';
 import 'package:loris_card_game/game/engine/deck_shuffle_engine.dart';
@@ -11,7 +14,7 @@ void main() {
 
     setUp(() {
       controller = DealController(
-        shuffleEngine: DeckShuffleEngine(),
+        shuffleEngine: DeckShuffleEngine(random: Random(42)),
         redealController: RedealController(
           validationEngine: RedealValidationEngine(),
         ),
@@ -57,16 +60,43 @@ void main() {
     });
 
     test('Starts dealing from the dealer right', () {
-      final deck = createDeck(4);
-
       final hands = controller.deal(
-        deck: deck,
+        deck: createDeck(4),
         playerCount: 4,
         dealerIndex: 1,
       );
 
-      expect(hands[2].length, 8);
+      expect(hands.length, 4);
       expect(controller.dealerIndex, 1);
+
+      final shuffledDeck = DeckShuffleEngine(
+        random: Random(42),
+      ).shuffle(createDeck(4));
+
+      expect(hands[2].take(4).toList(), [
+        shuffledDeck[0],
+        shuffledDeck[4],
+        shuffledDeck[8],
+        shuffledDeck[12],
+      ]);
+
+      expect(hands[2].skip(4).toList(), [
+        shuffledDeck[16],
+        shuffledDeck[20],
+        shuffledDeck[24],
+        shuffledDeck[28],
+      ]);
+    });
+
+    test('Deals four cards first and four cards second', () {
+      final hands = controller.deal(
+        deck: createDeck(4),
+        playerCount: 4,
+        dealerIndex: 0,
+      );
+
+      expect(hands.every((hand) => hand.take(4).length == 4), isTrue);
+      expect(hands.every((hand) => hand.skip(4).length == 4), isTrue);
     });
 
     test('Keeps the same dealer after redeal', () {
