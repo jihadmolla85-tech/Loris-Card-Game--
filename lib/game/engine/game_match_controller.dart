@@ -3,6 +3,7 @@ import 'game_round_controller.dart';
 import 'match_score_engine.dart';
 import 'bid_scoring_engine.dart';
 import 'deal_controller.dart';
+import 'redeal_validation_engine.dart';
 import '../models/loris_card.dart';
 
 class GameMatchController {
@@ -24,6 +25,7 @@ class GameMatchController {
   final DealController? dealController;
 
   GameRoundController? _currentRound;
+
   bool _dealerAdvanced = false;
 
   GameRoundController get currentRound {
@@ -67,7 +69,9 @@ class GameMatchController {
     }
 
     if (dealerIndex >= hands.length) {
-      throw ArgumentError('Invalid dealer index for player count.');
+      throw ArgumentError(
+        'Invalid dealer index for player count.',
+      );
     }
 
     _currentRound = GameRoundController(
@@ -93,7 +97,20 @@ class GameMatchController {
     final controller = dealController;
 
     if (controller == null) {
-      throw StateError('DealController has not been configured.');
+      throw StateError(
+        'DealController has not been configured.',
+      );
+    }
+
+    if (isMatchOver) {
+      throw StateError('The match has already ended.');
+    }
+
+    if (_currentRound != null &&
+        !_currentRound!.isRoundEnded) {
+      throw StateError(
+        'The current round has not ended.',
+      );
     }
 
     if (playerCount != 4 && playerCount != 6) {
@@ -101,7 +118,9 @@ class GameMatchController {
     }
 
     if (dealerIndex >= playerCount) {
-      throw ArgumentError('Invalid dealer index for player count.');
+      throw ArgumentError(
+        'Invalid dealer index for player count.',
+      );
     }
 
     final hands = controller.deal(
@@ -118,6 +137,40 @@ class GameMatchController {
     );
 
     return hands;
+  }
+
+  List<List<Card>> validateAndRedeal({
+    required bool everyonePassed,
+    required bool bidderHasTrumpSuit,
+  }) {
+    final controller = dealController;
+
+    if (controller == null) {
+      throw StateError(
+        'DealController has not been configured.',
+      );
+    }
+
+    final hands = controller.currentHands;
+
+    if (hands == null) {
+      throw StateError('Deal has not started.');
+    }
+
+    final result = controller.validateDeal(
+      everyonePassed: everyonePassed,
+      bidderHasTrumpSuit: bidderHasTrumpSuit,
+    );
+
+    if (!result.shouldRedeal) {
+      return hands;
+    }
+
+    if (result.sameDealerIndex != dealerIndex) {
+      throw StateError('Redeal dealer does not match.');
+    }
+
+    return controller.redeal();
   }
 
   void playCard(int playerIndex, Card card) {
