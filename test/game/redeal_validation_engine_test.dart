@@ -12,24 +12,24 @@ void main() {
     });
 
     List<Card> normalHand() {
-  return List.generate(
-    8,
-    (i) => Card.normal(
-      suit: Suit.clubs,
-      rank: 10 + (i % 5),
-    ),
-  );
-}
+      return List.generate(
+        8,
+        (i) => Card.normal(
+          suit: Suit.clubs,
+          rank: 10 + (i % 5),
+        ),
+      );
+    }
 
     List<Card> lowHand() {
-  return List.generate(
-    8,
-    (i) => Card.normal(
-      suit: Suit.clubs,
-      rank: 7 + (i % 3),
-    ),
-  );
-}
+      return List.generate(
+        8,
+        (i) => Card.normal(
+          suit: Suit.clubs,
+          rank: 7 + (i % 3),
+        ),
+      );
+    }
 
     List<List<Card>> validHands(int count) {
       return List.generate(count, (_) => normalHand());
@@ -43,11 +43,9 @@ void main() {
         bidderHasTrumpSuit: true,
       );
 
-      expect(result.shouldRedeal, true);
-      expect(
-        result.reasons,
-        contains(RedealReason.everyonePassed),
-      );
+      expect(result.shouldRedeal, isTrue);
+      expect(result.reasons,
+          contains(RedealReason.everyonePassed));
       expect(result.sameDealerIndex, 2);
     });
 
@@ -62,42 +60,14 @@ void main() {
         bidderHasTrumpSuit: true,
       );
 
-      expect(result.shouldRedeal, true);
-      expect(
-        result.reasons,
-        contains(RedealReason.allCardsBelowTen),
-      );
+      expect(result.shouldRedeal, isTrue);
+      expect(result.reasons,
+          contains(RedealReason.allCardsBelowTen));
     });
-test('LORIS is excluded from below-ten count', () {
-  final hands = normalHands(4);
 
-  hands[0] = List.generate(
-    8,
-    (i) => Card.normal(
-      suit: Suit.clubs,
-      rank: 10 + (i % 5),
-    ),
-  );
-
-  hands[0][7] = Card.loris(replacesRank: 7);
-
-  final result = engine.evaluate(
-    hands: hands,
-    dealerIndex: 0,
-    everyonePassed: false,
-    bidderHasTrumpSuit: true,
-  );
-
-  expect(
-    result.reasons,
-    isNot(contains(RedealReason.allCardsBelowTen)),
-  );
-});
-      final hand = lowHand();
-      hand[0] = Card.loris(replacesRank: 7);
-
+    test('LORIS is excluded from below-ten count', () {
       final hands = validHands(4);
-      hands[0] = hand;
+      hands[0][7] = Card.loris(replacesRank: 7);
 
       final result = engine.evaluate(
         hands: hands,
@@ -106,14 +76,12 @@ test('LORIS is excluded from below-ten count', () {
         bidderHasTrumpSuit: true,
       );
 
-      expect(result.shouldRedeal, true);
-      expect(
-        result.reasons,
-        contains(RedealReason.allCardsBelowTen),
-      );
+      expect(result.shouldRedeal, isFalse);
+      expect(result.reasons,
+          isNot(contains(RedealReason.allCardsBelowTen)));
     });
 
-    test('Redeals when bidder has no selected trump suit', () {
+    test('Redeals when bidder has no trump suit', () {
       final result = engine.evaluate(
         hands: validHands(4),
         dealerIndex: 1,
@@ -121,11 +89,9 @@ test('LORIS is excluded from below-ten count', () {
         bidderHasTrumpSuit: false,
       );
 
-      expect(result.shouldRedeal, true);
-      expect(
-        result.reasons,
-        contains(RedealReason.bidderHasNoTrump),
-      );
+      expect(result.shouldRedeal, isTrue);
+      expect(result.reasons,
+          contains(RedealReason.bidderHasNoTrump));
     });
 
     test('Does not redeal when all conditions are valid', () {
@@ -136,7 +102,7 @@ test('LORIS is excluded from below-ten count', () {
         bidderHasTrumpSuit: true,
       );
 
-      expect(result.shouldRedeal, false);
+      expect(result.shouldRedeal, isFalse);
       expect(result.reasons, isEmpty);
     });
 
@@ -159,7 +125,7 @@ test('LORIS is excluded from below-ten count', () {
         bidderHasTrumpSuit: true,
       );
 
-      expect(result.shouldRedeal, false);
+      expect(result.shouldRedeal, isFalse);
       expect(result.sameDealerIndex, 4);
     });
 
@@ -174,7 +140,7 @@ test('LORIS is excluded from below-ten count', () {
         bidderHasTrumpSuit: false,
       );
 
-      expect(result.shouldRedeal, true);
+      expect(result.shouldRedeal, isTrue);
       expect(result.reasons.length, 2);
     });
 
