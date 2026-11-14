@@ -24,7 +24,6 @@ class GameMatchController {
   final DealController? dealController;
 
   GameRoundController? _currentRound;
-
   bool _dealerAdvanced = false;
 
   GameRoundController get currentRound {
@@ -68,9 +67,7 @@ class GameMatchController {
     }
 
     if (dealerIndex >= hands.length) {
-      throw ArgumentError(
-        'Invalid dealer index for player count.',
-      );
+      throw ArgumentError('Invalid dealer index for player count.');
     }
 
     _currentRound = GameRoundController(
@@ -96,9 +93,7 @@ class GameMatchController {
     final controller = dealController;
 
     if (controller == null) {
-      throw StateError(
-        'DealController has not been configured.',
-      );
+      throw StateError('DealController has not been configured.');
     }
 
     if (isMatchOver) {
@@ -107,9 +102,7 @@ class GameMatchController {
 
     if (_currentRound != null &&
         !_currentRound!.isRoundEnded) {
-      throw StateError(
-        'The current round has not ended.',
-      );
+      throw StateError('The current round has not ended.');
     }
 
     if (playerCount != 4 && playerCount != 6) {
@@ -117,9 +110,7 @@ class GameMatchController {
     }
 
     if (dealerIndex >= playerCount) {
-      throw ArgumentError(
-        'Invalid dealer index for player count.',
-      );
+      throw ArgumentError('Invalid dealer index for player count.');
     }
 
     final hands = controller.deal(
@@ -145,9 +136,7 @@ class GameMatchController {
     final controller = dealController;
 
     if (controller == null) {
-      throw StateError(
-        'DealController has not been configured.',
-      );
+      throw StateError('DealController has not been configured.');
     }
 
     final hands = controller.currentHands;
@@ -169,7 +158,38 @@ class GameMatchController {
       throw StateError('Redeal dealer does not match.');
     }
 
-    return controller.redeal();
+    final newHands = controller.redeal();
+
+    // Redeal starts a fresh bidding cycle.
+    _currentRound = null;
+    _dealerAdvanced = false;
+
+    return newHands;
+  }
+
+  void startRoundWithCurrentDeal({
+    required Suit trumpSuit,
+    required int biddingTeam,
+    required int bidAmount,
+  }) {
+    final controller = dealController;
+
+    if (controller == null) {
+      throw StateError('DealController has not been configured.');
+    }
+
+    final hands = controller.currentHands;
+
+    if (hands == null) {
+      throw StateError('Deal has not started.');
+    }
+
+    startRound(
+      hands: hands,
+      trumpSuit: trumpSuit,
+      biddingTeam: biddingTeam,
+      bidAmount: bidAmount,
+    );
   }
 
   void playCard(int playerIndex, Card card) {
@@ -186,7 +206,6 @@ class GameMatchController {
 
   int completeTrick() {
     final round = currentRound;
-
     final winnerIndex = round.completeTrick();
 
     if (round.isRoundEnded && !_dealerAdvanced) {
