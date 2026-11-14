@@ -1,0 +1,359 @@
+
+name: Build LORIS 16 Call System
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Create 16 Call Engine
+        run: |
+          mkdir -p lib/game/engine
+          cat > lib/game/engine/sixteen_call_engine.dart <<'EOF'
+          enum SixteenCallStatus {
+            notCalled,
+            inProgress,
+            succeeded,
+            failed,
+          }
+
+          class SixteenCallEngine {
+            SixteenCallEngine({
+              required this.playerCount,
+              required this.biddingTeam,
+              required this.bidAmount,
+            }) {
+              if (playerCount != 4 && playerCount != 6) {
+                throw ArgumentError('Player count must be 4 or 6.');
+              }
+
+              if (biddingTeam != 0 && biddingTeam != 1) {
+                throw ArgumentError('Team must be 0 or 1.');
+              }
+
+              if (bidAmount < 4 || bidAmount > 7) {
+                throw ArgumentError(
+                  '16 Call is allowed only after bids 4 to 7.',
+                );
+              }
+            }
+
+            final int playerCount;
+            final int biddingTeam;
+            final int bidAmount;
+
+            int completedTricks = 0;
+            int biddingTeamTricks = 0;
+            int? lastTrickWinnerIndex;
+            int? callerIndex;
+
+            SixteenCallStatus status = SixteenCallStatus.notCalled;
+
+            int biddingTeamPoints = 0;
+            int opposingTeamPoints = 0;
+
+            bool get isRoundEnded =>
+                completedTricks == 8 ||
+                status == SixteenCallStatus.failed ||
+                status == SixteenCallStatus.succeeded;
+
+            bool get canCall =>
+                status == SixteenCallStatus.notCalled &&
+                completedTricks > 0 &&
+                completedTricks < 8 &&
+                biddingTeamTricks >= bidAmount &&
+                lastTrickWinnerIndex != null &&
+                (lastTrickWinnerIndex! % 2) == biddingTeam;
+
+            void call16({required int callerPlayerIndex}) {
+              if (status != SixteenCallStatus.notCalled) {
+                throw StateError('16 Call has already been made.');
+              }
+
+              if (completedTricks == 0 || completedTricks >= 8) {
+                throw StateError(
+                  '16 Call is not allowed at this time.',
+                );
+              }
+
+              if (biddingTeamTricks < bidAmount) {
+                throw StateError(
+                  'Bidding team has not reached its bid.',
+                );
+              }
+
+              if (callerPlayerIndex < 0 ||
+                  callerPlayerIndex >= playerCount) {
+                throw ArgumentError('Invalid caller index.');
+              }
+
+              if (callerPlayerIndex != lastTrickWinnerIndex) {
+                throw StateError(
+                  'Only the previous trick winner can call 16.',
+                );
+              }
+
+              if (callerPlayerIndex % 2 != biddingTeam) {
+                throw StateError(
+                  'Only a member of the bidding team can call 16.',
+                );
+              }
+
+              callerIndex = callerPlayerIndex;
+              status = SixteenCallStatus.inProgress;
+            }
+
+            SixteenCallStatus recordTrickWinner(int winnerIndex) {
+              if (isRoundEnded) {
+                throw StateError('The round has already ended.');
+              }
+
+              if (winnerIndex < 0 || winnerIndex >= playerCount) {
+                throw ArgumentError('Invalid winner index.');
+              }
+
+              completedTricks++;
+              lastTrickWinnerIndex = winnerIndex;
+
+              final winnerTeam = winnerIndex % 2;
+
+              if (winnerTeam == biddingTeam) {
+                biddingTeamTricks++;
+              }
+
+              if (status == SixteenCallStatus.inProgress) {
+                if (winnerTeam != biddingTeam) {
+                  status = SixteenCallStatus.failed;
+                  biddingTeamPoints = -16;
+                  opposingTeamPoints = 16;
+                } else if (completedTricks == 8) {
+                  status = SixteenCallStatus.succeeded;
+                  biddingTeamPoints = 16;
+                  opposingTeamPoints = -16;
+                }
+              }
+
+              return status;
+            }
+          }
+          EOF
+
+      - name: Create 16 Call Tests
+        run: |
+          mkdir -p test/game
+          cat > test/game/sixteen_call_engine_test.dart <<'EOF'
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:loris_card_game/game/engine/sixteen_call_engine.dart';
+
+          void main() {
+            group('LORIS 16 Call Engine', () {
+              late SixteenCallEngine engine;
+
+              SixteenCallEngine createEngine({
+                int bid = 4,
+                int team = 0,
+                int players = 4,
+              }) {
+                return SixteenCallEngine(
+                  playerCount: players,
+                  biddingTeam: team,
+                  bidAmount: bid,
+                );
+              }
+
+              void winFirstFour(SixteenCallEngine game) {
+                game.recordTrickWinner(0);
+                game.recordTrickWinner(2);
+                game.recordTrickWinner(0);
+                game.recordTrickWinner(2);
+              }
+
+              test('Allows bids 4 to 7', () {
+                for (var bid = 4; bid <= 7; bid++) {
+                  expect(
+                    () => createEngine(bid: bid),
+                    returnsNormally,
+                  );
+                }
+              });
+
+              test('Rejects bid 8 for 16 Call', () {
+                expect(
+                  () => createEngine(bid: 8),
+                  throwsArgumentError,
+                );
+              });
+
+              test('Rejects invalid bid', () {
+                expect(
+                  () => createEngine(bid: 3),
+                  throwsArgumentError,
+                );
+              });
+
+              test('Allows 4 and 6 player games', () {
+                expect(
+                  () => createEngine(players: 4),
+                  returnsNormally,
+                );
+                expect(
+                  () => createEngine(players: 6),
+                  returnsNormally,
+                );
+              });
+
+              test('Requires bidding team to reach its bid', () {
+                engine = createEngine(bid: 5);
+                winFirstFour(engine);
+
+                expect(engine.canCall, isFalse);
+                expect(
+                  () => engine.call16(callerPlayerIndex: 2),
+                  throwsStateError,
+                );
+              });
+
+              test('Only previous trick winner can call', () {
+                engine = createEngine();
+                winFirstFour(engine);
+
+                expect(engine.canCall, isTrue);
+                expect(
+                  () => engine.call16(callerPlayerIndex: 0),
+                  throwsStateError,
+                );
+              });
+
+              test('Only bidding team member can call', () {
+                engine = createEngine(team: 1);
+
+                engine.recordTrickWinner(1);
+                engine.recordTrickWinner(3);
+                engine.recordTrickWinner(1);
+                engine.recordTrickWinner(0);
+
+                expect(
+                  () => engine.call16(callerPlayerIndex: 0),
+                  throwsStateError,
+                );
+              });
+
+              test('Previous trick winner can make 16 Call', () {
+                engine = createEngine();
+                winFirstFour(engine);
+
+                engine.call16(callerPlayerIndex: 2);
+
+                expect(
+                  engine.status,
+                  SixteenCallStatus.inProgress,
+                );
+              });
+
+              test('Winning all remaining tricks succeeds', () {
+                engine = createEngine();
+                winFirstFour(engine);
+                engine.call16(callerPlayerIndex: 2);
+
+                engine.recordTrickWinner(0);
+                engine.recordTrickWinner(2);
+                engine.recordTrickWinner(0);
+                engine.recordTrickWinner(2);
+
+                expect(
+                  engine.status,
+                  SixteenCallStatus.succeeded,
+                );
+                expect(engine.biddingTeamPoints, 16);
+                expect(engine.opposingTeamPoints, -16);
+                expect(engine.isRoundEnded, isTrue);
+              });
+
+              test('Losing one trick ends round immediately', () {
+                engine = createEngine();
+                winFirstFour(engine);
+                engine.call16(callerPlayerIndex: 2);
+
+                engine.recordTrickWinner(1);
+
+                expect(
+                  engine.status,
+                  SixteenCallStatus.failed,
+                );
+                expect(engine.biddingTeamPoints, -16);
+                expect(engine.opposingTeamPoints, 16);
+                expect(engine.isRoundEnded, isTrue);
+              });
+
+              test('Cannot play after failed 16 Call', () {
+                engine = createEngine();
+                winFirstFour(engine);
+                engine.call16(callerPlayerIndex: 2);
+                engine.recordTrickWinner(1);
+
+                expect(
+                  () => engine.recordTrickWinner(0),
+                  throwsStateError,
+                );
+              });
+
+              test('Cannot call after all 8 tricks', () {
+                engine = createEngine();
+
+                for (var i = 0; i < 8; i++) {
+                  engine.recordTrickWinner(0);
+                }
+
+                expect(
+                  () => engine.call16(callerPlayerIndex: 0),
+                  throwsStateError,
+                );
+              });
+
+              test('Rejects invalid player index', () {
+                engine = createEngine();
+
+                expect(
+                  () => engine.recordTrickWinner(4),
+                  throwsArgumentError,
+                );
+              });
+
+              test('Rejects a second 16 Call', () {
+                engine = createEngine();
+                winFirstFour(engine);
+                engine.call16(callerPlayerIndex: 2);
+
+                expect(
+                  () => engine.call16(callerPlayerIndex: 2),
+                  throwsStateError,
+                );
+              });
+            });
+          }
+          EOF
+
+      - name: Run Flutter Tests
+        run: flutter test
+
+      - name: Commit 16 Call System
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lib/game/engine/sixteen_call_engine.dart test/game/sixteen_call_engine_test.dart
+          git diff --cached --quiet || git commit -m "Add LORIS 16 call system"
+          git push
