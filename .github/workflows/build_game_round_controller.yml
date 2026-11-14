@@ -1,0 +1,33 @@
+
+name: Build LORIS Game Round Controller
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Analyze Game Round Controller
+        run: |
+          dart analyze \
+            lib/game/engine/game_round_controller.dart \
+            test/game/game_round_controller_test.dart
+
+      - name: Run Game Round Controller Tests
+        run: flutter test test/game/game_round_controller_test.dart
