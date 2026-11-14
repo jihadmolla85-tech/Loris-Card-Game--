@@ -1,30 +1,29 @@
 
-class BidScoreResult {
-  final bool success;
-  final int biddingTeam;
-  final int bidAmount;
-  final int tricksWon;
-  final int biddingTeamPoints;
-  final int opposingTeamPoints;
+import 'trick_engine.dart';
+import 'sixteen_call_engine.dart';
+import 'bid_scoring_engine.dart';
+import 'match_score_engine.dart';
+import 'dealer_rotation_engine.dart';
+import '../models/loris_card.dart';
 
-  const BidScoreResult({
-    required this.success,
+class GameRoundController {
+  GameRoundController({
+    required List<List<Card>> hands,
+    required this.dealerIndex,
+    required Suit trumpSuit,
     required this.biddingTeam,
     required this.bidAmount,
-    required this.tricksWon,
-    required this.biddingTeamPoints,
-    required this.opposingTeamPoints,
-  });
-}
-
-class BidScoringEngine {
-  final List<int> teamScores = [0, 0];
-// MatchScoreEngine is the single source of truth for match scores..
-  BidScoreResult calculate({
-    required int biddingTeam,
-    required int bidAmount,
-    required int tricksWonByBiddingTeam,
+    required this.matchScoreEngine,
+    required this.bidScoringEngine,
   }) {
+    if (hands.length != 4 && hands.length != 6) {
+      throw ArgumentError('Player count must be 4 or 6.');
+    }
+
+    if (dealerIndex < 0 || dealerIndex >= hands.length) {
+      throw ArgumentError('Invalid dealer index.');
+    }
+
     if (biddingTeam != 0 && biddingTeam != 1) {
       throw ArgumentError('Team must be 0 or 1.');
     }
@@ -33,55 +32,149 @@ class BidScoringEngine {
       throw ArgumentError('Bid must be between 4 and 8.');
     }
 
-    if (tricksWonByBiddingTeam < 0 ||
-        tricksWonByBiddingTeam > 8) {
-      throw ArgumentError('Tricks must be between 0 and 8.');
+    trickEngine = TrickEngine(
+      hands: hands,
+      dealerIndex: dealerIndex,
+      trumpSuit: trumpSuit,
+    );
+
+    sixteenCallEngine = bidAmount < 8
+        ? SixteenCallEngine(
+            playerCount: hands.length,
+            biddingTeam: biddingTeam,
+            bidAmount: bidAmount,
+          )
+        : null;
+  }
+
+  final int dealerIndex;
+  final int biddingTeam;
+  final int bidAmount;
+  final MatchScoreEngine matchScoreEngine;
+  final BidScoringEngine bidScoringEngine;
+
+  late final TrickEngine trickEngine;
+  late final SixteenCallEngine? sixteenCallEngine;
+
+  int completedTricks = 0;
+  int biddingTeamTricks = 0;
+
+  bool isRoundScored = false;
+
+  int? get nextPlayerIndex =>
+      isRoundEnded ? null : trickEngine.currentPlayerIndex;
+
+  bool get isRoundEnded =>
+      isRoundScored ||
+      (sixteenCallEngine?.isRoundEnded ?? completedTricks == 8);
+
+  MatchWinner get matchWinner =>
+      matchScoreEngine.checkWinner();
+
+  void playCard(int playerIndex, Card card) {
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
     }
 
-    final success = bidAmount == 8
-        ? tricksWonByBiddingTeam == 8
-        : tricksWonByBiddingTeam >= bidAmount;
-
-    final points = success
-        ? (bidAmount == 8 ? 16 : bidAmount)
-        : bidAmount * 2;
-
-    final biddingPoints = success ? points : -points;
-
-    return BidScoreResult(
-      success: success,
-      biddingTeam: biddingTeam,
-      bidAmount: bidAmount,
-      tricksWon: tricksWonByBiddingTeam,
-      biddingTeamPoints: biddingPoints,
-      opposingPoints: -biddingPoints,
-    );
+    trickEngine.playCard(playerIndex, card);
   }
 
-  /// Calculates the score and updates this engine's stored scores.
-  BidScoreResult calculateAndApply({
-    required int biddingTeam,
-    required int bidAmount,
-    required int tricksWonByBiddingTeam,
+  int completeTrick() {
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
+    }
+
+    if (!trickEngine.isComplete) {
+      throw StateError('Trick is not complete.');
+    }
+
+    final winnerIndex = trickEngine.winnerIndex;
+
+    completedTricks++;
+
+    if (winnerIndex % 2 == biddingTeam) {
+      biddingTeamTricks++;
+    }
+
+    sixteenCallEngine?.recordTrickWinner(winnerIndex);
+
+    if (isRoundEnded) {
+      _applyRoundScore();
+    } else {
+      trickEngine.resetTrick();
+    }
+
+    return winnerIndex;
+  }
+
+  void call16({
+    required int callerPlayerIndex,
   }) {
-    final result = calculate(
-      biddingTeam: biddingTeam,
-      bidAmount: bidAmount,
-      tricksWonByBiddingTeam: tricksWonByBiddingTeam,
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
+    }
+
+    final engine = sixteenCallEngine;
+
+    if (engine == null) {
+      throw StateError('16 Call is not allowed on an 8 bid.');
+    }
+
+    engine.call16(
+      callerPlayerIndex: callerPlayerIndex,
     );
-
-    teamScores[result.biddingTeam] += result.biddingTeamPoints;
-    teamScores[1 - result.biddingTeam] += result.opposingTeamPoints;
-
-    return result;
   }
 
-  int get teamAScore => teamScores[0];
+  void _applyRoundScore() {
+    if (isRoundScored) return;
 
-  int get teamBScore => teamScores[1];
+    int teamAPoints;
+    int teamBPoints;
 
-  void resetScores() {
-    teamScores[0] = 0;
-    teamScores[1] = 0;
+    final engine = sixteenCallEngine;
+
+    if (engine != null &&
+        (engine.status == SixteenCallStatus.succeeded ||
+            engine.status == SixteenCallStatus.failed)) {
+      teamAPoints = biddingTeam == 0
+          ? engine.biddingTeamPoints
+          : engine.opposingTeamPoints;
+
+      teamBPoints = -teamAPoints;
+    } else {
+      final result = bidScoringEngine.calculate(
+        biddingTeam: biddingTeam,
+        bidAmount: bidAmount,
+        tricksWonByBiddingTeam: biddingTeamTricks,
+      );
+
+      teamAPoints = result.biddingTeam == 0
+          ? result.biddingTeamPoints
+          : result.opposingTeamPoints;
+
+      teamBPoints = -teamAPoints;
+    }
+
+    matchScoreEngine.applyRoundScore(
+      teamAPoints: teamAPoints,
+      teamBPoints: teamBPoints,
+    );
+
+    isRoundScored = true;
+  }
+
+  int getNextDealerIndex({bool isRedeal = false}) {
+    final dealerTeam = dealerIndex % 2;
+
+    final dealerTeamScore = dealerTeam == 0
+        ? matchScoreEngine.teamAScore
+        : matchScoreEngine.teamBScore;
+
+    return DealerRotationEngine.nextDealerIndex(
+      currentDealerIndex: dealerIndex,
+      playerCount: trickEngine.playerCount,
+      dealerTeamScore: dealerTeamScore,
+      isRedeal: isRedeal,
+    );
   }
 }
