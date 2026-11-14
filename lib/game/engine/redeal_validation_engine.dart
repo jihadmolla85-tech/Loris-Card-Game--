@@ -47,6 +47,11 @@ class RedealValidationEngine {
     }
 
     final hasLowHand = hands.any((hand) {
+  return hand.every((card) {
+    if (card.isLoris) return false;
+    return card.rank != null && card.rank! < 10;
+  });
+}); {
       final normalCards = hand.where((card) => !card.isLoris).toList();
 
       return normalCards.isNotEmpty &&
