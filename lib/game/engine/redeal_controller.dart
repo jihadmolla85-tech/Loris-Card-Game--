@@ -1,3 +1,4 @@
+
 import '../models/loris_card.dart';
 import 'redeal_validation_engine.dart';
 
@@ -34,6 +35,22 @@ class RedealController {
     _lastResult = result;
 
     return result;
+  }
+
+  void restoreResult({
+    required bool shouldRedeal,
+    required List<String> reasons,
+    required int dealerIndex,
+  }) {
+    final restoredReasons = RedealReason.values
+        .where((reason) => reasons.contains(reason.name))
+        .toList();
+
+    _lastResult = RedealResult(
+      shouldRedeal: shouldRedeal,
+      reasons: restoredReasons,
+      sameDealerIndex: dealerIndex,
+    );
   }
 
   void reset() {
