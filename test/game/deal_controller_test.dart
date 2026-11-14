@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:loris_card_game/game/engine/card_dealer.dart';
 import 'package:loris_card_game/game/engine/deal_controller.dart';
 import 'package:loris_card_game/game/engine/deck_shuffle_engine.dart';
 import 'package:loris_card_game/game/engine/redeal_controller.dart';
