@@ -15,6 +15,18 @@ class GameRoundController {
     required this.bidAmount,
     required this.matchScoreEngine,
     required this.bidScoringEngine,
+    int restoredCompletedTricks = 0,
+    int restoredBiddingTeamTricks = 0,
+    bool restoredIsRoundScored = false,
+    List<TrickPlay> initialTrickPlays = const [],
+    SixteenCallStatus restoredSixteenCallStatus =
+        SixteenCallStatus.notCalled,
+    int restoredSixteenCompletedTricks = 0,
+    int restoredSixteenBiddingTeamTricks = 0,
+    int? restoredSixteenLastTrickWinnerIndex,
+    int? restoredSixteenCallerIndex,
+    int restoredSixteenBiddingTeamPoints = 0,
+    int restoredSixteenOpposingTeamPoints = 0,
   }) {
     if (hands.length != 4 && hands.length != 6) {
       throw ArgumentError('Player count must be 4 or 6.');
@@ -32,10 +44,22 @@ class GameRoundController {
       throw ArgumentError('Bid must be between 4 and 8.');
     }
 
+    if (restoredCompletedTricks < 0 ||
+        restoredCompletedTricks > 8) {
+      throw ArgumentError('Invalid completed tricks count.');
+    }
+
+    if (restoredBiddingTeamTricks < 0 ||
+        restoredBiddingTeamTricks > 8) {
+      throw ArgumentError('Invalid bidding team tricks count.');
+    }
+
     trickEngine = TrickEngine(
       hands: hands,
       dealerIndex: dealerIndex,
       trumpSuit: trumpSuit,
+      completedTricks: restoredCompletedTricks,
+      initialPlays: initialTrickPlays,
     );
 
     sixteenCallEngine = bidAmount < 8
@@ -45,6 +69,27 @@ class GameRoundController {
             bidAmount: bidAmount,
           )
         : null;
+
+    completedTricks = restoredCompletedTricks;
+    biddingTeamTricks = restoredBiddingTeamTricks;
+    isRoundScored = restoredIsRoundScored;
+
+    final sixteenEngine = sixteenCallEngine;
+
+    if (sixteenEngine != null) {
+      sixteenEngine.status = restoredSixteenCallStatus;
+      sixteenEngine.completedTricks =
+          restoredSixteenCompletedTricks;
+      sixteenEngine.biddingTeamTricks =
+          restoredSixteenBiddingTeamTricks;
+      sixteenEngine.lastTrickWinnerIndex =
+          restoredSixteenLastTrickWinnerIndex;
+      sixteenEngine.callerIndex = restoredSixteenCallerIndex;
+      sixteenEngine.biddingTeamPoints =
+          restoredSixteenBiddingTeamPoints;
+      sixteenEngine.opposingTeamPoints =
+          restoredSixteenOpposingTeamPoints;
+    }
   }
 
   final int dealerIndex;
