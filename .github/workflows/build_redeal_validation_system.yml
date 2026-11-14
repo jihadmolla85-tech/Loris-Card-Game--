@@ -28,11 +28,16 @@ jobs:
           dart analyze \
             lib/game/engine/redeal_validation_engine.dart \
             lib/game/engine/redeal_controller.dart \
+            lib/game/engine/deck_shuffle_engine.dart \
             test/game/redeal_validation_engine_test.dart \
-            test/game/redeal_controller_test.dart
+            test/game/redeal_controller_test.dart \
+            test/game/deck_shuffle_engine_test.dart
 
       - name: Run Redeal Validation Tests
         run: flutter test test/game/redeal_validation_engine_test.dart
 
       - name: Run Redeal Controller Tests
         run: flutter test test/game/redeal_controller_test.dart
+
+      - name: Run Deck Shuffle Tests
+        run: flutter test test/game/deck_shuffle_engine_test.dart
