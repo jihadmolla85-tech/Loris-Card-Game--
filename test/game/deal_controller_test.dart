@@ -7,18 +7,19 @@ import 'package:loris_card_game/game/engine/deck_shuffle_engine.dart';
 import 'package:loris_card_game/game/engine/redeal_controller.dart';
 import 'package:loris_card_game/game/engine/redeal_validation_engine.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
-
+import 'package:loris_card_game/game/engine/deck_validation_engine.dart';
 void main() {
   group('LORIS Deal Controller', () {
     late DealController controller;
 
     setUp(() {
       controller = DealController(
-        shuffleEngine: DeckShuffleEngine(random: Random(42)),
-        redealController: RedealController(
-          validationEngine: RedealValidationEngine(),
-        ),
-      );
+  shuffleEngine: DeckShuffleEngine(random: Random(42)),
+  redealController: RedealController(
+    validationEngine: RedealValidationEngine(),
+  ),
+  deckValidationEngine: DeckValidationEngine(),
+);
     });
 
     List<Card> createDeck(int playerCount) {
