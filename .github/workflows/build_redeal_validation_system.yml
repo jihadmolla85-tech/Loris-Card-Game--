@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -27,7 +27,12 @@ jobs:
         run: |
           dart analyze \
             lib/game/engine/redeal_validation_engine.dart \
-            test/game/redeal_validation_engine_test.dart
+            lib/game/engine/redeal_controller.dart \
+            test/game/redeal_validation_engine_test.dart \
+            test/game/redeal_controller_test.dart
 
-      - name: Run Redeal Tests
+      - name: Run Redeal Validation Tests
         run: flutter test test/game/redeal_validation_engine_test.dart
+
+      - name: Run Redeal Controller Tests
+        run: flutter test test/game/redeal_controller_test.dart
