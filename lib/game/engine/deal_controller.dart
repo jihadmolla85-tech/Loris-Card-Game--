@@ -25,7 +25,14 @@ class DealController {
 
   List<List<Card>>? get currentHands => _currentHands;
 
+  List<Card>? get originalDeck =>
+      _originalDeck == null
+          ? null
+          : List<Card>.from(_originalDeck!);
+
   int? get dealerIndex => _dealerIndex;
+
+  int? get playerCount => _playerCount;
 
   bool get shouldRedeal => redealController.shouldRedeal;
 
@@ -73,6 +80,40 @@ class DealController {
     );
 
     return _currentHands!;
+  }
+
+  void restoreDeal({
+    required List<Card> originalDeck,
+    required List<List<Card>> hands,
+    required int dealerIndex,
+    required int playerCount,
+  }) {
+    if (playerCount != 4 && playerCount != 6) {
+      throw ArgumentError('Player count must be 4 or 6.');
+    }
+
+    if (dealerIndex < 0 || dealerIndex >= playerCount) {
+      throw ArgumentError('Invalid dealer index.');
+    }
+
+    if (hands.length != playerCount ||
+        hands.any((hand) => hand.length > 8)) {
+      throw ArgumentError('Invalid saved hands.');
+    }
+
+    if (originalDeck.length != playerCount * 8) {
+      throw ArgumentError('Invalid saved deck.');
+    }
+
+    _originalDeck = List<Card>.from(originalDeck);
+    _currentHands = hands
+        .map((hand) => List<Card>.from(hand))
+        .toList();
+
+    _dealerIndex = dealerIndex;
+    _playerCount = playerCount;
+
+    redealController.reset();
   }
 
   RedealResult validateDeal({
