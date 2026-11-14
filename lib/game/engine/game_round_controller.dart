@@ -142,7 +142,7 @@ class GameRoundController {
 
       teamBPoints = -teamAPoints;
     } else {
-      final result = bidScoringEngine.calculateAndApply(
+      final result = bidScoringEngine.calculate(
         biddingTeam: biddingTeam,
         bidAmount: bidAmount,
         tricksWonByBiddingTeam: biddingTeamTricks,
