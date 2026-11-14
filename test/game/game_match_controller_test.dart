@@ -1,13 +1,14 @@
 import 'dart:math';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:loris_card_game/game/engine/game_match_controller.dart';
+import 'package:loris_card_game/game/engine/match_score_engine.dart';
+import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/deal_controller.dart';
 import 'package:loris_card_game/game/engine/deck_shuffle_engine.dart';
 import 'package:loris_card_game/game/engine/deck_validation_engine.dart';
 import 'package:loris_card_game/game/engine/redeal_controller.dart';
 import 'package:loris_card_game/game/engine/redeal_validation_engine.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:loris_card_game/game/engine/game_match_controller.dart';
-import 'package:loris_card_game/game/engine/match_score_engine.dart';
-import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
 
 void main() {
@@ -33,11 +34,23 @@ void main() {
       });
     }
 
+    List<Card> createDeck() {
+      final ranks = List.generate(8, (i) => i + 7);
+
+      return [
+        for (final suit in Suit.values)
+          for (final rank in ranks)
+            if (!(suit == Suit.spades && rank == 7))
+              Card.normal(suit: suit, rank: rank),
+        Card.loris(replacesRank: 7),
+      ];
+    }
+
     setUp(() {
       matchScore = MatchScoreEngine();
       bidScore = BidScoringEngine();
 
-            match = GameMatchController(
+      match = GameMatchController(
         initialDealerIndex: 3,
         matchScoreEngine: matchScore,
         bidScoringEngine: bidScore,
@@ -96,17 +109,6 @@ void main() {
       expect(
         () => match.startRound(
           hands: createHands(),
-              List<Card> createDeck() {
-      final ranks = List.generate(8, (i) => i + 7);
-
-      return [
-        for (final suit in Suit.values)
-          for (final rank in ranks)
-            if (!(suit == Suit.spades && rank == 7))
-              Card.normal(suit: suit, rank: rank),
-        Card.loris(replacesRank: 7),
-      ];
-    }
           trumpSuit: Suit.spades,
           biddingTeam: 0,
           bidAmount: 4,
@@ -189,6 +191,7 @@ void main() {
 
       expect(match.dealerIndex, 0);
     });
+
     test('Starts a round by dealing cards automatically', () {
       final hands = match.startRoundWithDeal(
         deck: createDeck(),
@@ -204,6 +207,7 @@ void main() {
       expect(match.currentRound.dealerIndex, 3);
       expect(match.nextPlayerIndex, 0);
     });
+
     test('Supports a six-player match', () {
       final sixPlayerMatch = GameMatchController(
         initialDealerIndex: 5,
