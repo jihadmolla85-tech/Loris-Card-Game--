@@ -1,0 +1,33 @@
+
+name: Build LORIS Dealer Rotation System
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Analyze Dealer Rotation Files
+        run: |
+          dart analyze \
+            lib/game/engine/dealer_rotation_engine.dart \
+            test/game/dealer_rotation_engine_test.dart
+
+      - name: Run Dealer Rotation Tests
+        run: flutter test test/game/dealer_rotation_engine_test.dart
