@@ -1,0 +1,33 @@
+
+name: Build LORIS Game Match Controller
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Analyze Game Match Controller
+        run: |
+          dart analyze \
+            lib/game/engine/game_match_controller.dart \
+            test/game/game_match_controller_test.dart
+
+      - name: Run Game Match Controller Tests
+        run: flutter test test/game/game_match_controller_test.dart
