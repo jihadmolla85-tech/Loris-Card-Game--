@@ -68,8 +68,31 @@ void main() {
         contains(RedealReason.allCardsBelowTen),
       );
     });
+test('LORIS is excluded from below-ten count', () {
+  final hands = normalHands(4);
 
-    test('Does not count LORIS as a card below ten', () {
+  hands[0] = List.generate(
+    8,
+    (i) => Card.normal(
+      suit: Suit.clubs,
+      rank: 10 + (i % 5),
+    ),
+  );
+
+  hands[0][7] = Card.loris(replacesRank: 7);
+
+  final result = engine.evaluate(
+    hands: hands,
+    dealerIndex: 0,
+    everyonePassed: false,
+    bidderHasTrumpSuit: true,
+  );
+
+  expect(
+    result.reasons,
+    isNot(contains(RedealReason.allCardsBelowTen)),
+  );
+});
       final hand = lowHand();
       hand[0] = Card.loris(replacesRank: 7);
 
