@@ -14,14 +14,14 @@ void main() {
     });
 
     List<Card> normalHand() {
-      return List.generate(
-        8,
-        (index) => Card(
-          suit: Suit.hearts,
-          rank: 10 + (index % 5),
-        ),
-      );
-    }
+  return List.generate(
+    8,
+    (index) => Card.normal(
+      suit: Suit.hearts,
+      rank: 10 + (index % 5),
+    ),
+  );
+}
 
     List<List<Card>> validHands() {
       return List.generate(4, (_) => normalHand());
