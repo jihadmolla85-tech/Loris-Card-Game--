@@ -34,6 +34,8 @@ jobs:
             test/game/redeal_controller_test.dart \
             test/game/deck_shuffle_engine_test.dart \
             test/game/card_dealer_test.dart \
+            lib/game/engine/deck_validation_engine.dart \
+            test/game/deck_validation_engine_test.dart \
             test/game/deal_controller_test.dart
 
       - name: Run Redeal Validation Tests
@@ -49,3 +51,5 @@ jobs:
         run: flutter test test/game/deal_controller_test.dart
       - name: Run Card Dealer Tests
         run: flutter test test/game/card_dealer_test.dart
+      - name: Run Deck Validation Tests
+        run: flutter test test/game/deck_validation_engine_test.dart
