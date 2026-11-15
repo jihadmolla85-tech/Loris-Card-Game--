@@ -361,11 +361,8 @@ class _GameScreenState extends State<GameScreen> {
   String? _error;
 
   int? _dealerIndex;
-  int? _bidderIndex;
-  int? _bidAmount;
 
   int _trickNumber = 0;
-  int? _lastTrickWinner;
   
   @override
   void initState() {
