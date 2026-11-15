@@ -479,15 +479,15 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             child: const Text('PASS'),
           ),
           ...List.generate(5, (index) {
-  final amount = index + 4;
+            final amount = index + 4;
 
-  return TextButton(
-    onPressed: amount > highest
-        ? () => Navigator.pop(dialogContext, amount)
-        : null,
-    child: Text('$amount'),
-  );
-}),
+            return TextButton(
+              onPressed: amount > highest
+                  ? () => Navigator.pop(dialogContext, amount)
+                  : null,
+              child: Text('$amount'),
+            );
+          }),
         ],
       ),
     );
@@ -564,19 +564,24 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
     if (hands == null) return;
 
-    final teammate = (bidder + 2) % hands.length;
+    // Show the bidder's own cards and cards of every teammate.
+    // In a 4-player game this gives one teammate.
+    // In a 6-player game this gives two teammates.
+    final teammateIndices = List.generate(hands.length, (index) => index)
+        .where(
+          (index) =>
+              index != bidder && index % 2 == bidder % 2,
+        )
+        .toList();
 
+    final eligibleOwnerIndices = [bidder, ...teammateIndices];
     final options = <MapEntry<int, loris.Card>>[];
 
-    for (final card in hands[bidder]) {
-      if (!card.isLoris && card.suit != null) {
-        options.add(MapEntry(bidder, card));
-      }
-    }
-
-    for (final card in hands[teammate]) {
-      if (!card.isLoris && card.suit != null) {
-        options.add(MapEntry(teammate, card));
+    for (final ownerIndex in eligibleOwnerIndices) {
+      for (final card in hands[ownerIndex]) {
+        if (!card.isLoris && card.suit != null) {
+          options.add(MapEntry(ownerIndex, card));
+        }
       }
     }
 
@@ -606,7 +611,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                 title: Text(card.displayName),
                 subtitle: Text(
                   option.key == bidder
-                      ? 'Your card'
+                      ? 'Bidder card'
                       : 'Teammate card - Player ${option.key + 1}',
                 ),
                 onTap: () => Navigator.pop(
@@ -634,31 +639,57 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
     if (hands == null) return;
 
-    final hand = hands[bidder];
+    // AI can inspect its own hand and the hands of its teammates.
+    final teammateIndices = List.generate(hands.length, (index) => index)
+        .where(
+          (index) =>
+              index != bidder && index % 2 == bidder % 2,
+        )
+        .toList();
 
-    final suitCounts = <loris.Suit, int>{
-      for (final suit in loris.Suit.values) suit: 0,
-    };
+    final eligibleOwnerIndices = [bidder, ...teammateIndices];
 
-    for (final card in hand) {
-      if (!card.isLoris && card.suit != null) {
-        suitCounts[card.suit!] =
-            (suitCounts[card.suit!] ?? 0) + 1;
+    loris.Suit? preferredSuit;
+    int bestCount = -1;
+    int selectedOwnerIndex = bidder;
+    loris.Card? selectedCard;
+
+    for (final ownerIndex in eligibleOwnerIndices) {
+      final suitCounts = <loris.Suit, int>{
+        for (final suit in loris.Suit.values) suit: 0,
+      };
+
+      for (final card in hands[ownerIndex]) {
+        if (!card.isLoris && card.suit != null) {
+          suitCounts[card.suit!] =
+              (suitCounts[card.suit!] ?? 0) + 1;
+        }
+      }
+
+      for (final entry in suitCounts.entries) {
+        if (entry.value > bestCount) {
+          bestCount = entry.value;
+          preferredSuit = entry.key;
+          selectedOwnerIndex = ownerIndex;
+        }
       }
     }
 
-    final preferredSuit = suitCounts.entries.reduce(
-      (a, b) => a.value >= b.value ? a : b,
-    ).key;
+    if (preferredSuit == null || bestCount <= 0) {
+      setState(() {
+        _error = 'AI could not select a trump card.';
+      });
+      return;
+    }
 
-    final selectedCard = hand.firstWhere(
+    selectedCard = hands[selectedOwnerIndex].firstWhere(
       (card) =>
           !card.isLoris && card.suit == preferredSuit,
     );
 
     await _resolveTrumpSelection(
       bidderIndex: bidder,
-      cardOwnerIndex: bidder,
+      cardOwnerIndex: selectedOwnerIndex,
       selectedCard: selectedCard,
     );
   }
