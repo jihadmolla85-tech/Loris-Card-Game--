@@ -18,7 +18,6 @@ import 'game/engine/game_state_snapshot.dart';
 import 'game/engine/bidding_round_controller.dart';
 import 'game/engine/trump_selection_engine.dart';
 import 'game/engine/trick_engine.dart';
-import 'game/engine/sixteen_call_engine.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -351,10 +350,6 @@ class _GameScreenState extends State<GameScreen> {
   List<List<loris.Card>>? _hands;
 
   BiddingRoundController? _biddingController;
-
-  int? _dealerIndex;
-  int? _bidderIndex;
-  int? _bidAmount;
 
   loris.Suit? _trumpSuit;
 
