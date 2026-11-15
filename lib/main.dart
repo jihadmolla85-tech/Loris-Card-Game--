@@ -1282,7 +1282,7 @@ await DealerRevealDialog.show(
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(.12),
+                color: Colors.red.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -1435,7 +1435,7 @@ await DealerRevealDialog.show(
         color: LorisApp.blue,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: LorisApp.gold.withOpacity(.7),
+          color: LorisApp.gold.withValues(alpha: .7),
           width: 1.5,
         ),
       ),
@@ -1489,7 +1489,7 @@ await DealerRevealDialog.show(
         vertical: 9,
       ),
       decoration: BoxDecoration(
-        color: LorisApp.blue.withOpacity(.75),
+        color: LorisApp.blue.withValues(alpha: .75),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -1610,7 +1610,7 @@ await DealerRevealDialog.show(
               vertical: 8,
             ),
             decoration: BoxDecoration(
-              color: LorisApp.navy.withOpacity(.7),
+              color: LorisApp.navy.withValues(alpha: .7),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
