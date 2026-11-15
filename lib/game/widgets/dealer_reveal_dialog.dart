@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../models/loris_card.dart';
+import '../models/loris_card.dart' as loris;;
 
 class DealerRevealDialog extends StatefulWidget {
   const DealerRevealDialog({
@@ -12,13 +12,13 @@ class DealerRevealDialog extends StatefulWidget {
     required this.dealerIndex,
   });
 
-  final List<Card> drawnCards;
+  final List<loris.Card> drawnCards;
   final int playerCount;
   final int dealerIndex;
 
   static Future<void> show(
     BuildContext context, {
-    required List<Card> drawnCards,
+    required List<loris.card> drawnCards,
     required int playerCount,
     required int dealerIndex,
   }) {
@@ -82,10 +82,10 @@ class _DealerRevealDialogState
     if (card.isLoris) return 'LORIS';
 
     final suit = switch (card.suit!) {
-      Suit.clubs => '♣',
-      Suit.diamonds => '♦',
-      Suit.hearts => '♥',
-      Suit.spades => '♠',
+      loris.Suit.clubs => '♣',
+      loris.Suit.diamonds => '♦',
+      loris.Suit.hearts => '♥',
+      loris.Suit.spades => '♠',
     };
 
     return '${card.displayName} $suit';
