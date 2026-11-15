@@ -6,8 +6,6 @@ import 'package:flutter/material.dart';
 import 'game/models/loris_card.dart' as loris;
 import 'game/models/loris_deck.dart' as loris;
 
-import 'game/ai/ai_bidding_strategy.dart';
-
 import 'game/engine/game_match_controller.dart';
 import 'game/engine/match_score_engine.dart';
 import 'game/engine/bid_scoring_engine.dart';
