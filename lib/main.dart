@@ -1,7 +1,7 @@
 
 import 'dart:math';
 import 'game/engine/bidding_engine.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'game/models/loris_card.dart' as loris;
 import 'game/models/loris_deck.dart' as loris;
