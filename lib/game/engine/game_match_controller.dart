@@ -1,8 +1,11 @@
 
+import 'dart:math';
+
 import 'game_round_controller.dart';
 import 'match_score_engine.dart';
 import 'bid_scoring_engine.dart';
 import 'deal_controller.dart';
+import 'initial_dealer_selector.dart';
 import 'sixteen_call_engine.dart';
 import 'trick_engine.dart';
 import 'game_state_snapshot.dart';
@@ -50,6 +53,41 @@ class GameMatchController {
 
   int? get nextPlayerIndex =>
       _currentRound?.nextPlayerIndex;
+
+  /// Randomly selects the starting seat.
+  /// The first player to draw a Jack becomes the initial dealer.
+  DealerSelectionResult selectInitialDealer({
+    required List<Card> deck,
+    required int playerCount,
+    Random? random,
+  }) {
+    if (_currentRound != null) {
+      throw StateError(
+        'Initial dealer can only be selected before the first round.',
+      );
+    }
+
+    if (playerCount != 4 && playerCount != 6) {
+      throw ArgumentError('Player count must be 4 or 6.');
+    }
+
+    final rng = random ?? Random();
+
+    final firstPlayerIndex = rng.nextInt(playerCount);
+
+    final drawDeck = List<Card>.from(deck)..shuffle(rng);
+
+    final result = InitialDealerSelector.select(
+      deck: drawDeck,
+      playerCount: playerCount,
+      firstPlayerIndex: firstPlayerIndex,
+      random: rng,
+    );
+
+    dealerIndex = result.dealerIndex;
+
+    return result;
+  }
 
   void startRound({
     required List<List<Card>> hands,
