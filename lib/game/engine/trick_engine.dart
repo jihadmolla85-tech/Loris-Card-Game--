@@ -21,14 +21,16 @@ class TrickEngine {
 
   int completedTricks;
 
+  late int _firstPlayerIndex;
+
   TrickEngine({
     required this.hands,
     required this.dealerIndex,
     required this.trumpSuit,
-    int completedTricks = 0,
+    this.completedTricks = 0,
     List<TrickPlay> initialPlays = const [],
-  })  : playerCount = hands.length,
-        completedTricks = completedTricks {
+    int? restoredFirstPlayerIndex,
+  }) : playerCount = hands.length {
     if (playerCount != 4 && playerCount != 6) {
       throw ArgumentError('Player count must be 4 or 6.');
     }
@@ -38,59 +40,54 @@ class TrickEngine {
     }
 
     if (completedTricks < 0 || completedTricks > 8) {
-      throw ArgumentError('Invalid completed tricks count.');
+      throw ArgumentError('Invalid completed trick count.');
+    }
+
+    _firstPlayerIndex =
+        restoredFirstPlayerIndex ?? (dealerIndex + 1) % playerCount;
+
+    if (_firstPlayerIndex < 0 || _firstPlayerIndex >= playerCount) {
+      throw ArgumentError('Invalid first player index.');
     }
 
     if (initialPlays.length >= playerCount) {
-      throw ArgumentError('Invalid saved trick plays.');
+      throw ArgumentError('Invalid initial trick plays.');
     }
 
     final playedByPlayers = <int>{};
 
     for (var i = 0; i < initialPlays.length; i++) {
       final play = initialPlays[i];
-      final expectedPlayer = (dealerIndex + 1 + i) % playerCount;
+      final expectedPlayer =
+          (_firstPlayerIndex + i) % playerCount;
 
-      if (play.playerIndex != expectedPlayer ||
-          !playedByPlayers.add(play.playerIndex)) {
-        throw ArgumentError('Invalid saved trick play order.');
+      if (play.playerIndex != expectedPlayer) {
+        throw ArgumentError('Invalid restored trick play order.');
+      }
+
+      if (!playedByPlayers.add(play.playerIndex)) {
+        throw ArgumentError('A player cannot play twice in one trick.');
       }
     }
 
     for (var i = 0; i < playerCount; i++) {
-      final expectedCards =
+      final expectedHandSize =
           8 - completedTricks - (playedByPlayers.contains(i) ? 1 : 0);
 
-      if (hands[i].length != expectedCards) {
-        throw ArgumentError('Invalid saved hand for player $i.');
+      if (hands[i].length != expectedHandSize) {
+        throw ArgumentError('Invalid hand size for player $i.');
       }
     }
 
     plays.addAll(initialPlays);
   }
 
-  int get firstPlayerIndex =>
-      (dealerIndex + 1) % playerCount;
+  int get firstPlayerIndex => _firstPlayerIndex;
 
   int get currentPlayerIndex =>
-      (firstPlayerIndex + plays.length) % playerCount;
+      (_firstPlayerIndex + plays.length) % playerCount;
 
-  bool get isComplete =>
-      plays.length == playerCount;
-
-  Suit get ledSuit {
-    if (plays.isEmpty) {
-      throw StateError('No card has been played.');
-    }
-
-    final firstCard = plays.first.card;
-
-    if (firstCard.isLoris) {
-      return Suit.spades;
-    }
-
-    return firstCard.suit!;
-  }
+  bool get isComplete => plays.length == playerCount;
 
   void playCard(int playerIndex, Card card) {
     if (isComplete) {
@@ -98,75 +95,66 @@ class TrickEngine {
     }
 
     if (playerIndex != currentPlayerIndex) {
-      throw StateError('It is not this player turn.');
+      throw StateError('It is not this player’s turn.');
     }
 
     final hand = hands[playerIndex];
 
     if (!hand.contains(card)) {
-      throw ArgumentError('Card is not in player hand.');
-    }
-
-    if (plays.isNotEmpty && !card.isLoris) {
-      final requiredSuit = ledSuit;
-
-      final hasLedSuit = hand.any(
-        (c) => !c.isLoris && c.suit == requiredSuit,
-      );
-
-      if (hasLedSuit && card.suit != requiredSuit) {
-        throw ArgumentError(
-          'You must follow the led suit.',
-        );
-      }
+      throw ArgumentError('Card is not in this player’s hand.');
     }
 
     hand.remove(card);
-
-    plays.add(
-      TrickPlay(
-        playerIndex: playerIndex,
-        card: card,
-      ),
-    );
+    plays.add(TrickPlay(playerIndex: playerIndex, card: card));
   }
 
   int get winnerIndex {
     if (!isComplete) {
-      throw StateError('Trick is not complete yet.');
+      throw StateError('Trick is not complete.');
     }
 
-    for (final play in plays) {
-      if (play.card.isLoris) {
-        return play.playerIndex;
-      }
+    final lorisPlay = plays.where((p) => p.card.isLoris).firstOrNull;
+
+    if (lorisPlay != null) {
+      return lorisPlay.playerIndex;
     }
 
-    final trumpPlays = plays.where(
-      (play) => play.card.suit == trumpSuit,
-    ).toList();
+    final ledSuit = plays.first.card.suit;
 
-    final candidates = trumpPlays.isNotEmpty
-        ? trumpPlays
-        : plays.where(
-            (play) => play.card.suit == ledSuit,
-          ).toList();
+    final trumpPlays =
+        plays.where((p) => p.card.suit == trumpSuit).toList();
 
-    candidates.sort(
-      (a, b) => b.card.rank!.compareTo(a.card.rank!),
-    );
+    if (trumpPlays.isNotEmpty) {
+      return _highestRankPlay(trumpPlays).playerIndex;
+    }
 
-    return candidates.first.playerIndex;
+    final ledSuitPlays =
+        plays.where((p) => p.card.suit == ledSuit).toList();
+
+    return _highestRankPlay(ledSuitPlays).playerIndex;
   }
 
-  void resetTrick() {
+  TrickPlay _highestRankPlay(List<TrickPlay> candidates) {
+    return candidates.reduce((a, b) {
+      final aRank = a.card.rank ?? 0;
+      final bRank = b.card.rank ?? 0;
+      return bRank > aRank ? b : a;
+    });
+  }
+
+  void resetTrick({int? nextLeaderIndex}) {
     if (!isComplete) {
-      throw StateError(
-        'Cannot reset before trick is complete.',
-      );
+      throw StateError('Cannot reset an incomplete trick.');
+    }
+
+    final leader = nextLeaderIndex ?? winnerIndex;
+
+    if (leader < 0 || leader >= playerCount) {
+      throw ArgumentError('Invalid next leader index.');
     }
 
     completedTricks++;
+    _firstPlayerIndex = leader;
     plays.clear();
   }
 }
