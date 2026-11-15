@@ -6,11 +6,10 @@ import 'bidding_engine.dart';
 class BiddingRoundController {
   BiddingRoundController({
     required this.hands,
-    required this.dealerIndex,
+    required int dealerIndex,
     this.humanPlayerIndex = 0,
-    AiBiddingStrategy strategy = const AiBiddingStrategy(),
-  })  : strategy = strategy,
-        engine = BiddingEngine(
+    this.strategy = const AiBiddingStrategy(),
+  }) : engine = BiddingEngine(
           playerCount: hands.length,
           dealerIndex: dealerIndex,
         ) {
