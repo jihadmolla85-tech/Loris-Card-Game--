@@ -89,6 +89,15 @@ class TrickEngine {
 
   bool get isComplete => plays.length == playerCount;
 
+  Suit? get ledSuit {
+    if (plays.isEmpty) return null;
+
+    final firstCard = plays.first.card;
+
+    // LORIS প্রথমে খেললে Spades স্যুট ধরা হবে।
+    return firstCard.isLoris ? Suit.spades : firstCard.suit;
+  }
+
   void playCard(int playerIndex, Card card) {
     if (isComplete) {
       throw StateError('Trick is already complete.');
@@ -102,6 +111,22 @@ class TrickEngine {
 
     if (!hand.contains(card)) {
       throw ArgumentError('Card is not in this player’s hand.');
+    }
+
+    final currentLedSuit = ledSuit;
+
+    // LORIS যেকোনো সময় খেলা যাবে।
+    // অন্য কার্ড খেললে হাতে led suit থাকলে সেটি অনুসরণ করতে হবে।
+    if (currentLedSuit != null && !card.isLoris) {
+      final hasLedSuit = hand.any(
+        (heldCard) =>
+            !heldCard.isLoris &&
+            heldCard.suit == currentLedSuit,
+      );
+
+      if (hasLedSuit && card.suit != currentLedSuit) {
+        throw ArgumentError('You must follow the led suit.');
+      }
     }
 
     hand.remove(card);
@@ -119,7 +144,7 @@ class TrickEngine {
       return lorisPlay.playerIndex;
     }
 
-    final ledSuit = plays.first.card.suit;
+    final currentLedSuit = ledSuit;
 
     final trumpPlays =
         plays.where((p) => p.card.suit == trumpSuit).toList();
@@ -129,7 +154,7 @@ class TrickEngine {
     }
 
     final ledSuitPlays =
-        plays.where((p) => p.card.suit == ledSuit).toList();
+        plays.where((p) => p.card.suit == currentLedSuit).toList();
 
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }
