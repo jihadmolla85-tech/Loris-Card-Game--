@@ -1,11 +1,11 @@
+from pathlib import Path
 
-import 'dart:math';
-import 'game/engine/bidding_engine.dart';
-import 'package:material_ui/material_ui.dart';
+source = r'''import 'dart:math';
+
+import 'package:flutter/material.dart';
 
 import 'game/models/loris_card.dart' as loris;
 import 'game/models/loris_deck.dart' as loris;
-
 import 'game/engine/game_match_controller.dart';
 import 'game/engine/match_score_engine.dart';
 import 'game/engine/bid_scoring_engine.dart';
@@ -15,8 +15,10 @@ import 'game/engine/deck_validation_engine.dart';
 import 'game/engine/redeal_controller.dart';
 import 'game/engine/redeal_validation_engine.dart';
 import 'game/engine/game_save_service.dart';
+import 'game/engine/game_state_snapshot.dart';
 import 'game/engine/bidding_round_controller.dart';
 import 'game/engine/trump_selection_engine.dart';
+import 'game/engine/sixteen_call_engine.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,9 +28,9 @@ void main() {
 class LorisApp extends StatelessWidget {
   const LorisApp({super.key});
 
-  static const Color navy = Color(0xFF07152E);
-  static const Color blue = Color(0xFF102B55);
-  static const Color gold = Color(0xFFD6B15E);
+  static const navy = Color(0xFF07152E);
+  static const blue = Color(0xFF102B55);
+  static const gold = Color(0xFFD6B15E);
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +39,7 @@ class LorisApp extends StatelessWidget {
       title: 'LORIS – The Ultimate Card Game',
       theme: ThemeData(
         useMaterial3: true,
+        brightness: Brightness.dark,
         scaffoldBackgroundColor: navy,
         colorScheme: ColorScheme.fromSeed(
           seedColor: gold,
@@ -58,21 +61,17 @@ class LorisHomeScreen extends StatefulWidget {
 }
 
 class _LorisHomeScreenState extends State<LorisHomeScreen> {
-  final GameSaveService _saveService = GameSaveService();
-
-  bool _musicEnabled = true;
-  bool _soundEnabled = true;
-  bool _checkingSave = false;
+  final GameSaveService _save = GameSaveService();
+  bool _busy = false;
+  bool _music = true;
+  bool _sounds = true;
 
   Future<void> _newGame() async {
-    final playerCount = await showDialog<int>(
+    final count = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: LorisApp.blue,
-        title: const Text(
-          'SELECT PLAYERS',
-          style: TextStyle(color: LorisApp.gold),
-        ),
+        title: const Text('SELECT PLAYERS'),
         content: const Text('Choose the number of players'),
         actions: [
           TextButton(
@@ -86,89 +85,78 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
         ],
       ),
     );
-
-    if (!mounted || playerCount == null) return;
-
+    if (!mounted || count == null) return;
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => GameSetupScreen(
-          playerCount: playerCount,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => GameScreen(playerCount: count)),
     );
   }
 
-  Future<void> _resumeGame() async {
-    if (_checkingSave) return;
-
-    setState(() => _checkingSave = true);
-
+  Future<void> _resume() async {
+    if (_busy) return;
+    setState(() => _busy = true);
     try {
-      final snapshot = await _saveService.load();
-
+      final snapshot = await _save.load();
       if (!mounted) return;
-
-      if (snapshot == null) {
-        _showMessage('No saved game found.');
+      if (snapshot == null || snapshot.playerCount == null) {
+        _message('No saved match found.');
       } else {
-        _showMessage(
-          'Saved match found. Resume screen is not connected yet.',
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GameScreen(
+              playerCount: snapshot.playerCount!,
+              savedSnapshot: snapshot,
+            ),
+          ),
         );
       }
-    } catch (_) {
-      if (mounted) {
-        _showMessage('Unable to load saved game.');
-      }
+    } catch (e) {
+      if (mounted) _message('Could not resume match: $e');
     } finally {
-      if (mounted) {
-        setState(() => _checkingSave = false);
-      }
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _showMessage(String message) {
+  void _message(String value) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(content: Text(value)),
     );
   }
 
-  void _showSettings() {
-    showDialog(
+  void _settings() {
+    showDialog<void>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
           backgroundColor: LorisApp.blue,
-          title: const Text(
-            'SETTINGS',
-            style: TextStyle(color: LorisApp.gold),
-          ),
+          title: const Text('SETTINGS'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SwitchListTile(
                 title: const Text('Background Music'),
-                value: _musicEnabled,
+                value: _music,
                 activeThumbColor: LorisApp.gold,
-                onChanged: (value) {
-                  setState(() => _musicEnabled = value);
-                  setDialogState(() => _musicEnabled = value);
+                onChanged: (v) {
+                  setState(() => _music = v);
+                  update(() => _music = v);
                 },
               ),
               SwitchListTile(
                 title: const Text('Sound Effects'),
-                value: _soundEnabled,
+                value: _sounds,
                 activeThumbColor: LorisApp.gold,
-                onChanged: (value) {
-                  setState(() => _soundEnabled = value);
-                  setDialogState(() => _soundEnabled = value);
+                onChanged: (v) {
+                  setState(() => _sounds = v);
+                  update(() => _sounds = v);
                 },
               ),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('CLOSE'),
             ),
           ],
@@ -185,11 +173,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF102B55),
-              Color(0xFF07152E),
-              Color(0xFF030A16),
-            ],
+            colors: [LorisApp.blue, LorisApp.navy, Color(0xFF030A16)],
           ),
         ),
         child: SafeArea(
@@ -199,11 +183,8 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.workspace_premium,
-                    size: 76,
-                    color: LorisApp.gold,
-                  ),
+                  const Icon(Icons.workspace_premium,
+                      size: 78, color: LorisApp.gold),
                   const SizedBox(height: 18),
                   const Text(
                     'LORIS',
@@ -217,46 +198,28 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   const SizedBox(height: 8),
                   const Text(
                     'THE ULTIMATE CARD GAME',
-                    textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: 13,
                       letterSpacing: 3,
+                      fontSize: 12,
                     ),
                   ),
                   const SizedBox(height: 38),
-                  Container(
-                    width: 190,
-                    height: 2,
-                    color: LorisApp.gold,
-                  ),
+                  Container(width: 190, height: 2, color: LorisApp.gold),
                   const SizedBox(height: 38),
-                  _menuButton(
-                    icon: Icons.play_arrow_rounded,
-                    title: 'NEW GAME',
-                    onPressed: _newGame,
-                    primary: true,
-                  ),
+                  _menuButton('NEW GAME', Icons.play_arrow, _newGame, true),
                   const SizedBox(height: 16),
                   _menuButton(
-                    icon: Icons.restore_rounded,
-                    title: 'RESUME GAME',
-                    onPressed: _checkingSave ? null : _resumeGame,
+                    _busy ? 'LOADING...' : 'RESUME GAME',
+                    Icons.restore,
+                    _busy ? null : _resume,
                   ),
                   const SizedBox(height: 16),
-                  _menuButton(
-                    icon: Icons.settings_rounded,
-                    title: 'SETTINGS',
-                    onPressed: _showSettings,
-                  ),
+                  _menuButton('SETTINGS', Icons.settings, _settings),
                   const SizedBox(height: 42),
                   const Text(
                     'STRATEGY • TEAMWORK • VICTORY',
-                    style: TextStyle(
-                      color: Colors.white38,
-                      fontSize: 10,
-                      letterSpacing: 2,
-                    ),
+                    style: TextStyle(color: Colors.white38, letterSpacing: 2),
                   ),
                 ],
               ),
@@ -267,525 +230,497 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
     );
   }
 
-  Widget _menuButton({
-    required IconData icon,
-    required String title,
-    required VoidCallback? onPressed,
+  Widget _menuButton(
+    String label,
+    IconData icon,
+    VoidCallback? action, [
     bool primary = false,
-  }) {
+  ]) {
     return SizedBox(
       width: double.infinity,
-      height: 58,
+      height: 56,
       child: primary
           ? ElevatedButton.icon(
-              onPressed: onPressed,
+              onPressed: action,
               icon: Icon(icon),
-              label: Text(title),
+              label: Text(label),
               style: ElevatedButton.styleFrom(
                 backgroundColor: LorisApp.gold,
                 foregroundColor: LorisApp.navy,
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
               ),
             )
           : OutlinedButton.icon(
-              onPressed: onPressed,
+              onPressed: action,
               icon: Icon(icon),
-              label: Text(title),
+              label: Text(label),
               style: OutlinedButton.styleFrom(
                 foregroundColor: LorisApp.gold,
                 side: const BorderSide(color: LorisApp.gold),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.5,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
               ),
             ),
     );
   }
 }
 
-class GameSetupScreen extends StatefulWidget {
-  const GameSetupScreen({
+class GameScreen extends StatefulWidget {
+  const GameScreen({
     super.key,
     required this.playerCount,
+    this.savedSnapshot,
   });
 
   final int playerCount;
+  final GameStateSnapshot? savedSnapshot;
 
   @override
-  State<GameSetupScreen> createState() => _GameSetupScreenState();
+  State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameSetupScreenState extends State<GameSetupScreen> {
-  bool _starting = false;
-  bool _roundStarted = false;
-  bool _processing = false;
+class _GameScreenState extends State<GameScreen> {
+  final GameSaveService _save = GameSaveService();
 
-  String? _error;
-  String? _statusMessage;
+  late final GameMatchController _match;
+  late final DealController _deal;
+  final Random _random = Random();
 
-  int? _dealerIndex;
   List<List<loris.Card>>? _hands;
+  BiddingRoundController? _auction;
+  int? _dealer;
+  int? _bidder;
+  int? _bid;
+  loris.Suit? _trump;
 
-  GameMatchController? _matchController;
-  DealController? _dealController;
-  BiddingRoundController? _biddingController;
+  bool _busy = false;
+  bool _started = false;
+  bool _finished = false;
+  String _status = 'Press START MATCH to deal the cards.';
+  String? _error;
+  int? _lastWinner;
+  int _trickNumber = 0;
 
-  loris.Suit? _selectedTrump;
-  int? _winningBid;
-  int? _winningBidder;
+  @override
+  void initState() {
+    super.initState();
+    _deal = DealController(
+      shuffleEngine: DeckShuffleEngine(random: _random),
+      redealController: RedealController(
+        validationEngine: RedealValidationEngine(),
+      ),
+      deckValidationEngine: DeckValidationEngine(),
+    );
+    _match = GameMatchController(
+      initialDealerIndex: widget.savedSnapshot?.dealerIndex ?? 0,
+      matchScoreEngine: MatchScoreEngine(),
+      bidScoringEngine: BidScoringEngine(),
+      dealController: _deal,
+    );
+    if (widget.savedSnapshot != null) {
+      _restore(widget.savedSnapshot!);
+    }
+  }
 
-  void _startGame() {
-    if (_starting || _hands != null) return;
+  void _restore(GameStateSnapshot snapshot) {
+    try {
+      _match.restoreSnapshot(snapshot);
+      if (_match.hasStarted) {
+        _hands = _match.currentRound.trickEngine.hands;
+        _dealer = snapshot.dealerIndex;
+        _bid = snapshot.bidAmount;
+        _bidder = snapshot.biddingTeam == null
+            ? null
+            : _findBidderForTeam(snapshot.biddingTeam!);
+        _trump = snapshot.trumpSuit;
+        _started = true;
+        _finished = _match.currentRound.isRoundEnded;
+        _status = 'Saved match restored.';
+        _trickNumber = snapshot.completedTricks;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_finished) _runAiTurns();
+        });
+      } else {
+        _status = 'Saved deal restored. Bidding must be restarted.';
+      }
+      setState(() {});
+    } catch (e) {
+      _error = 'Resume failed: $e';
+      setState(() {});
+    }
+  }
 
+  int _findBidderForTeam(int team) => team;
+
+  Future<void> _startMatch() async {
+    if (_busy || _hands != null) return;
     setState(() {
-      _starting = true;
+      _busy = true;
       _error = null;
     });
-
     try {
-      final random = Random();
-
-      final playerType = widget.playerCount == 4
-          ? loris.PlayerCount.four
-          : loris.PlayerCount.six;
-
       final deck = loris.LorisDeck.create(
-        playerType,
-        random: random,
+        widget.playerCount == 4
+            ? loris.PlayerCount.four
+            : loris.PlayerCount.six,
+        random: _random,
       );
-
-      final dealController = DealController(
-        shuffleEngine: DeckShuffleEngine(random: random),
-        redealController: RedealController(
-          validationEngine: RedealValidationEngine(),
-        ),
-        deckValidationEngine: DeckValidationEngine(),
-      );
-
-      final matchController = GameMatchController(
-        initialDealerIndex: 0,
-        matchScoreEngine: MatchScoreEngine(),
-        bidScoringEngine: BidScoringEngine(),
-        dealController: dealController,
-      );
-
-      final selection = matchController.selectInitialDealer(
+      final selection = _match.selectInitialDealer(
         deck: deck,
         playerCount: widget.playerCount,
-        random: random,
+        random: _random,
       );
-
-      final hands = dealController.deal(
+      final dealt = _deal.deal(
         deck: selection.shuffledDeck,
         playerCount: widget.playerCount,
         dealerIndex: selection.dealerIndex,
       );
-
-      _matchController = matchController;
-      _dealController = dealController;
-
       setState(() {
-        _dealerIndex = selection.dealerIndex;
-        _hands = hands;
-        _starting = false;
-        _statusMessage = 'Cards dealt. Bidding is ready.';
+        _dealer = selection.dealerIndex;
+        _hands = dealt;
+        _status = 'Cards dealt. Bidding begins.';
       });
-
       _startAuction();
-    } catch (error) {
-      setState(() {
-        _error = error.toString();
-        _starting = false;
-      });
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   void _startAuction() {
-    final hands = _hands;
-    final dealer = _dealerIndex;
-
-    if (hands == null || dealer == null) return;
-
+    final currentHands = _hands;
+    final dealer = _dealer;
+    if (currentHands == null || dealer == null) return;
     try {
-      final controller = BiddingRoundController(
-        hands: hands,
+      final auction = BiddingRoundController(
+        hands: currentHands,
         dealerIndex: dealer,
         humanPlayerIndex: 0,
       );
-
       setState(() {
-        _biddingController = controller;
-        _roundStarted = false;
-        _selectedTrump = null;
-        _winningBid = null;
-        _winningBidder = null;
-        _statusMessage = controller.isComplete
-            ? 'Bidding completed.'
-            : controller.isHumanTurn
+        _auction = auction;
+        _started = false;
+        _bidder = null;
+        _bid = null;
+        _trump = null;
+        _status = auction.isComplete
+            ? 'Bidding complete.'
+            : auction.isHumanTurn
                 ? 'Your turn to bid.'
                 : 'AI players are bidding.';
       });
-
-      if (controller.isComplete) {
-        _finishBidding();
-      }
-    } catch (error) {
-      setState(() => _error = error.toString());
+      if (auction.isComplete) _finishAuction();
+    } catch (e) {
+      setState(() => _error = e.toString());
     }
   }
 
-  Future<void> _showBidDialog() async {
-    final controller = _biddingController;
-
-    if (controller == null ||
-        !controller.isHumanTurn ||
-        _processing) {
-      return;
-    }
-
-    final highest = controller.highestBid ?? 3;
-
+  Future<void> _humanBid() async {
+    final auction = _auction;
+    if (auction == null || !auction.isHumanTurn || _busy) return;
+    final highest = auction.highestBid ?? 3;
     final result = await showDialog<int>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: LorisApp.blue,
-        title: const Text(
-          'YOUR BID',
-          style: TextStyle(color: LorisApp.gold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Current highest bid: ${controller.highestBid ?? "-"}'),
-            const SizedBox(height: 14),
-            const Text('Choose your bid or pass.'),
-          ],
-        ),
+        title: const Text('YOUR BID'),
+        content: Text('Current highest bid: ${auction.highestBid ?? "-"}'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, -1),
+            onPressed: () => Navigator.pop(ctx, -1),
             child: const Text('PASS'),
           ),
-          ...List.generate(5, (index) {
-            final amount = index + 4;
-
+          ...List.generate(5, (i) {
+            final value = i + 4;
             return TextButton(
-              onPressed: amount > highest
-                  ? () => Navigator.pop(dialogContext, amount)
+              onPressed: value > highest
+                  ? () => Navigator.pop(ctx, value)
                   : null,
-              child: Text('$amount'),
+              child: Text('$value'),
             );
           }),
         ],
       ),
     );
-
     if (!mounted || result == null) return;
-
-    setState(() => _processing = true);
-
+    setState(() => _busy = true);
     try {
-      controller.submitHumanBid(
-        result == -1 ? null : result,
-      );
-
+      auction.submitHumanBid(result == -1 ? null : result);
       setState(() {
-        _statusMessage = controller.isComplete
-            ? 'Bidding completed.'
-            : controller.isHumanTurn
+        _status = auction.isComplete
+            ? 'Bidding complete.'
+            : auction.isHumanTurn
                 ? 'Your turn to bid.'
                 : 'AI players are bidding.';
       });
-
-      if (controller.isComplete) {
-        await _finishBidding();
-      }
-    } catch (error) {
-      setState(() => _error = error.toString());
+      if (auction.isComplete) await _finishAuction();
+    } catch (e) {
+      setState(() => _error = e.toString());
     } finally {
-      if (mounted) {
-        setState(() => _processing = false);
-      }
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _finishBidding() async {
-    final controller = _biddingController;
-    final match = _matchController;
-
-    if (controller == null || match == null) return;
-    if (!controller.isComplete) return;
-
-    if (controller.everyonePassed) {
-      await _redealAndRestart(
+  Future<void> _finishAuction() async {
+    final auction = _auction;
+    if (auction == null || !auction.isComplete) return;
+    if (auction.everyonePassed) {
+      await _validateDeal(
         everyonePassed: true,
-        bidderHasTrumpSuit: true,
+        bidderHasTrump: true,
       );
       return;
     }
-
-    final bidder = controller.highestBidder;
-    final bid = controller.highestBid;
-
-    if (bidder == null || bid == null) {
-      setState(() {
-        _error = 'Bidding result is invalid.';
-      });
+    final bidder = auction.highestBidder;
+    final amount = auction.highestBid;
+    if (bidder == null || amount == null) {
+      setState(() => _error = 'Invalid auction result.');
       return;
     }
-
-    setState(() {
-      _winningBidder = bidder;
-      _winningBid = bid;
-      _statusMessage = 'Player ${bidder + 1} won the bidding.';
-    });
-
+    _bidder = bidder;
+    _bid = amount;
     if (bidder == 0) {
-      await _showTrumpSelectionDialog(bidder);
+      await _chooseHumanTrump(bidder);
     } else {
-      await _selectAiTrump(bidder);
+      await _chooseAiTrump(bidder);
     }
   }
 
-  Future<void> _showTrumpSelectionDialog(int bidder) async {
-    final hands = _hands;
-
-    if (hands == null) return;
-
-    // Show the bidder's own cards and cards of every teammate.
-    // In a 4-player game this gives one teammate.
-    // In a 6-player game this gives two teammates.
-    final teammateIndices = List.generate(hands.length, (index) => index)
-        .where(
-          (index) =>
-              index != bidder && index % 2 == bidder % 2,
-        )
-        .toList();
-
-    final eligibleOwnerIndices = [bidder, ...teammateIndices];
-    final options = <MapEntry<int, loris.Card>>[];
-
-    for (final ownerIndex in eligibleOwnerIndices) {
-      for (final card in hands[ownerIndex]) {
+  Future<void> _chooseHumanTrump(int bidder) async {
+    final currentHands = _hands;
+    if (currentHands == null) return;
+    final eligible = <MapEntry<int, loris.Card>>[];
+    for (var p = 0; p < currentHands.length; p++) {
+      if (p % 2 != bidder % 2) continue;
+      for (final card in currentHands[p]) {
         if (!card.isLoris && card.suit != null) {
-          options.add(MapEntry(ownerIndex, card));
+          eligible.add(MapEntry(p, card));
         }
       }
     }
-
     final selected = await showDialog<MapEntry<int, loris.Card>>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: LorisApp.blue,
-        title: const Text(
-          'SELECT TRUMP',
-          style: TextStyle(color: LorisApp.gold),
-        ),
+        title: const Text('SELECT TRUMP'),
         content: SizedBox(
           width: double.maxFinite,
           height: 360,
           child: ListView.builder(
-            itemCount: options.length,
-            itemBuilder: (context, index) {
-              final option = options[index];
-              final card = option.value;
-
+            itemCount: eligible.length,
+            itemBuilder: (ctx, i) {
+              final item = eligible[i];
               return ListTile(
-                leading: const Icon(
-                  Icons.style,
-                  color: LorisApp.gold,
-                ),
-                title: Text(card.displayName),
-                subtitle: Text(
-                  option.key == bidder
-                      ? 'Bidder card'
-                      : 'Teammate card - Player ${option.key + 1}',
-                ),
-                onTap: () => Navigator.pop(
-                  dialogContext,
-                  option,
-                ),
+                title: Text(item.value.displayName),
+                subtitle: Text(item.key == bidder
+                    ? 'Your card'
+                    : 'Teammate ${item.key + 1}'),
+                onTap: () => Navigator.pop(ctx, item),
               );
             },
           ),
         ),
       ),
     );
-
     if (!mounted || selected == null) return;
-
-    await _resolveTrumpSelection(
-      bidderIndex: bidder,
-      cardOwnerIndex: selected.key,
-      selectedCard: selected.value,
+    await _applyTrump(
+      bidder,
+      selected.key,
+      selected.value,
     );
   }
 
-  Future<void> _selectAiTrump(int bidder) async {
-    final hands = _hands;
-
-    if (hands == null) return;
-
-    // AI can inspect its own hand and the hands of its teammates.
-    final teammateIndices = List.generate(hands.length, (index) => index)
-        .where(
-          (index) =>
-              index != bidder && index % 2 == bidder % 2,
-        )
-        .toList();
-
-    final eligibleOwnerIndices = [bidder, ...teammateIndices];
-
-    loris.Suit? preferredSuit;
-    int bestCount = -1;
-    int selectedOwnerIndex = bidder;
-    loris.Card? selectedCard;
-
-    for (final ownerIndex in eligibleOwnerIndices) {
-      final suitCounts = <loris.Suit, int>{
+  Future<void> _chooseAiTrump(int bidder) async {
+    final currentHands = _hands;
+    if (currentHands == null) return;
+    loris.Suit? bestSuit;
+    var bestCount = -1;
+    var owner = bidder;
+    for (var p = 0; p < currentHands.length; p++) {
+      if (p % 2 != bidder % 2) continue;
+      final counts = <loris.Suit, int>{
         for (final suit in loris.Suit.values) suit: 0,
       };
-
-      for (final card in hands[ownerIndex]) {
+      for (final card in currentHands[p]) {
         if (!card.isLoris && card.suit != null) {
-          suitCounts[card.suit!] =
-              (suitCounts[card.suit!] ?? 0) + 1;
+          counts[card.suit!] = counts[card.suit!]! + 1;
         }
       }
-
-      for (final entry in suitCounts.entries) {
+      for (final entry in counts.entries) {
         if (entry.value > bestCount) {
           bestCount = entry.value;
-          preferredSuit = entry.key;
-          selectedOwnerIndex = ownerIndex;
+          bestSuit = entry.key;
+          owner = p;
         }
       }
     }
-
-    if (preferredSuit == null || bestCount <= 0) {
-      setState(() {
-        _error = 'AI could not select a trump card.';
-      });
+    if (bestSuit == null || bestCount <= 0) {
+      setState(() => _error = 'AI could not select trump.');
       return;
     }
-
-    selectedCard = hands[selectedOwnerIndex].firstWhere(
-      (card) =>
-          !card.isLoris && card.suit == preferredSuit,
+    final card = currentHands[owner].firstWhere(
+      (c) => !c.isLoris && c.suit == bestSuit,
     );
-
-    await _resolveTrumpSelection(
-      bidderIndex: bidder,
-      cardOwnerIndex: selectedOwnerIndex,
-      selectedCard: selectedCard,
-    );
+    await _applyTrump(bidder, owner, card);
   }
 
-  Future<void> _resolveTrumpSelection({
-    required int bidderIndex,
-    required int cardOwnerIndex,
-    required loris.Card selectedCard,
-  }) async {
-    final hands = _hands;
-    final match = _matchController;
-
-    if (hands == null || match == null) return;
-
+  Future<void> _applyTrump(
+    int bidder,
+    int owner,
+    loris.Card card,
+  ) async {
+    final currentHands = _hands;
+    final auction = _auction;
+    if (currentHands == null || auction == null) return;
     try {
       final result = TrumpSelectionEngine.select(
-        hands: hands,
-        bidderIndex: bidderIndex,
-        highestBidderIndex: _winningBidder!,
-        cardOwnerIndex: cardOwnerIndex,
-        selectedCard: selectedCard,
+        hands: currentHands,
+        bidderIndex: bidder,
+        highestBidderIndex: auction.highestBidder!,
+        cardOwnerIndex: owner,
+        selectedCard: card,
       );
-
-      setState(() {
-        _selectedTrump = result.trumpSuit;
-        _statusMessage =
-            'Trump selected: ${_suitName(result.trumpSuit)}';
-      });
-
-      await _redealAndRestart(
+      _trump = result.trumpSuit;
+      await _validateDeal(
         everyonePassed: false,
-        bidderHasTrumpSuit: result.bidderHasTrumpSuit,
-        trumpSuit: result.trumpSuit,
+        bidderHasTrump: result.bidderHasTrumpSuit,
+        trump: result.trumpSuit,
       );
-    } catch (error) {
-      setState(() => _error = error.toString());
+    } catch (e) {
+      setState(() => _error = e.toString());
     }
   }
 
-  Future<void> _redealAndRestart({
+  Future<void> _validateDeal({
     required bool everyonePassed,
-    required bool bidderHasTrumpSuit,
-    loris.Suit? trumpSuit,
+    required bool bidderHasTrump,
+    loris.Suit? trump,
   }) async {
-    final match = _matchController;
-    final controller = _biddingController;
-    final dealer = _dealerIndex;
-
-    if (match == null || controller == null || dealer == null) {
-      return;
-    }
-
+    final auction = _auction;
+    if (auction == null) return;
     try {
-      final newHands = match.validateAndRedeal(
+      final newHands = _match.validateAndRedeal(
         everyonePassed: everyonePassed,
-        bidderHasTrumpSuit: bidderHasTrumpSuit,
+        bidderHasTrumpSuit: bidderHasTrump,
       );
-
-      final dealController = _dealController;
-
-      if (dealController == null) return;
-
-      if (dealController.shouldRedeal) {
+      if (_deal.shouldRedeal) {
         setState(() {
           _hands = newHands;
-          _selectedTrump = null;
-          _winningBid = null;
-          _winningBidder = null;
-          _statusMessage =
-              'Redeal required. Same dealer: Player ${dealer + 1}.';
+          _status = 'Redeal required. Dealer remains Player ${_dealer! + 1}.';
+          _trump = null;
+          _bidder = null;
+          _bid = null;
         });
-
         _startAuction();
         return;
       }
-
-      if (trumpSuit == null ||
-          controller.highestBid == null ||
-          controller.highestBidder == null) {
-        setState(() {
-          _error = 'Unable to complete bidding.';
-        });
+      if (trump == null || auction.highestBid == null ||
+          auction.highestBidder == null) {
+        setState(() => _error = 'Trump or bid result is missing.');
         return;
       }
-
-      match.startRoundWithCurrentDeal(
-        trumpSuit: trumpSuit,
-        biddingTeam: controller.highestBidder! % 2,
-        bidAmount: controller.highestBid!,
+      _match.startRoundWithCurrentDeal(
+        trumpSuit: trump,
+        biddingTeam: auction.highestBidder! % 2,
+        bidAmount: auction.highestBid!,
       );
-
       setState(() {
-        _roundStarted = true;
-        _statusMessage =
-            'Round initialized. Trump: ${_suitName(trumpSuit)}';
+        _started = true;
+        _status = 'Round started. ${_suitName(trump)} is trump.';
       });
-    } catch (error) {
-      setState(() => _error = error.toString());
+      await _runAiTurns();
+    } catch (e) {
+      setState(() => _error = e.toString());
+    }
+  }
+
+  loris.Card _chooseAiCard(int player) {
+    final engine = _match.currentRound.trickEngine;
+    final hand = engine.hands[player];
+    if (engine.plays.isNotEmpty) {
+      final led = engine.ledSuit;
+      final following = hand.where((c) =>
+          c.isLoris || (c.suit != null && c.suit == led)).toList();
+      if (following.isNotEmpty) return following.first;
+    }
+    return hand.first;
+  }
+
+  Future<void> _playHumanCard(loris.Card card) async {
+    if (!_started || _finished || _busy) return;
+    final round = _match.currentRound;
+    if (round.nextPlayerIndex != 0) return;
+    setState(() => _busy = true);
+    try {
+      _match.playCard(0, card);
+      await _afterCardPlayed();
+      await _runAiTurns();
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _runAiTurns() async {
+    if (!_started || _finished || !mounted) return;
+    var safety = 0;
+    while (mounted &&
+        !_match.currentRound.isRoundEnded &&
+        _match.currentRound.nextPlayerIndex != 0 &&
+        safety < widget.playerCount) {
+      safety++;
+      final player = _match.currentRound.nextPlayerIndex!;
+      final card = _chooseAiCard(player);
+      _match.playCard(player, card);
+      await _afterCardPlayed();
+      if (!mounted || _finished) return;
+    }
+  }
+
+  Future<void> _afterCardPlayed() async {
+    final round = _match.currentRound;
+    if (round.trickEngine.isComplete) {
+      final winner = _match.completeTrick();
+      _lastWinner = winner;
+      _trickNumber = round.completedTricks;
+      setState(() {
+        _status = 'Trick $_trickNumber won by Player ${winner + 1}.';
+        _finished = round.isRoundEnded;
+      });
+      if (_finished) {
+        _status = 'Round complete. Team A: ${_match.matchScoreEngine.teamAScore}  '
+            'Team B: ${_match.matchScoreEngine.teamBScore}';
+      }
+    } else {
+      setState(() {
+        _status = 'Player ${round.nextPlayerIndex! + 1} to play.';
+      });
+    }
+  }
+
+  Future<void> _call16() async {
+    if (!_started || _finished || _busy) return;
+    final engine = _match.currentRound.sixteenCallEngine;
+    if (engine == null || !engine.canCall ||
+        engine.lastTrickWinnerIndex != 0) return;
+    try {
+      _match.call16(callerPlayerIndex: 0);
+      setState(() => _status = '16 CALL! Your team must win every remaining trick.');
+    } catch (e) {
+      setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _saveGame() async {
+    try {
+      await _match.saveGame(_save);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Match saved successfully.')),
+        );
+      }
+    } catch (e) {
+      setState(() => _error = 'Save failed: $e');
     }
   }
 
@@ -802,93 +737,57 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     }
   }
 
-  String _bidActionText(BidRecord record) {
-    if (record.amount == null) return 'PASS';
-    return 'BID ${record.amount}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final hands = _hands;
-
+    final currentHands = _hands;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NEW MATCH'),
+        title: const Text('LORIS MATCH'),
         backgroundColor: LorisApp.blue,
-        foregroundColor: LorisApp.gold,
+        actions: [
+          if (_started)
+            IconButton(
+              tooltip: 'Save match',
+              onPressed: _saveGame,
+              icon: const Icon(Icons.save, color: LorisApp.gold),
+            ),
+        ],
       ),
       body: SafeArea(
-        child: hands == null
-            ? _buildStartPanel()
-            : _buildDealtGame(hands),
+        child: currentHands == null
+            ? _startPanel()
+            : _gamePanel(currentHands),
       ),
     );
   }
 
-  Widget _buildStartPanel() {
+  Widget _startPanel() {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.style_rounded,
-              size: 76,
-              color: LorisApp.gold,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              '${widget.playerCount} PLAYERS',
-              style: const TextStyle(
-                color: LorisApp.gold,
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            const Icon(Icons.style, size: 72, color: LorisApp.gold),
+            const SizedBox(height: 20),
+            Text('${widget.playerCount} PLAYERS',
+                style: const TextStyle(
+                    color: LorisApp.gold,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            Text(
-              widget.playerCount == 4
-                  ? '1 Human + 3 AI Players'
-                  : '1 Human + 5 AI Players',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 30),
-            Text(
-              widget.playerCount == 4
-                  ? 'Teams: A - B - A - B'
-                  : 'Teams: A - B - A - B - A - B',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 36),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton.icon(
-                onPressed: _starting ? null : _startGame,
-                icon: const Icon(Icons.play_arrow),
-                label: Text(
-                  _starting ? 'STARTING...' : 'START MATCH',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: LorisApp.gold,
-                  foregroundColor: LorisApp.navy,
-                ),
-              ),
+            Text(widget.playerCount == 4
+                ? '1 Human + 3 AI • Teams A-B-A-B'
+                : '1 Human + 5 AI • Teams A-B-A-B-A-B'),
+            const SizedBox(height: 28),
+            ElevatedButton.icon(
+              onPressed: _busy ? null : _startMatch,
+              icon: const Icon(Icons.play_arrow),
+              label: Text(_busy ? 'STARTING...' : 'START MATCH'),
             ),
             if (_error != null) ...[
-              const SizedBox(height: 18),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.redAccent),
-              ),
+              const SizedBox(height: 16),
+              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
             ],
           ],
         ),
@@ -896,247 +795,294 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     );
   }
 
-  Widget _buildDealtGame(List<List<loris.Card>> hands) {
-    final bidding = _biddingController;
-
+  Widget _gamePanel(List<List<loris.Card>> hands) {
+    final round = _started ? _match.currentRound : null;
+    final auction = _auction;
+    final currentPlayer = round?.nextPlayerIndex;
+    final plays = round?.trickEngine.plays ?? const [];
+    final canCall = round?.sixteenCallEngine?.canCall == true &&
+        round?.sixteenCallEngine?.lastTrickWinnerIndex == 0;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       child: Column(
         children: [
-          const Icon(
-            Icons.verified,
-            color: LorisApp.gold,
-            size: 48,
-          ),
-          const SizedBox(height: 10),
-          const Text(
-            'LORIS MATCH',
-            style: TextStyle(
-              color: LorisApp.gold,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          _scoreBoard(),
           const SizedBox(height: 12),
-          Text(
-            'Dealer: Player ${_dealerIndex! + 1}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 17,
+          _infoStrip('DEALER', _dealer == null ? '-' : 'Player ${_dealer! + 1}'),
+          _infoStrip('TRUMP', _trump == null ? '-' : _suitName(_trump!)),
+          _infoStrip('STATUS', _status),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(_error!, style: const TextStyle(color: Colors.redAccent)),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _statusMessage ?? '',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.redAccent),
-            ),
-          ],
-          const SizedBox(height: 20),
-          const Divider(color: LorisApp.gold),
-          const Text(
-            'PLAYER SEATING',
-            style: TextStyle(
-              color: LorisApp.gold,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
           const SizedBox(height: 12),
-          ...List.generate(hands.length, (index) {
-            final isHuman = index == 0;
-            final team = index.isEven ? 'TEAM A' : 'TEAM B';
-            final isDealer = index == _dealerIndex;
-
-            return Card(
-              color: LorisApp.blue,
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: LorisApp.gold,
-                  foregroundColor: LorisApp.navy,
-                  child: Text('${index + 1}'),
+          if (!_started) ...[
+            _biddingTable(auction),
+            if (auction?.isHumanTurn == true && !auction!.isComplete)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _busy ? null : _humanBid,
+                  child: const Text('MAKE YOUR BID'),
                 ),
-                title: Text(
-                  isHuman ? 'You' : 'AI Player $index',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                subtitle: Text(
-                  '$team • ${hands[index].length} cards',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                trailing: isDealer
-                    ? const Text(
-                        'DEALER',
-                        style: TextStyle(
-                          color: LorisApp.gold,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    : null,
               ),
-            );
-          }),
-          const SizedBox(height: 20),
-          const Divider(color: LorisApp.gold),
-          const Text(
-            'BIDDING',
-            style: TextStyle(
-              color: LorisApp.gold,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Highest bid: ${bidding?.highestBid ?? "-"}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-            ),
-          ),
-          if (bidding?.highestBidder != null)
-            Text(
-              'Highest bidder: Player ${bidding!.highestBidder! + 1}',
-              style: const TextStyle(color: Colors.white70),
-            ),
-          const SizedBox(height: 12),
-          if (bidding != null)
-            ...bidding.history.map(
-              (record) => Card(
-                color: LorisApp.blue,
-                child: ListTile(
-                  dense: true,
-                  title: Text(
-                    'Player ${record.playerIndex + 1}',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  trailing: Text(
-                    _bidActionText(record),
-                    style: const TextStyle(
+          ] else ...[
+            _tableSurface(plays, currentPlayer),
+            const SizedBox(height: 12),
+            if (canCall)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _call16,
+                  child: const Text('CALL 16'),
+                ),
+              ),
+            if (_finished)
+              const Text('ROUND FINISHED',
+                  style: TextStyle(
                       color: LorisApp.gold,
                       fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          if (bidding != null &&
-              bidding.isHumanTurn &&
-              !bidding.isComplete &&
-              !_roundStarted)
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _processing ? null : _showBidDialog,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: LorisApp.gold,
-                  foregroundColor: LorisApp.navy,
-                ),
-                child: const Text(
-                  'MAKE YOUR BID',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          if (_roundStarted) ...[
-            const SizedBox(height: 14),
-            Text(
-              'Winning bid: $_winningBid',
-              style: const TextStyle(
-                color: LorisApp.gold,
-                fontSize: 18,
-              ),
-            ),
-            Text(
-              'Trump: ${_selectedTrump == null ? "-" : _suitName(_selectedTrump!)}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Bidding and trump selection completed. The playable table is the next integration task.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white54),
-            ),
+                      fontSize: 20)),
           ],
-          const SizedBox(height: 24),
-          const Divider(color: LorisApp.gold),
-          const Text(
-            'YOUR HAND',
-            style: TextStyle(
-              color: LorisApp.gold,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
+          const SizedBox(height: 18),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text('YOUR HAND',
+                style: TextStyle(
+                    color: LorisApp.gold,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2)),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Wrap(
             alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 10,
-            children: hands[0]
-                .map((card) => _playingCard(card))
-                .toList(),
+            spacing: 7,
+            runSpacing: 9,
+            children: hands[0].map((card) {
+              final playable = _started &&
+                  !_finished &&
+                  !_busy &&
+                  currentPlayer == 0;
+              return GestureDetector(
+                onTap: playable ? () => _playHumanCard(card) : null,
+                child: _cardWidget(card, enabled: playable),
+              );
+            }).toList(),
+          ),
+          if (_started && !_finished && currentPlayer != 0)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text('AI is thinking...',
+                  style: TextStyle(color: Colors.white60)),
+            ),
+          if (_started)
+            TextButton.icon(
+              onPressed: _saveGame,
+              icon: const Icon(Icons.save),
+              label: const Text('SAVE MATCH'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scoreBoard() {
+    final score = _match.matchScoreEngine;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+      decoration: BoxDecoration(
+        color: LorisApp.blue,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: LorisApp.gold.withOpacity(.65)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _score('TEAM A', score.teamAScore),
+          Container(width: 1, height: 38, color: LorisApp.gold),
+          _score('TEAM B', score.teamBScore),
+        ],
+      ),
+    );
+  }
+
+  Widget _score(String label, int value) => Column(
+        children: [
+          Text(label, style: const TextStyle(color: LorisApp.gold)),
+          Text('$value',
+              style: const TextStyle(
+                  fontSize: 25, fontWeight: FontWeight.bold)),
+        ],
+      );
+
+  Widget _infoStrip(String label, String value) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: LorisApp.blue.withOpacity(.7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: LorisApp.gold)),
+          Flexible(child: Text(value, textAlign: TextAlign.right)),
+        ],
+      ),
+    );
+  }
+
+  Widget _biddingTable(BiddingRoundController? auction) {
+    if (auction == null) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B442F),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: LorisApp.gold, width: 2),
+      ),
+      child: Column(
+        children: [
+          const Text('BIDDING TABLE',
+              style: TextStyle(
+                  color: LorisApp.gold,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 2)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(widget.playerCount, (i) {
+              final record = auction.history
+                  .where((r) => r.playerIndex == i)
+                  .toList();
+              final bidText = record.isEmpty
+                  ? '—'
+                  : record.last.amount == null
+                      ? 'PASS'
+                      : '${record.last.amount}';
+              return Column(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: i == 0 ? LorisApp.gold : LorisApp.navy,
+                    foregroundColor: i == 0 ? LorisApp.navy : Colors.white,
+                    child: Text(i == 0 ? 'YOU' : '${i + 1}'),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(bidText,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold)),
+                ],
+              );
+            }),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Highest: ${auction.highestBid ?? "-"}'
+            '${auction.highestBidder == null ? "" : " • Player ${auction.highestBidder! + 1}"}',
+            style: const TextStyle(color: Colors.white70),
           ),
         ],
       ),
     );
   }
 
-  Widget _playingCard(loris.Card card) {
-    final isLoris = card.isLoris;
+  Widget _tableSurface(List plays, int? currentPlayer) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 250),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF075239),
+        borderRadius: BorderRadius.circular(110),
+        border: Border.all(color: LorisApp.gold, width: 5),
+        boxShadow: const [
+          BoxShadow(color: Colors.black54, blurRadius: 12, offset: Offset(0, 6)),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            currentPlayer == null
+                ? 'ROUND COMPLETE'
+                : 'TURN: PLAYER ${currentPlayer + 1}',
+            style: const TextStyle(
+                color: LorisApp.gold, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 10,
+            children: List.generate(widget.playerCount, (i) {
+              final play = plays.where((p) => p.playerIndex == i).toList();
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(i == 0 ? 'YOU' : 'P${i + 1}',
+                      style: const TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 4),
+                  play.isEmpty
+                      ? Container(
+                          width: 52,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.white24),
+                            borderRadius: BorderRadius.circular(7),
+                          ),
+                        )
+                      : _cardWidget(play.last.card, compact: true),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cardWidget(loris.Card card,
+      {bool enabled = false, bool compact = false}) {
     final suit = card.suit;
-
-    final isRed = suit == loris.Suit.hearts ||
-        suit == loris.Suit.diamonds;
-
-    final suitSymbol = switch (suit) {
+    final red = suit == loris.Suit.hearts || suit == loris.Suit.diamonds;
+    final symbol = switch (suit) {
       loris.Suit.clubs => '♣',
       loris.Suit.diamonds => '♦',
       loris.Suit.hearts => '♥',
       loris.Suit.spades => '♠',
       null => '',
     };
-
     return Container(
-      width: 62,
-      height: 92,
-      padding: const EdgeInsets.all(6),
+      width: compact ? 52 : 62,
+      height: compact ? 72 : 92,
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color: isLoris ? LorisApp.gold : Colors.white,
+        color: card.isLoris ? LorisApp.gold : Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: LorisApp.gold,
-          width: 1.5,
+          color: enabled ? LorisApp.gold : Colors.white70,
+          width: enabled ? 2 : 1,
         ),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black38,
-            blurRadius: 5,
-            offset: Offset(2, 3),
-          ),
+          BoxShadow(color: Colors.black38, blurRadius: 4, offset: Offset(2, 3)),
         ],
       ),
       child: Center(
         child: Text(
-          isLoris
-              ? 'LORIS'
-              : '${card.displayName}\n$suitSymbol',
+          card.isLoris ? 'LORIS' : '${card.displayName}\n$symbol',
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isLoris
+            color: card.isLoris
                 ? LorisApp.navy
-                : (isRed ? Colors.red : Colors.black87),
-            fontSize: isLoris ? 12 : 23,
+                : red
+                    ? Colors.red
+                    : Colors.black87,
+            fontSize: compact ? 13 : (card.isLoris ? 11 : 21),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1144,3 +1090,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     );
   }
 }
+'''
+path = Path("/mnt/data/main.dart")
+path.write_text(source, encoding="utf-8")
+print(f"Created complete replacement: {path.name} ({len(source.splitlines())} lines, {path.stat().st_size:,} bytes)")
