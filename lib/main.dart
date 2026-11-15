@@ -1,121 +1,380 @@
-import 'package:material_ui/material_ui.dart';
+
+import 'package:flutter/material.dart';
+import 'game/engine/game_save_service.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const LorisApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class LorisApp extends StatelessWidget {
+  const LorisApp({super.key});
 
-  // This widget is the root of your application.
+  static const Color navy = Color(0xFF07152E);
+  static const Color blue = Color(0xFF102B55);
+  static const Color gold = Color(0xFFD6B15E);
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'LORIS – The Ultimate Card Game',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+        scaffoldBackgroundColor: navy,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: gold,
+          brightness: Brightness.dark,
+          primary: gold,
+          surface: blue,
+        ),
+        fontFamily: 'Roboto',
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const LorisHomeScreen(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class LorisHomeScreen extends StatefulWidget {
+  const LorisHomeScreen({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<LorisHomeScreen> createState() => _LorisHomeScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _LorisHomeScreenState extends State<LorisHomeScreen> {
+  final GameSaveService _saveService = GameSaveService();
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  bool _musicEnabled = true;
+  bool _soundEnabled = true;
+  bool _checkingSave = false;
+
+  Future<void> _newGame() async {
+    final playerCount = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF102B55),
+        title: const Text(
+          'SELECT PLAYERS',
+          style: TextStyle(
+            color: LorisApp.gold,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Choose the number of players',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 4),
+            child: const Text('4 PLAYERS'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, 6),
+            child: const Text('6 PLAYERS'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || playerCount == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GameSetupScreen(
+          playerCount: playerCount,
+        ),
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+  Future<void> _resumeGame() async {
+    if (_checkingSave) return;
+
+    setState(() => _checkingSave = true);
+
+    try {
+      final snapshot = await _saveService.load();
+
+      if (!mounted) return;
+
+      if (snapshot == null) {
+        _showMessage('No saved game found.');
+      } else {
+        _showMessage(
+          'Saved match found. Game resume screen is being connected.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showMessage('Unable to load saved game.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _checkingSave = false);
+      }
+    }
+  }
+
+  void _showSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: const Color(0xFF102B55),
+          title: const Text(
+            'SETTINGS',
+            style: TextStyle(
+              color: LorisApp.gold,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                title: const Text(
+                  'Background Music',
+                  style: TextStyle(color: Colors.white),
+                ),
+                value: _musicEnabled,
+                activeThumbColor: LorisApp.gold,
+                onChanged: (value) {
+                  setState(() => _musicEnabled = value);
+                  setDialogState(() => _musicEnabled = value);
+                },
+              ),
+              SwitchListTile(
+                title: const Text(
+                  'Sound Effects',
+                  style: TextStyle(color: Colors.white),
+                ),
+                value: _soundEnabled,
+                activeThumbColor: LorisApp.gold,
+                onChanged: (value) {
+                  setState(() => _soundEnabled = value);
+                  setDialogState(() => _soundEnabled = value);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CLOSE'),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF102B55),
+              Color(0xFF07152E),
+              Color(0xFF030A16),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 28,
+                vertical: 24,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.workspace_premium,
+                    size: 76,
+                    color: LorisApp.gold,
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'LORIS',
+                    style: TextStyle(
+                      color: LorisApp.gold,
+                      fontSize: 48,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'THE ULTIMATE CARD GAME',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      letterSpacing: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 38),
+                  Container(
+                    width: 190,
+                    height: 2,
+                    color: LorisApp.gold.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(height: 38),
+                  _menuButton(
+                    icon: Icons.play_arrow_rounded,
+                    title: 'NEW GAME',
+                    onPressed: _newGame,
+                    primary: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _menuButton(
+                    icon: Icons.restore_rounded,
+                    title: 'RESUME GAME',
+                    onPressed: _checkingSave ? null : _resumeGame,
+                  ),
+                  const SizedBox(height: 16),
+                  _menuButton(
+                    icon: Icons.settings_rounded,
+                    title: 'SETTINGS',
+                    onPressed: _showSettings,
+                  ),
+                  const SizedBox(height: 42),
+                  const Text(
+                    'STRATEGY • TEAMWORK • VICTORY',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white38,
+                      fontSize: 10,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _menuButton({
+    required IconData icon,
+    required String title,
+    required VoidCallback? onPressed,
+    bool primary = false,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 58,
+      child: primary
+          ? ElevatedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon),
+              label: Text(title),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: LorisApp.gold,
+                foregroundColor: LorisApp.navy,
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            )
+          : OutlinedButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon),
+              label: Text(title),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: LorisApp.gold,
+                side: const BorderSide(color: LorisApp.gold),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class GameSetupScreen extends StatelessWidget {
+  const GameSetupScreen({
+    super.key,
+    required this.playerCount,
+  });
+
+  final int playerCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('NEW MATCH'),
+        backgroundColor: LorisApp.blue,
+        foregroundColor: LorisApp.gold,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.style_rounded,
+                size: 70,
+                color: LorisApp.gold,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                '$playerCount PLAYERS',
+                style: const TextStyle(
+                  color: LorisApp.gold,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                playerCount == 4
+                    ? '1 Human + 3 AI Players'
+                    : '1 Human + 5 AI Players',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 30),
+              const Text(
+                'Game table and match initialization will be connected next.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
