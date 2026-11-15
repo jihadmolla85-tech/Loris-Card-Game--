@@ -1,6 +1,5 @@
-from pathlib import Path
 
-source = r'''import 'dart:math';
+r'''import 'dart:math';
 
 import 'package:flutter/material.dart';
 
