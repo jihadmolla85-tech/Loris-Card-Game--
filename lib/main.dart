@@ -410,7 +410,6 @@ class _GameScreenState extends State<GameScreen> {
       _hands = _matchController.currentRound.trickEngine.hands;
 
       _dealerIndex = snapshot.dealerIndex;
-      _bidAmount = snapshot.bidAmount;
       _trumpSuit = snapshot.trumpSuit;
 
       _started = true;
@@ -506,8 +505,6 @@ await DealerRevealDialog.show(
       setState(() {
         _biddingController = controller;
         _started = false;
-        _bidderIndex = null;
-        _bidAmount = null;
         _trumpSuit = null;
 
         _status = controller.isHumanTurn
@@ -616,9 +613,6 @@ await DealerRevealDialog.show(
       setState(() => _error = 'Invalid bidding result.');
       return;
     }
-
-    _bidderIndex = bidder;
-    _bidAmount = amount;
 
     if (bidder == 0) {
       await _chooseHumanTrump(bidder);
@@ -812,8 +806,6 @@ await DealerRevealDialog.show(
         setState(() {
           _hands = newHands;
           _trumpSuit = null;
-          _bidderIndex = null;
-          _bidAmount = null;
           _started = false;
 
           _status = 'Redeal required. Same dealer remains.';
@@ -949,7 +941,6 @@ await DealerRevealDialog.show(
     if (round.trickEngine.isComplete) {
       final winner = _matchController.completeTrick();
 
-      _lastTrickWinner = winner;
       _trickNumber = round.completedTricks;
 
       setState(() {
@@ -1089,12 +1080,9 @@ await DealerRevealDialog.show(
         _started = false;
         _finished = false;
 
-        _bidderIndex = null;
-        _bidAmount = null;
         _trumpSuit = null;
 
         _trickNumber = 0;
-        _lastTrickWinner = null;
 
         _status = 'Next round dealt. Bidding begins.';
       });
