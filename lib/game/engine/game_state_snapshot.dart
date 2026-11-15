@@ -16,6 +16,7 @@ class GameStateSnapshot {
     this.biddingTeam,
     this.bidAmount,
     this.trickPlays = const [],
+    this.firstPlayerIndex,
     this.completedTricks = 0,
     this.biddingTeamTricks = 0,
     this.isRoundScored = false,
@@ -45,6 +46,8 @@ class GameStateSnapshot {
   final int? biddingTeam;
   final int? bidAmount;
   final List<SnapshotTrickPlay> trickPlays;
+
+  final int? firstPlayerIndex;
   final int completedTricks;
   final int biddingTeamTricks;
   final bool isRoundScored;
@@ -76,6 +79,7 @@ class GameStateSnapshot {
         'biddingTeam': biddingTeam,
         'bidAmount': bidAmount,
         'trickPlays': trickPlays.map((play) => play.toJson()).toList(),
+        'firstPlayerIndex': firstPlayerIndex,
         'completedTricks': completedTricks,
         'biddingTeamTricks': biddingTeamTricks,
         'isRoundScored': isRoundScored,
@@ -123,6 +127,7 @@ class GameStateSnapshot {
                 Map<String, dynamic>.from(value as Map),
               ))
           .toList(),
+      firstPlayerIndex: json['firstPlayerIndex'] as int?,
       completedTricks: _intValue(json, 'completedTricks'),
       biddingTeamTricks: _intValue(json, 'biddingTeamTricks'),
       isRoundScored: _boolValue(json, 'isRoundScored'),
