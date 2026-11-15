@@ -457,7 +457,12 @@ class _GameScreenState extends State<GameScreen> {
         playerCount: widget.playerCount,
         random: _random,
       );
-
+await DealerRevealDialog.show(
+  context,
+  drawnCards: dealerSelection.drawnCards,
+  playerCount: widget.playerCount,
+  dealerIndex: dealerSelection.dealerIndex,
+);
       final dealtHands = _dealController.deal(
         deck: dealerSelection.shuffledDeck,
         playerCount: widget.playerCount,
