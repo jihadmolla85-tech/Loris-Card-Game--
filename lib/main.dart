@@ -360,7 +360,12 @@ class _GameScreenState extends State<GameScreen> {
   String _status = 'Press START MATCH to begin.';
   String? _error;
 
-  int? _dealerIndex
+  int? _dealerIndex;
+  int? _bidderIndex;
+  int? _bidAmount;
+
+  int _trickNumber = 0;
+  int? _lastTrickWinner;
   
   @override
   void initState() {
