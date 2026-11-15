@@ -252,6 +252,7 @@ class GameMatchController {
                   ))
               .toList() ??
           const [],
+      firstPlayerIndex: round?.trickEngine.firstPlayerIndex,
       completedTricks: round?.completedTricks ?? 0,
       biddingTeamTricks: round?.biddingTeamTricks ?? 0,
       isRoundScored: round?.isRoundScored ?? false,
@@ -351,6 +352,7 @@ class GameMatchController {
       restoredBiddingTeamTricks: snapshot.biddingTeamTricks,
       restoredIsRoundScored: snapshot.isRoundScored,
       initialTrickPlays: restoredPlays,
+      restoredFirstPlayerIndex: snapshot.firstPlayerIndex,
       restoredSixteenCallStatus: restoredStatus,
       restoredSixteenCompletedTricks:
           snapshot.sixteenCompletedTricks,
