@@ -362,7 +362,10 @@ class _GameScreenState extends State<GameScreen> {
 
   int _trickNumber = 0;
   int? _lastTrickWinner;
-
+  int? _dealerIndex;
+  int? _bidderIndex;
+  int? _bidAmount;
+  
   @override
   void initState() {
     super.initState();
