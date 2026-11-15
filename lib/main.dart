@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 
 import 'game/models/loris_card.dart' as loris;
 import 'game/models/loris_deck.dart' as loris;
+
+import 'game/ai/ai_bidding_strategy.dart';
+
 import 'game/engine/game_match_controller.dart';
 import 'game/engine/match_score_engine.dart';
 import 'game/engine/bid_scoring_engine.dart';
@@ -14,6 +17,8 @@ import 'game/engine/deck_validation_engine.dart';
 import 'game/engine/redeal_controller.dart';
 import 'game/engine/redeal_validation_engine.dart';
 import 'game/engine/game_save_service.dart';
+import 'game/engine/bidding_round_controller.dart';
+import 'game/engine/trump_selection_engine.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -324,13 +329,22 @@ class GameSetupScreen extends StatefulWidget {
 
 class _GameSetupScreenState extends State<GameSetupScreen> {
   bool _starting = false;
+  bool _roundStarted = false;
+  bool _processing = false;
+
   String? _error;
+  String? _statusMessage;
 
   int? _dealerIndex;
   List<List<loris.Card>>? _hands;
 
   GameMatchController? _matchController;
   DealController? _dealController;
+  BiddingRoundController? _biddingController;
+
+  loris.Suit? _selectedTrump;
+  int? _winningBid;
+  int? _winningBidder;
 
   void _startGame() {
     if (_starting || _hands != null) return;
@@ -343,19 +357,15 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
     try {
       final random = Random();
 
-      final playerCount = widget.playerCount;
-
-      final playerType = playerCount == 4
+      final playerType = widget.playerCount == 4
           ? loris.PlayerCount.four
           : loris.PlayerCount.six;
 
-      // Create the correct LORIS deck.
       final deck = loris.LorisDeck.create(
         playerType,
         random: random,
       );
 
-      // Prepare the dealing engine.
       final dealController = DealController(
         shuffleEngine: DeckShuffleEngine(random: random),
         redealController: RedealController(
@@ -371,33 +381,403 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
         dealController: dealController,
       );
 
-      // Random starting seat; first player to draw a Jack is dealer.
       final selection = matchController.selectInitialDealer(
         deck: deck,
-        playerCount: playerCount,
+        playerCount: widget.playerCount,
         random: random,
       );
 
-      // Deal eight cards to each player, starting right of dealer.
       final hands = dealController.deal(
         deck: selection.shuffledDeck,
-        playerCount: playerCount,
+        playerCount: widget.playerCount,
         dealerIndex: selection.dealerIndex,
       );
 
+      _matchController = matchController;
+      _dealController = dealController;
+
       setState(() {
-        _matchController = matchController;
-        _dealController = dealController;
         _dealerIndex = selection.dealerIndex;
         _hands = hands;
         _starting = false;
+        _statusMessage = 'Cards dealt. Bidding is ready.';
       });
+
+      _startAuction();
     } catch (error) {
       setState(() {
         _error = error.toString();
         _starting = false;
       });
     }
+  }
+
+  void _startAuction() {
+    final hands = _hands;
+    final dealer = _dealerIndex;
+
+    if (hands == null || dealer == null) return;
+
+    try {
+      final controller = BiddingRoundController(
+        hands: hands,
+        dealerIndex: dealer,
+        humanPlayerIndex: 0,
+      );
+
+      setState(() {
+        _biddingController = controller;
+        _roundStarted = false;
+        _selectedTrump = null;
+        _winningBid = null;
+        _winningBidder = null;
+        _statusMessage = controller.isComplete
+            ? 'Bidding completed.'
+            : controller.isHumanTurn
+                ? 'Your turn to bid.'
+                : 'AI players are bidding.';
+      });
+
+      if (controller.isComplete) {
+        _finishBidding();
+      }
+    } catch (error) {
+      setState(() => _error = error.toString());
+    }
+  }
+
+  Future<void> _showBidDialog() async {
+    final controller = _biddingController;
+
+    if (controller == null ||
+        !controller.isHumanTurn ||
+        _processing) {
+      return;
+    }
+
+    final highest = controller.highestBid ?? 3;
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: LorisApp.blue,
+        title: const Text(
+          'YOUR BID',
+          style: TextStyle(color: LorisApp.gold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Current highest bid: ${controller.highestBid ?? "-"}'),
+            const SizedBox(height: 14),
+            const Text('Choose your bid or pass.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, -1),
+            child: const Text('PASS'),
+          ),
+          ...List.generate(5, (index) {
+            final amount = index + 4;
+
+            return if (amount > highest)
+              TextButton(
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  amount,
+                ),
+                child: Text('$amount'),
+              );
+          }),
+        ],
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    setState(() => _processing = true);
+
+    try {
+      controller.submitHumanBid(
+        result == -1 ? null : result,
+      );
+
+      setState(() {
+        _statusMessage = controller.isComplete
+            ? 'Bidding completed.'
+            : controller.isHumanTurn
+                ? 'Your turn to bid.'
+                : 'AI players are bidding.';
+      });
+
+      if (controller.isComplete) {
+        await _finishBidding();
+      }
+    } catch (error) {
+      setState(() => _error = error.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+      }
+    }
+  }
+
+  Future<void> _finishBidding() async {
+    final controller = _biddingController;
+    final match = _matchController;
+
+    if (controller == null || match == null) return;
+    if (!controller.isComplete) return;
+
+    if (controller.everyonePassed) {
+      await _redealAndRestart(
+        everyonePassed: true,
+        bidderHasTrumpSuit: true,
+      );
+      return;
+    }
+
+    final bidder = controller.highestBidder;
+    final bid = controller.highestBid;
+
+    if (bidder == null || bid == null) {
+      setState(() {
+        _error = 'Bidding result is invalid.';
+      });
+      return;
+    }
+
+    setState(() {
+      _winningBidder = bidder;
+      _winningBid = bid;
+      _statusMessage = 'Player ${bidder + 1} won the bidding.';
+    });
+
+    if (bidder == 0) {
+      await _showTrumpSelectionDialog(bidder);
+    } else {
+      await _selectAiTrump(bidder);
+    }
+  }
+
+  Future<void> _showTrumpSelectionDialog(int bidder) async {
+    final hands = _hands;
+
+    if (hands == null) return;
+
+    final teammate = (bidder + 2) % hands.length;
+
+    final options = <MapEntry<int, loris.Card>>[];
+
+    for (final card in hands[bidder]) {
+      if (!card.isLoris && card.suit != null) {
+        options.add(MapEntry(bidder, card));
+      }
+    }
+
+    for (final card in hands[teammate]) {
+      if (!card.isLoris && card.suit != null) {
+        options.add(MapEntry(teammate, card));
+      }
+    }
+
+    final selected = await showDialog<MapEntry<int, loris.Card>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: LorisApp.blue,
+        title: const Text(
+          'SELECT TRUMP',
+          style: TextStyle(color: LorisApp.gold),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 360,
+          child: ListView.builder(
+            itemCount: options.length,
+            itemBuilder: (context, index) {
+              final option = options[index];
+              final card = option.value;
+
+              return ListTile(
+                leading: const Icon(
+                  Icons.style,
+                  color: LorisApp.gold,
+                ),
+                title: Text(card.displayName),
+                subtitle: Text(
+                  option.key == bidder
+                      ? 'Your card'
+                      : 'Teammate card - Player ${option.key + 1}',
+                ),
+                onTap: () => Navigator.pop(
+                  dialogContext,
+                  option,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || selected == null) return;
+
+    await _resolveTrumpSelection(
+      bidderIndex: bidder,
+      cardOwnerIndex: selected.key,
+      selectedCard: selected.value,
+    );
+  }
+
+  Future<void> _selectAiTrump(int bidder) async {
+    final hands = _hands;
+
+    if (hands == null) return;
+
+    final hand = hands[bidder];
+
+    final suitCounts = <loris.Suit, int>{
+      for (final suit in loris.Suit.values) suit: 0,
+    };
+
+    for (final card in hand) {
+      if (!card.isLoris && card.suit != null) {
+        suitCounts[card.suit!] =
+            (suitCounts[card.suit!] ?? 0) + 1;
+      }
+    }
+
+    final preferredSuit = suitCounts.entries.reduce(
+      (a, b) => a.value >= b.value ? a : b,
+    ).key;
+
+    final selectedCard = hand.firstWhere(
+      (card) =>
+          !card.isLoris && card.suit == preferredSuit,
+    );
+
+    await _resolveTrumpSelection(
+      bidderIndex: bidder,
+      cardOwnerIndex: bidder,
+      selectedCard: selectedCard,
+    );
+  }
+
+  Future<void> _resolveTrumpSelection({
+    required int bidderIndex,
+    required int cardOwnerIndex,
+    required loris.Card selectedCard,
+  }) async {
+    final hands = _hands;
+    final match = _matchController;
+
+    if (hands == null || match == null) return;
+
+    try {
+      final result = TrumpSelectionEngine.select(
+        hands: hands,
+        bidderIndex: bidderIndex,
+        highestBidderIndex: _winningBidder!,
+        cardOwnerIndex: cardOwnerIndex,
+        selectedCard: selectedCard,
+      );
+
+      setState(() {
+        _selectedTrump = result.trumpSuit;
+        _statusMessage =
+            'Trump selected: ${_suitName(result.trumpSuit)}';
+      });
+
+      await _redealAndRestart(
+        everyonePassed: false,
+        bidderHasTrumpSuit: result.bidderHasTrumpSuit,
+        trumpSuit: result.trumpSuit,
+      );
+    } catch (error) {
+      setState(() => _error = error.toString());
+    }
+  }
+
+  Future<void> _redealAndRestart({
+    required bool everyonePassed,
+    required bool bidderHasTrumpSuit,
+    loris.Suit? trumpSuit,
+  }) async {
+    final match = _matchController;
+    final controller = _biddingController;
+    final dealer = _dealerIndex;
+
+    if (match == null || controller == null || dealer == null) {
+      return;
+    }
+
+    try {
+      final newHands = match.validateAndRedeal(
+        everyonePassed: everyonePassed,
+        bidderHasTrumpSuit: bidderHasTrumpSuit,
+      );
+
+      final dealController = _dealController;
+
+      if (dealController == null) return;
+
+      if (dealController.shouldRedeal) {
+        setState(() {
+          _hands = newHands;
+          _selectedTrump = null;
+          _winningBid = null;
+          _winningBidder = null;
+          _statusMessage =
+              'Redeal required. Same dealer: Player ${dealer + 1}.';
+        });
+
+        _startAuction();
+        return;
+      }
+
+      if (trumpSuit == null ||
+          controller.highestBid == null ||
+          controller.highestBidder == null) {
+        setState(() {
+          _error = 'Unable to complete bidding.';
+        });
+        return;
+      }
+
+      match.startRoundWithCurrentDeal(
+        trumpSuit: trumpSuit,
+        biddingTeam: controller.highestBidder! % 2,
+        bidAmount: controller.highestBid!,
+      );
+
+      setState(() {
+        _roundStarted = true;
+        _statusMessage =
+            'Round initialized. Trump: ${_suitName(trumpSuit)}';
+      });
+    } catch (error) {
+      setState(() => _error = error.toString());
+    }
+  }
+
+  String _suitName(loris.Suit suit) {
+    switch (suit) {
+      case loris.Suit.clubs:
+        return 'Clubs';
+      case loris.Suit.diamonds:
+        return 'Diamonds';
+      case loris.Suit.hearts:
+        return 'Hearts';
+      case loris.Suit.spades:
+        return 'Spades';
+    }
+  }
+
+  String _bidActionText(BidRecord record) {
+    if (record.amount == null) return 'PASS';
+    return 'BID ${record.amount}';
   }
 
   @override
@@ -450,20 +830,15 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
               ),
             ),
             const SizedBox(height: 30),
-            const Text(
-              'Teams: A - B - A - B',
-              style: TextStyle(
+            Text(
+              widget.playerCount == 4
+                  ? 'Teams: A - B - A - B'
+                  : 'Teams: A - B - A - B - A - B',
+              style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 16,
               ),
             ),
-            if (widget.playerCount == 6) ...[
-              const SizedBox(height: 6),
-              const Text(
-                'A - B - A - B - A - B',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ],
             const SizedBox(height: 36),
             SizedBox(
               width: double.infinity,
@@ -495,6 +870,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
   }
 
   Widget _buildDealtGame(List<List<loris.Card>> hands) {
+    final bidding = _biddingController;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -506,11 +883,10 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
           ),
           const SizedBox(height: 10),
           const Text(
-            'CARDS DEALT SUCCESSFULLY',
-            textAlign: TextAlign.center,
+            'LORIS MATCH',
             style: TextStyle(
               color: LorisApp.gold,
-              fontSize: 20,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -523,12 +899,20 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'First deal starts from the dealer’s right.',
+          Text(
+            _statusMessage ?? '',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70),
+            style: const TextStyle(color: Colors.white70),
           ),
-          const SizedBox(height: 24),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.redAccent),
+            ),
+          ],
+          const SizedBox(height: 20),
           const Divider(color: LorisApp.gold),
           const Text(
             'PLAYER SEATING',
@@ -553,7 +937,7 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                   child: Text('${index + 1}'),
                 ),
                 title: Text(
-                  isHuman ? 'You' : 'AI Player ${index}',
+                  isHuman ? 'You' : 'AI Player $index',
                   style: const TextStyle(color: Colors.white),
                 ),
                 subtitle: Text(
@@ -572,7 +956,92 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
               ),
             );
           }),
-          const SizedBox(height: 22),
+          const SizedBox(height: 20),
+          const Divider(color: LorisApp.gold),
+          const Text(
+            'BIDDING',
+            style: TextStyle(
+              color: LorisApp.gold,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Highest bid: ${bidding?.highestBid ?? "-"}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+            ),
+          ),
+          if (bidding?.highestBidder != null)
+            Text(
+              'Highest bidder: Player ${bidding!.highestBidder! + 1}',
+              style: const TextStyle(color: Colors.white70),
+            ),
+          const SizedBox(height: 12),
+          if (bidding != null)
+            ...bidding.history.map(
+              (record) => Card(
+                color: LorisApp.blue,
+                child: ListTile(
+                  dense: true,
+                  title: Text(
+                    'Player ${record.playerIndex + 1}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  trailing: Text(
+                    _bidActionText(record),
+                    style: const TextStyle(
+                      color: LorisApp.gold,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (bidding != null &&
+              bidding.isHumanTurn &&
+              !bidding.isComplete &&
+              !_roundStarted)
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _processing ? null : _showBidDialog,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: LorisApp.gold,
+                  foregroundColor: LorisApp.navy,
+                ),
+                child: const Text(
+                  'MAKE YOUR BID',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          if (_roundStarted) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Winning bid: $_winningBid',
+              style: const TextStyle(
+                color: LorisApp.gold,
+                fontSize: 18,
+              ),
+            ),
+            Text(
+              'Trump: ${_selectedTrump == null ? "-" : _suitName(_selectedTrump!)}',
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Bidding and trump selection completed. The playable table is the next integration task.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54),
+            ),
+          ],
+          const SizedBox(height: 24),
+          const Divider(color: LorisApp.gold),
           const Text(
             'YOUR HAND',
             style: TextStyle(
@@ -591,12 +1060,6 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
                 .map((card) => _playingCard(card))
                 .toList(),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Initial dealing is connected. Bidding and the playable game table are the next integration tasks.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white54),
-          ),
         ],
       ),
     );
@@ -604,8 +1067,8 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
 
   Widget _playingCard(loris.Card card) {
     final isLoris = card.isLoris;
-
     final suit = card.suit;
+
     final isRed = suit == loris.Suit.hearts ||
         suit == loris.Suit.diamonds;
 
