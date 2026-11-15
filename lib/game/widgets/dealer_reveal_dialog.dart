@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../models/loris_card.dart' as loris;;
+import '../models/loris_card.dart' as loris;
 
 class DealerRevealDialog extends StatefulWidget {
   const DealerRevealDialog({
@@ -18,7 +18,7 @@ class DealerRevealDialog extends StatefulWidget {
 
   static Future<void> show(
     BuildContext context, {
-    required List<loris.card> drawnCards,
+    required List<loris.Card> drawnCards,
     required int playerCount,
     required int dealerIndex,
   }) {
@@ -78,7 +78,7 @@ class _DealerRevealDialogState
     }
   }
 
-  String cardText(Card card) {
+String cardText(loris.Card card) {
     if (card.isLoris) return 'LORIS';
 
     final suit = switch (card.suit!) {
