@@ -19,6 +19,7 @@ class GameRoundController {
     int restoredBiddingTeamTricks = 0,
     bool restoredIsRoundScored = false,
     List<TrickPlay> initialTrickPlays = const [],
+    int? restoredFirstPlayerIndex,
     SixteenCallStatus restoredSixteenCallStatus =
         SixteenCallStatus.notCalled,
     int restoredSixteenCompletedTricks = 0,
@@ -60,6 +61,7 @@ class GameRoundController {
       trumpSuit: trumpSuit,
       completedTricks: restoredCompletedTricks,
       initialPlays: initialTrickPlays,
+      restoredFirstPlayerIndex: restoredFirstPlayerIndex,
     );
 
     sixteenCallEngine = bidAmount < 8
@@ -146,7 +148,7 @@ class GameRoundController {
     if (isRoundEnded) {
       _applyRoundScore();
     } else {
-      trickEngine.resetTrick();
+      trickEngine.resetTrick(nextLeaderIndex: winnerIndex);
     }
 
     return winnerIndex;
