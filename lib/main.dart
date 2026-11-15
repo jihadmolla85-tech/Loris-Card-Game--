@@ -1,6 +1,6 @@
 
 import 'dart:math';
-
+import 'game/engine/bidding_engine.dart';
 import 'package:flutter/material.dart';
 
 import 'game/models/loris_card.dart' as loris;
@@ -479,17 +479,15 @@ class _GameSetupScreenState extends State<GameSetupScreen> {
             child: const Text('PASS'),
           ),
           ...List.generate(5, (index) {
-            final amount = index + 4;
+  final amount = index + 4;
 
-            return if (amount > highest)
-              TextButton(
-                onPressed: () => Navigator.pop(
-                  dialogContext,
-                  amount,
-                ),
-                child: Text('$amount'),
-              );
-          }),
+  return TextButton(
+    onPressed: amount > highest
+        ? () => Navigator.pop(dialogContext, amount)
+        : null,
+    child: Text('$amount'),
+  );
+}),
         ],
       ),
     );
