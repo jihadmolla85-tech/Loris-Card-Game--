@@ -219,9 +219,15 @@ begin
              where room_id = target.id and user_id = auth.uid()) then
     return target;
   end if;
-  select coalesce(max(seat_index) + 1, 0) into next_seat
-    from public.loris_room_players where room_id = target.id;
-  if next_seat >= max_players then raise exception 'room_full'; end if;
+  select candidate.seat into next_seat
+    from generate_series(0, max_players - 1) as candidate(seat)
+    where not exists (
+      select 1 from public.loris_room_players p
+      where p.room_id = target.id and p.seat_index = candidate.seat
+    )
+    order by candidate.seat
+    limit 1;
+  if next_seat is null then raise exception 'room_full'; end if;
 
   insert into public.player_profiles(user_id, display_name, avatar_id)
   values (auth.uid(), trim(requested_display_name), coalesce(nullif(requested_avatar_id, ''), 'default'))
