@@ -291,7 +291,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                     },
                   ),
                   const Text(
-                    'Audio playback will be connected when the audio assets are added.',
+                    'Sound effects follow this setting during a match. Background music is not connected yet.',
                     style: TextStyle(
                       color: Colors.white54,
                       fontSize: 11,
