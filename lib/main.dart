@@ -1197,6 +1197,16 @@ await DealerRevealDialog.show(
 
       final redealRequired = validation.shouldRedeal;
 
+      if (redealRequired) {
+        setState(() => _isShuffling = true);
+        _shuffleController.repeat(reverse: true);
+        await _playShuffleSound();
+        await Future.delayed(const Duration(milliseconds: 700));
+        if (!mounted) return;
+        _shuffleController.stop();
+        setState(() => _isShuffling = false);
+      }
+
       final newHands = _matchController.validateAndRedeal(
         everyonePassed: everyonePassed,
         bidderHasTrumpSuit: bidderHasTrump,
