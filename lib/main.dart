@@ -448,6 +448,17 @@ class _GameScreenState extends State<GameScreen> {
   final GameSaveService _saveService = GameSaveService();
   final Random _random = Random();
 
+  static const List<String> _namePool = [
+    'Ayaan', 'Rayan', 'Zara', 'Mika', 'Noah', 'Lina',
+    'Aria', 'Omar', 'Iris', 'Ethan', 'Maya', 'Leo',
+  ];
+  static const List<String> _avatarPool = [
+    '🦊', '🐼', '🦁', '🐯', '🐸', '🐨',
+    '🐻', '🦉', '🐺', '🐵', '🐧', '🐙',
+  ];
+  late final List<String> _playerNames;
+  late final List<String> _playerAvatars;
+
   late final DealController _dealController;
   late final GameMatchController _matchController;
 
@@ -471,6 +482,17 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void initState() {
     super.initState();
+
+    final shuffledNames = List<String>.from(_namePool)..shuffle(_random);
+    final shuffledAvatars = List<String>.from(_avatarPool)..shuffle(_random);
+    _playerNames = [
+      'YOU',
+      ...shuffledNames.take(widget.playerCount - 1),
+    ];
+    _playerAvatars = [
+      '🎮',
+      ...shuffledAvatars.take(widget.playerCount - 1),
+    ];
 
     _dealController = DealController(
       shuffleEngine: DeckShuffleEngine(random: _random),
@@ -1423,7 +1445,7 @@ await DealerRevealDialog.show(
             'DEALER',
             _dealerIndex == null
                 ? '-'
-                : 'Player ${_dealerIndex! + 1}',
+                : '${_playerAvatars[_dealerIndex!]} ${_playerNames[_dealerIndex!]}',
           ),
 
           _infoStrip(
@@ -1741,11 +1763,8 @@ await DealerRevealDialog.show(
                           ? LorisApp.navy
                           : Colors.white,
                       child: Text(
-                        isHuman ? 'YOU' : '${index + 1}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        _playerAvatars[index],
+                        style: const TextStyle(fontSize: 18),
                       ),
                     ),
                     const SizedBox(height: 7),
@@ -1845,9 +1864,16 @@ await DealerRevealDialog.show(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      index == 0 ? 'YOU' : 'P${index + 1}',
+                      _playerAvatars[index],
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                    Text(
+                      _playerNames[index],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white70,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
