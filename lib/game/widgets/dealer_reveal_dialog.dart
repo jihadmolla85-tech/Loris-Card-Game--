@@ -11,7 +11,7 @@ class DealerRevealDialog extends StatefulWidget {
     required this.playerCount,
     required this.dealerIndex,
     this.dealerName = 'Dealer',
-    this.dealerAvatar = '🦉',
+    this.dealerAvatar = '🧑🏻',
   });
 
   final List<loris.Card> drawnCards;
@@ -26,7 +26,7 @@ class DealerRevealDialog extends StatefulWidget {
     required int playerCount,
     required int dealerIndex,
     String dealerName = 'Dealer',
-    String dealerAvatar = '🦉',
+    String dealerAvatar = '🧑🏻',
   }) {
     return showDialog<void>(
       context: context,
