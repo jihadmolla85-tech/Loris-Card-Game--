@@ -496,9 +496,12 @@ class _GameScreenState extends State<GameScreen> {
     'Mitu', 'Tania', 'Nusrat', 'Mim', 'Sumi', 'Rima',
     'Nila', 'Faria', 'Sumaiya', 'Tisha', 'Anika', 'Maliha',
   ];
+  // Human character portraits only; no animal or object avatars.
   static const List<String> _avatarPool = [
-    '🦊', '🐼', '🦁', '🐯', '🐸', '🐨',
-    '🐻', '🦉', '🐺', '🐵', '🐧', '🐙',
+    '👨🏻', '👩🏻', '👨🏼', '👩🏼', '👨🏽', '👩🏽',
+    '👨🏾', '👩🏾', '👨🏿', '👩🏿', '🧑🏻‍🦱', '🧑🏼‍🦰',
+    '👨🏻‍🦱', '👩🏻‍🦰', '👨🏽‍🦲', '👩🏽‍🦱',
+    '👨🏾‍🦰', '👩🏾‍🦳', '🧑🏽‍🦱', '🧑🏾‍🦰',
   ];
   late final List<String> _playerNames;
   late final List<String> _playerAvatars;
