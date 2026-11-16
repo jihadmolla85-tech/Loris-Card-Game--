@@ -583,6 +583,8 @@ await DealerRevealDialog.show(
   drawnCards: dealerSelection.drawnCards,
   playerCount: widget.playerCount,
   dealerIndex: dealerSelection.dealerIndex,
+  dealerName: _playerNames[dealerSelection.dealerIndex],
+  dealerAvatar: _playerAvatars[dealerSelection.dealerIndex],
 );
       final dealtHands = _dealController.deal(
         deck: dealerSelection.shuffledDeck,
