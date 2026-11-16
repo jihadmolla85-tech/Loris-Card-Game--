@@ -10,5 +10,17 @@ void main() {
     expect(find.text('NEW GAME'), findsOneWidget);
     expect(find.text('RESUME GAME'), findsOneWidget);
     expect(find.text('SETTINGS'), findsOneWidget);
+    expect(find.text('HOW TO PLAY'), findsOneWidget);
+
+    await tester.tap(find.text('HOW TO PLAY'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('HOW TO PLAY LORIS'), findsOneWidget);
+    expect(find.text('GAME SETUP'), findsOneWidget);
+    expect(find.text('CALL 16'), findsOneWidget);
+    expect(find.text('SCORING'), findsOneWidget);
+
+    await tester.tap(find.text('CLOSE'));
+    await tester.pumpAndSettle();
   });
 }
