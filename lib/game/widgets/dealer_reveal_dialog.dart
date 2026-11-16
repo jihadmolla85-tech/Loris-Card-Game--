@@ -60,7 +60,7 @@ class _DealerRevealDialogState
   Future<void> revealCards() async {
     for (var i = 0; i < widget.drawnCards.length; i++) {
       await Future.delayed(
-        const Duration(milliseconds: 720),
+        const Duration(milliseconds: 320),
       );
 
       if (!mounted) return;
@@ -131,7 +131,7 @@ String cardText(loris.Card card) {
                     !card.isLoris && card.rank == 11;
 
                 return AnimatedContainer(
-                  duration: const Duration(milliseconds: 350),
+                  duration: const Duration(milliseconds: 180),
                   width: 62,
                   height: 88,
                   alignment: Alignment.center,
