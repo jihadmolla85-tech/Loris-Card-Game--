@@ -2302,7 +2302,7 @@ await DealerRevealDialog.show(
           ),
           AnimatedAlign(
             alignment: target == null ? Alignment.center : _dealSeatAlignment(target),
-            duration: const Duration(milliseconds: 115),
+            duration: target == null ? Duration.zero : const Duration(milliseconds: 115),
             curve: Curves.easeOutCubic,
             child: _dealCardBack(),
           ),
