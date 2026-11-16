@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 // Stylised human portrait used for every player seat (no animal emoji).
 class LorisPortraitAvatar extends StatelessWidget {
   const LorisPortraitAvatar({
+    super.key,
     required this.variant,
     this.size = 54,
     this.highlighted = false,
