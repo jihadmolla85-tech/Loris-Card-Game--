@@ -19,7 +19,7 @@ A Flutter card game for Android and web, with offline play against AI.
 - If a higher trump can beat the highest trump already played, overtrumping is compulsory.
 - LORIS may be played at any time and is the highest card; it cannot be overtrumped.
 - A valid 16 call requires the bidding team to have reached its bid and won the previous trick; after the call, the team must win every remaining trick.
-- A successful bid scores its bid amount (including 8); an unsuccessful bid awards the opposing team double the bid.
+- A successful bid scores its bid amount; a successful 8-call (all eight tricks) scores 16 points. An unsuccessful bid awards the opposing team double the bid.
 - The match target is 32 points.
 - Saved matches can be resumed on the same device.
 
