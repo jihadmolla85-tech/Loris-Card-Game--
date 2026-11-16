@@ -2919,6 +2919,8 @@ await DealerRevealDialog.show(
   }
 
 
+}
+
 /// Original illustrated court-card artwork. Each face card has its own
 /// silhouette, costume and ornament rather than a plain suit pip.
 class _CourtCardPainter extends CustomPainter {
@@ -3163,4 +3165,3 @@ class _CourtCardPainter extends CustomPainter {
       oldDelegate.accent != accent;
 }
 
-}
