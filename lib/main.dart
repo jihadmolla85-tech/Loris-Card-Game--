@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:async';\nimport 'dart:math';
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
@@ -633,13 +633,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Future<void> _playCardFeedback(loris.Card card) async {
     if (!_soundEnabled) return;
     if (card.isLoris) {
-      await _audio.play('loris');
+      unawaited(_audio.play('loris'));
       await HapticFeedback.heavyImpact();
     } else if (card.suit == _trumpSuit) {
-      await _audio.play('trump');
+      unawaited(_audio.play('trump'));
       await HapticFeedback.mediumImpact();
     } else {
-      await _audio.play('card_place');
+      // Use the device's short tactile click instead of the drum-like
+      // placeholder recording currently bundled as card_place.wav.
+      await SystemSound.play(SystemSoundType.click);
       await HapticFeedback.lightImpact();
     }
   }
@@ -1352,7 +1354,7 @@ await DealerRevealDialog.show(
         _collectingTrickWinner = null;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
-      if (_soundEnabled) await _audio.play('trick_win');
+      if (_soundEnabled) unawaited(_audio.play('trick_win'));
       await HapticFeedback.heavyImpact();
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
@@ -1397,11 +1399,11 @@ await DealerRevealDialog.show(
 
       if (_finished) {
         if (_matchController.isMatchOver) {
-          if (_soundEnabled) await _audio.play('match_win');
+          if (_soundEnabled) unawaited(_audio.play('match_win'));
           await HapticFeedback.vibrate();
           if (mounted) setState(() => _winCelebration = 'MATCH CHAMPION!');
         } else {
-          if (_soundEnabled) await _audio.play('round_win');
+          if (_soundEnabled) unawaited(_audio.play('round_win'));
           await HapticFeedback.heavyImpact();
           if (mounted) setState(() => _winCelebration = 'ROUND WON!');
         }
@@ -1424,7 +1426,9 @@ await DealerRevealDialog.show(
 
     // Persist after every card so an unexpected app close does not discard
     // the latest turn. Save failures are surfaced without interrupting play.
-    await _autoSaveGame();
+    // Saving is deliberately detached from the turn pipeline: slow local
+    // storage must never leave the table waiting for the next player's turn.
+    unawaited(_autoSaveGame());
     if (mounted && _winCelebration != null) {
       await Future.delayed(const Duration(milliseconds: 1150));
       if (mounted) setState(() => _winCelebration = null);
@@ -1954,6 +1958,28 @@ await DealerRevealDialog.show(
           ),
         );
       },
+    );
+  }
+
+  Widget _seatRoleBadge(String label, Color foreground, Color background) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: foreground.withValues(alpha: .9), width: .7),
+        boxShadow: [BoxShadow(color: foreground.withValues(alpha: .22), blurRadius: 5)],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 5.5,
+          height: 1,
+          fontWeight: FontWeight.w900,
+          letterSpacing: .35,
+        ),
+      ),
     );
   }
 
@@ -2628,6 +2654,17 @@ await DealerRevealDialog.show(
                             'TEAM ${index.isEven ? "A" : "B"}',
                             style: const TextStyle(color: Color(0xFFFFD978), fontSize: 7, fontWeight: FontWeight.bold),
                           ),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 3,
+                            runSpacing: 2,
+                            children: [
+                              if (_dealerIndex == index)
+                                _seatRoleBadge('DEALER', const Color(0xFFFFD76A), const Color(0xFF3B2608)),
+                              if (_biddingController?.highestBidder == index)
+                                _seatRoleBadge('BID ${_biddingController!.highestBid}', const Color(0xFF9BE7FF), const Color(0xFF082B3A)),
+                            ],
+                          ),
                           if (currentPlayer == index)
                             Container(
                               margin: const EdgeInsets.only(top: 2),
@@ -2695,7 +2732,41 @@ await DealerRevealDialog.show(
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: .7),
                       ),
-                      if (plays.isEmpty)
+                      if (_trumpSuit != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFFFD76A).withValues(alpha: .30),
+                                const Color(0xFFFFF0B0).withValues(alpha: .12),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFFFD76A), width: 1.2),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x66FFD76A), blurRadius: 13, spreadRadius: 1),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE8A3), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                              const SizedBox(width: 6),
+                              Text(
+                                _suitSymbol(_trumpSuit),
+                                style: TextStyle(
+                                  color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF737D) : Colors.white,
+                                  fontSize: 19,
+                                  height: 1,
+                                  fontWeight: FontWeight.w900,
+                                  shadows: const [Shadow(color: Color(0xFFFFD76A), blurRadius: 8)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (plays.isEmpty)
                         const Text('PLAY A CARD', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1.5, fontWeight: FontWeight.bold))
                       else
                         const SizedBox(height: 1),
