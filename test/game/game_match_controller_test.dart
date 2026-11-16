@@ -363,6 +363,38 @@ void main() {
       expect(match.dealerIndex, 3);
     });
 
+    test('Restores a saved match in the middle of a trick', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      final round = match.currentRound;
+      final player = round.trickEngine.currentPlayerIndex;
+      final playedCard = round.trickEngine.hands[player].first;
+      match.playCard(player, playedCard);
+
+      final snapshot = match.createSnapshot();
+      final restored = GameMatchController(
+        initialDealerIndex: snapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(snapshot);
+
+      expect(restored.currentRound.trickEngine.plays, hasLength(1));
+      expect(
+        restored.currentRound.trickEngine.currentPlayerIndex,
+        (player + 1) % 4,
+      );
+      expect(
+        restored.currentRound.trickEngine.hands[player].contains(playedCard),
+        isFalse,
+      );
+    });
+
     test('Restores a saved match after the final trick of a round', () {
       match.startRound(
         hands: createHands(),
