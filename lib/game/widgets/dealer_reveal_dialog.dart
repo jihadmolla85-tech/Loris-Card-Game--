@@ -183,7 +183,7 @@ class _DealerRevealDialogState extends State<DealerRevealDialog> {
                   : ListView.separated(
                       scrollDirection: Axis.horizontal,
                       itemCount: cards.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 4),
+                      separatorBuilder: (_, _) => const SizedBox(width: 4),
                       itemBuilder: (_, index) => _revealedCard(cards[index]),
                     ),
             ),
