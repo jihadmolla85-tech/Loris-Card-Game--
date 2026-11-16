@@ -164,7 +164,6 @@ void main() {
     test('Cannot play after failed 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(2);
       engine.call16(callerPlayerIndex: 2);
       engine.recordTrickWinner(1);
 
