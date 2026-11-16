@@ -2748,7 +2748,7 @@ await DealerRevealDialog.show(
                             ),
                             child: LorisPortraitAvatar(
                               variant: index,
-                              expression: _avatarExpressionFor(index),
+                              expression: _avatarExpressionFor(index, currentPlayer),
                               size: avatarSize,
                               highlighted: currentPlayer == index || _collectingTrickWinner == index,
                             ),
@@ -3064,7 +3064,7 @@ await DealerRevealDialog.show(
     );
   }
 
-  int _avatarExpressionFor(int index) {
+  int _avatarExpressionFor(int index, int? currentPlayer) {
     if (_collectingTrickWinner == index) return 0; // celebrating the trick
     if (currentPlayer == index) return 1; // concentrating on the decision
     if (_biddingController?.highestBidder == index) return 3; // confident bidder
