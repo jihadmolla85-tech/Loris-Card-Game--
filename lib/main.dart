@@ -527,6 +527,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _passed16 = false;
   bool _busy = false;
   bool _isShuffling = false;
+  bool _isDealing = false;
+  int? _dealTargetPlayer;
+  int _dealBatch = 0;
+  int _dealCardNumber = 0;
   late final AnimationController _shuffleController;
 
   String _status = 'Press START MATCH to begin.';
@@ -614,7 +618,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     await Future.delayed(const Duration(milliseconds: 35));
     if (!mounted) return;
     setState(() => _flightStarted = true);
-    await Future.delayed(const Duration(milliseconds: 1120));
+    await Future.delayed(const Duration(milliseconds: 520));
     if (!mounted) return;
     setState(() {
       _flyingCard = null;
@@ -697,10 +701,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     try {
       await _playShuffleSound();
-      await Future.delayed(const Duration(milliseconds: 450));
+      await Future.delayed(const Duration(milliseconds: 1050));
       if (!mounted) return;
-      _shuffleController.stop();
-      setState(() => _isShuffling = false);
       final deck = loris_deck.LorisDeck.create(
         widget.playerCount == 4
             ? loris.PlayerCount.four
@@ -721,6 +723,9 @@ await DealerRevealDialog.show(
   dealerName: _playerNames[dealerSelection.dealerIndex],
   dealerAvatar: _playerAvatars[dealerSelection.dealerIndex],
 );
+      _shuffleController.stop();
+      if (mounted) setState(() => _isShuffling = false);
+
       final dealtHands = _dealController.deal(
         deck: dealerSelection.shuffledDeck,
         playerCount: widget.playerCount,
@@ -730,9 +735,18 @@ await DealerRevealDialog.show(
       setState(() {
         _dealerIndex = dealerSelection.dealerIndex;
         _hands = dealtHands;
-        _status = 'Cards dealt. Bidding begins.';
+        _isDealing = true;
+        _dealTargetPlayer = null;
+        _status = 'Dealing cards in two batches of four.';
       });
 
+      await _animateDeal(dealerSelection.dealerIndex);
+      if (!mounted) return;
+      setState(() {
+        _isDealing = false;
+        _dealTargetPlayer = null;
+        _status = 'Cards dealt. Bidding begins.';
+      });
       _startBidding();
     } catch (e) {
       setState(() {
@@ -1192,10 +1206,13 @@ await DealerRevealDialog.show(
           _hands = newHands;
           _trumpSuit = null;
           _started = false;
-
+          _isDealing = true;
           _status = 'Redeal required. Same dealer remains.';
         });
 
+        await _animateDeal(_dealerIndex!);
+        if (!mounted) return;
+        setState(() => _isDealing = false);
         _startBidding();
         return;
       }
@@ -1326,12 +1343,12 @@ await DealerRevealDialog.show(
       await HapticFeedback.heavyImpact();
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
-      await Future.delayed(const Duration(milliseconds: 550));
+      await Future.delayed(const Duration(milliseconds: 320));
       if (!mounted) return;
       setState(() {
         _collectingTrickWinner = winnerPreview;
       });
-      await Future.delayed(const Duration(milliseconds: 900));
+      await Future.delayed(const Duration(milliseconds: 520));
       if (!mounted) return;
 
       final winner = _matchController.completeTrick();
@@ -1492,6 +1509,14 @@ await DealerRevealDialog.show(
     });
 
     try {
+      setState(() => _isShuffling = true);
+      _shuffleController.repeat(reverse: true);
+      await _playShuffleSound();
+      await Future.delayed(const Duration(milliseconds: 850));
+      if (!mounted) return;
+      _shuffleController.stop();
+      setState(() => _isShuffling = false);
+
       final deck = loris_deck.LorisDeck.create(
         widget.playerCount == 4
             ? loris.PlayerCount.four
@@ -1514,6 +1539,7 @@ await DealerRevealDialog.show(
         _started = false;
         _finished = false;
         _passed16 = false;
+        _isDealing = true;
 
         _trumpSuit = null;
 
@@ -1522,6 +1548,9 @@ await DealerRevealDialog.show(
         _status = 'Next round dealt. Bidding begins.';
       });
 
+      await _animateDeal(_matchController.dealerIndex);
+      if (!mounted) return;
+      setState(() => _isDealing = false);
       _startBidding();
     } catch (e) {
       setState(() => _error = e.toString());
@@ -1733,28 +1762,34 @@ await DealerRevealDialog.show(
     // Bidding remains scrollable; the live match itself is a fixed,
     // screen-fitted layout so the table and all eight cards stay visible.
     if (!_started) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            _buildScoreBoard(),
-            const SizedBox(height: 10),
-            _infoStrip('DEALER', _dealerIndex == null
-                ? '-'
-                : '${_playerAvatars[_dealerIndex!]} ${_playerNames[_dealerIndex!]}'),
-            _infoStrip('STATUS', _status),
-            if (_error != null) _buildErrorBanner(),
-            _buildBiddingTable(bidding),
-            if (bidding != null && bidding.isHumanTurn && !bidding.isComplete)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _busy ? null : _humanBid,
-                  child: const Text('MAKE YOUR BID'),
-                ),
-              ),
-          ],
-        ),
+      return Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              children: [
+                _buildScoreBoard(),
+                const SizedBox(height: 10),
+                _infoStrip('DEALER', _dealerIndex == null
+                    ? '-'
+                    : '${_playerAvatars[_dealerIndex!]} ${_playerNames[_dealerIndex!]}'),
+                _infoStrip('STATUS', _status),
+                if (_error != null) _buildErrorBanner(),
+                _buildBiddingHand(hands[0]),
+                _buildBiddingTable(bidding),
+                if (bidding != null && bidding.isHumanTurn && !bidding.isComplete)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _busy ? null : _humanBid,
+                      child: const Text('MAKE YOUR BID'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (_isDealing) Positioned.fill(child: _buildDealAnimation()),
+        ],
       );
     }
 
@@ -2119,6 +2154,157 @@ await DealerRevealDialog.show(
   }
 
   // ----------------------------------------------------------
+  // BIDDING HAND AND DEAL ANIMATION
+  // ----------------------------------------------------------
+
+  Widget _buildBiddingHand(List<loris.Card> hand) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: LorisApp.navy.withValues(alpha: .82),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: LorisApp.gold, width: 1.4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('YOUR HAND • ${hand.length} CARDS',
+            style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 8,
+            children: hand.map((card) => _buildCard(card, compact: true)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Alignment _dealSeatAlignment(int playerIndex) {
+    final seats = widget.playerCount == 4
+        ? const <Alignment>[
+            Alignment(0, .78),
+            Alignment(-.86, 0),
+            Alignment(0, -.78),
+            Alignment(.86, 0),
+          ]
+        : const <Alignment>[
+            Alignment(0, .82),
+            Alignment(-.86, .48),
+            Alignment(-.86, -.48),
+            Alignment(0, -.82),
+            Alignment(.86, -.48),
+            Alignment(.86, .48),
+          ];
+    return seats[playerIndex];
+  }
+
+  Widget _dealCardBack() {
+    return Container(
+      width: 48,
+      height: 68,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(7),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF315F9A), Color(0xFF102747)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: LorisApp.gold, width: 1.6),
+        boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(2, 5))],
+      ),
+      child: const Center(
+        child: Icon(Icons.auto_awesome, color: LorisApp.gold, size: 22),
+      ),
+    );
+  }
+
+  Widget _buildDealAnimation() {
+    final target = _dealTargetPlayer;
+    return ColoredBox(
+      color: Colors.black.withValues(alpha: .88),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 34,
+            left: 12,
+            right: 12,
+            child: Column(
+              children: [
+                const Text('DEALING CARDS',
+                  style: TextStyle(color: LorisApp.gold, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 2)),
+                const SizedBox(height: 6),
+                Text('BATCH ${_dealBatch + 1} OF 2  •  CARD $_dealCardNumber OF 4',
+                  style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 8,
+            right: 8,
+            bottom: 24,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
+              children: List.generate(widget.playerCount, (index) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_playerAvatars[index], style: const TextStyle(fontSize: 20)),
+                  const SizedBox(width: 3),
+                  Text(_playerNames[index], style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                ],
+              )),
+            ),
+          ),
+          AnimatedAlign(
+            alignment: target == null ? Alignment.center : _dealSeatAlignment(target),
+            duration: const Duration(milliseconds: 115),
+            curve: Curves.easeOutCubic,
+            child: _dealCardBack(),
+          ),
+          if (target != null)
+            Positioned(
+              top: 86,
+              left: 12,
+              right: 12,
+              child: Text('TO ${_playerNames[target]}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _animateDeal(int dealerIndex) async {
+    final firstPlayer = (dealerIndex + 1) % widget.playerCount;
+    for (var batch = 0; batch < 2; batch++) {
+      for (var cardNumber = 0; cardNumber < 4; cardNumber++) {
+        for (var offset = 0; offset < widget.playerCount; offset++) {
+          if (!mounted) return;
+          final player = (firstPlayer + offset) % widget.playerCount;
+          setState(() {
+            _dealBatch = batch;
+            _dealCardNumber = cardNumber + 1;
+            _dealTargetPlayer = null;
+          });
+          await Future.delayed(const Duration(milliseconds: 18));
+          if (!mounted) return;
+          setState(() => _dealTargetPlayer = player);
+          await Future.delayed(const Duration(milliseconds: 115));
+          if (!mounted) return;
+          setState(() => _dealTargetPlayer = null);
+          await Future.delayed(const Duration(milliseconds: 22));
+        }
+      }
+    }
+  }
+
+  // ----------------------------------------------------------
   // BIDDING TABLE
   // ----------------------------------------------------------
 
@@ -2471,11 +2657,11 @@ await DealerRevealDialog.show(
                             -.25 + (i ~/ 3) * .50,
                           )
                         : trickCollectionTargets[_collectingTrickWinner!],
-                    duration: Duration(milliseconds: _collectingTrickWinner == null ? 260 : 850),
+                    duration: Duration(milliseconds: _collectingTrickWinner == null ? 220 : 520),
                     curve: _collectingTrickWinner == null ? Curves.easeOutBack : Curves.easeInCubic,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: .78, end: _collectingTrickWinner == null ? 1 : .42),
-                      duration: Duration(milliseconds: _collectingTrickWinner == null ? 260 : 850),
+                      duration: Duration(milliseconds: _collectingTrickWinner == null ? 220 : 520),
                       curve: Curves.easeInOut,
                       builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
                       child: _buildCard(plays[i].card, compact: true),
@@ -2486,11 +2672,11 @@ await DealerRevealDialog.show(
                     alignment: _flightStarted
                         ? Alignment.center
                         : seatAlignments[_flyingFromPlayer!],
-                    duration: Duration(milliseconds: _flightStarted ? 1120 : 1),
+                    duration: Duration(milliseconds: _flightStarted ? 520 : 1),
                     curve: Curves.easeInOutCubic,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: _flightStarted ? 1.0 : 0.0),
-                      duration: const Duration(milliseconds: 1120),
+                      duration: const Duration(milliseconds: 520),
                       curve: Curves.easeInOutCubic,
                       builder: (context, progress, child) {
                         final transform = Matrix4.identity()
