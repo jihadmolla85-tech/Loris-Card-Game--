@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/services.dart';
+import 'game/engine/loris_audio_service.dart';
 import 'game/widgets/dealer_reveal_dialog.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
 import 'game/engine/game_settings_service.dart';
@@ -486,6 +487,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin {
   final GameSaveService _saveService = GameSaveService();
+  final LorisAudioService _audio = LorisAudioService();
   final Random _random = Random();
 
   static const List<String> _namePool = [
@@ -577,6 +579,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _shuffleController.dispose();
+    _audio.dispose();
     super.dispose();
   }
 
@@ -607,28 +610,20 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   Future<void> _playCardFeedback(loris.Card card) async {
     if (card.isLoris) {
-      await SystemSound.play(SystemSoundType.alert);
+      await _audio.play('loris');
       await HapticFeedback.heavyImpact();
     } else if (card.suit == _trumpSuit) {
-      await SystemSound.play(SystemSoundType.alert);
+      await _audio.play('trump');
       await HapticFeedback.mediumImpact();
     } else {
-      await SystemSound.play(SystemSoundType.click);
+      await _audio.play('card_place');
       await HapticFeedback.lightImpact();
     }
   }
 
   Future<void> _playShuffleSound() async {
-    await SystemSound.play(SystemSoundType.click);
+    await _audio.play('shuffle');
     await HapticFeedback.lightImpact();
-  }
-
-  Future<void> _playShuffleSound() async {
-    for (var i = 0; i < 7; i++) {
-      if (!mounted) return;
-      await SystemSound.play(SystemSoundType.click);
-      await Future.delayed(const Duration(milliseconds: 105));
-    }
   }
 
   // ----------------------------------------------------------
@@ -1367,7 +1362,7 @@ await DealerRevealDialog.show(
         _collectingTrickWinner = null;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
-      await SystemSound.play(SystemSoundType.alert);
+      await _audio.play('trick_win');
       await HapticFeedback.heavyImpact();
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
@@ -1410,14 +1405,12 @@ await DealerRevealDialog.show(
       }
 
       if (_finished) {
-        await SystemSound.play(SystemSoundType.alert);
-        await HapticFeedback.vibrate();
         if (_matchController.isMatchOver) {
-          await Future.delayed(const Duration(milliseconds: 350));
-          if (mounted) {
-            await SystemSound.play(SystemSoundType.alert);
-            await HapticFeedback.vibrate();
-          }
+          await _audio.play('match_win');
+          await HapticFeedback.vibrate();
+        } else {
+          await _audio.play('round_win');
+          await HapticFeedback.heavyImpact();
         }
         final score = _matchController.matchScoreEngine;
 
