@@ -2584,7 +2584,7 @@ await DealerRevealDialog.show(
                 Positioned.fill(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(130),
-                    child: const Loris3DTable(playerCount: 4),
+                    child: Loris3DTable(playerCount: widget.playerCount),
                   ),
                 ),
                 for (var index = 0; index < widget.playerCount; index++)
