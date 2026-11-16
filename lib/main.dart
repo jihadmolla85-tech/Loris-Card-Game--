@@ -1885,7 +1885,7 @@ await DealerRevealDialog.show(
                       foregroundColor: isHighest || isHuman
                           ? LorisApp.navy
                           : Colors.white,
-                      child: _LorisPortraitAvatar(
+                      child: LorisPortraitAvatar(
                         variant: index,
                         size: 38,
                       ),
@@ -2002,7 +2002,7 @@ await DealerRevealDialog.show(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _LorisPortraitAvatar(
+                    LorisPortraitAvatar(
                       variant: index,
                       size: 54,
                       highlighted: currentPlayer == index,
