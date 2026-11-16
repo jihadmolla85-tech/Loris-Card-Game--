@@ -2529,6 +2529,7 @@ await DealerRevealDialog.show(
                             .70 + (progress * .30),
                             .70 + (progress * .30),
                             1.0,
+                            1.0,
                           );
                         return Transform(
                           alignment: Alignment.center,
