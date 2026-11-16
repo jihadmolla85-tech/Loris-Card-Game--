@@ -1681,6 +1681,7 @@ await DealerRevealDialog.show(
             _buildTableSurface(
               _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,
               currentPlayer,
+              hands.map((hand) => hand.length).toList(),
             ),
 
             const SizedBox(height: 12),
@@ -2049,6 +2050,7 @@ await DealerRevealDialog.show(
   Widget _buildTableSurface(
     List<TrickPlay> plays,
     int? currentPlayer,
+    List<int> handCounts,
   ) {
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
@@ -2135,6 +2137,47 @@ await DealerRevealDialog.show(
                           color: LorisApp.gold,
                           fontSize: 8,
                         )),
+                    const SizedBox(height: 4),
+                    if (index != 0)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (var back = 0;
+                              back < (handCounts[index] > 0 ? 3 : 0);
+                              back++)
+                            Transform.translate(
+                              offset: Offset(back * -5.0, 0),
+                              child: Container(
+                                width: 10,
+                                height: 15,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF17365D),
+                                  borderRadius: BorderRadius.circular(2),
+                                  border: Border.all(
+                                    color: const Color(0xFFFFD879),
+                                    width: .7,
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.star,
+                                    size: 6,
+                                    color: Color(0xFFFFD879),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${handCounts[index]}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
