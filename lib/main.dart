@@ -1788,6 +1788,7 @@ await DealerRevealDialog.show(
               ],
             ),
           ),
+          if (_isShuffling) Positioned.fill(child: _buildShuffleOverlay()),
           if (_isDealing) Positioned.fill(child: _buildDealAnimation()),
         ],
       );
@@ -2218,6 +2219,45 @@ await DealerRevealDialog.show(
       ),
       child: const Center(
         child: Icon(Icons.auto_awesome, color: LorisApp.gold, size: 22),
+      ),
+    );
+  }
+
+  Widget _buildShuffleOverlay() {
+    return ColoredBox(
+      color: Colors.black.withValues(alpha: .88),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _shuffleController,
+              builder: (context, child) {
+                final phase = _shuffleController.value * 2 * pi;
+                return SizedBox(
+                  width: 170,
+                  height: 112,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      for (var i = 0; i < 5; i++)
+                        Transform.translate(
+                          offset: Offset(sin(phase + i * .85) * 34, cos(phase + i * .85) * 10),
+                          child: Transform.rotate(
+                            angle: sin(phase + i * .85) * .24,
+                            child: _dealCardBack(),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('SHUFFLING THE DECK',
+              style: TextStyle(color: LorisApp.gold, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 2)),
+          ],
+        ),
       ),
     );
   }
