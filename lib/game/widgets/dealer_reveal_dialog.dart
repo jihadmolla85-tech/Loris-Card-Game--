@@ -10,17 +10,23 @@ class DealerRevealDialog extends StatefulWidget {
     required this.drawnCards,
     required this.playerCount,
     required this.dealerIndex,
+    this.dealerName = 'Dealer',
+    this.dealerAvatar = '🦉',
   });
 
   final List<loris.Card> drawnCards;
   final int playerCount;
   final int dealerIndex;
+  final String dealerName;
+  final String dealerAvatar;
 
   static Future<void> show(
     BuildContext context, {
     required List<loris.Card> drawnCards,
     required int playerCount,
     required int dealerIndex,
+    String dealerName = 'Dealer',
+    String dealerAvatar = '🦉',
   }) {
     return showDialog<void>(
       context: context,
@@ -29,6 +35,8 @@ class DealerRevealDialog extends StatefulWidget {
         drawnCards: drawnCards,
         playerCount: playerCount,
         dealerIndex: dealerIndex,
+        dealerName: dealerName,
+        dealerAvatar: dealerAvatar,
       ),
     );
   }
@@ -162,10 +170,10 @@ String cardText(loris.Card card) {
             ),
             const SizedBox(height: 16),
             if (jackFound)
-              const Text(
-                '🦉 JACK FOUND! DEALER SELECTED',
+              Text(
+                '${widget.dealerAvatar} JACK FOUND! ${widget.dealerName.toUpperCase()} IS THE DEALER',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Color(0xFFFFD76A),
                   fontWeight: FontWeight.w900,
                 ),
