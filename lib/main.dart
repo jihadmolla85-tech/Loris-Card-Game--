@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'game/widgets/dealer_reveal_dialog.dart';
+import 'game/engine/game_settings_service.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'game/models/loris_card.dart' as loris;
@@ -70,10 +71,45 @@ class LorisHomeScreen extends StatefulWidget {
 
 class _LorisHomeScreenState extends State<LorisHomeScreen> {
   final GameSaveService _saveService = GameSaveService();
+  final GameSettingsService _settingsService = GameSettingsService();
 
   bool _loading = false;
   bool _musicEnabled = true;
   bool _soundEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    try {
+      final settings = await _settingsService.load();
+      if (!mounted) return;
+      setState(() {
+        _musicEnabled = settings.musicEnabled;
+        _soundEnabled = settings.soundEnabled;
+      });
+    } catch (_) {
+      // Keep safe defaults if local preferences cannot be read.
+    }
+  }
+
+  Future<void> _saveSettings() async {
+    try {
+      await _settingsService.save(
+        GameSettings(
+          musicEnabled: _musicEnabled,
+          soundEnabled: _soundEnabled,
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Could not save settings on this device.');
+      }
+    }
+  }
 
   Future<void> _newGame() async {
     final playerCount = await showDialog<int>(
@@ -238,6 +274,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                     onChanged: (value) {
                       setState(() => _musicEnabled = value);
                       updateDialog(() => _musicEnabled = value);
+                      _saveSettings();
                     },
                   ),
                   SwitchListTile(
@@ -247,6 +284,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                     onChanged: (value) {
                       setState(() => _soundEnabled = value);
                       updateDialog(() => _soundEnabled = value);
+                      _saveSettings();
                     },
                   ),
                   const Text(
