@@ -283,13 +283,17 @@ class GameMatchController {
       trumpSuit: round?.trickEngine.trumpSuit,
       biddingTeam: round?.biddingTeam,
       bidAmount: round?.bidAmount,
-      trickPlays: round?.trickEngine.plays
+      // A completed trick has already been scored. Do not serialize its
+      // plays as an in-progress trick, otherwise restore rejects a full
+      // trick (and a finished round cannot be resumed).
+      trickPlays: round == null || round.trickEngine.isComplete
+          ? const []
+          : round.trickEngine.plays
               .map((play) => SnapshotTrickPlay(
                     playerIndex: play.playerIndex,
                     card: play.card,
                   ))
-              .toList() ??
-          const [],
+              .toList(),
       firstPlayerIndex: round?.trickEngine.firstPlayerIndex,
       completedTricks: round?.completedTricks ?? 0,
       biddingTeamTricks: round?.biddingTeamTricks ?? 0,
