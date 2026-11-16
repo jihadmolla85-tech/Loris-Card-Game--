@@ -199,7 +199,6 @@ void main() {
     test('Rejects a second 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(2);
       engine.call16(callerPlayerIndex: 2);
 
       expect(
