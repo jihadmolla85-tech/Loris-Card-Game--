@@ -1794,7 +1794,7 @@ await DealerRevealDialog.show(
                                     duration: const Duration(milliseconds: 180),
                                     curve: Curves.easeOut,
                                     transform: Matrix4.identity()
-                                      ..translate(0.0, playable ? -9.0 : 0.0)
+                                      ..translateByDouble(0.0, playable ? -9.0 : 0.0, 0.0, 1.0)
                                       ..rotateZ(angle),
                                     transformAlignment: Alignment.bottomCenter,
                                     child: _buildCard(
