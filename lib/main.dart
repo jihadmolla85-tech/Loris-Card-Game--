@@ -2194,6 +2194,3 @@ await DealerRevealDialog.show(
   }
 
 }
-}
-
-
