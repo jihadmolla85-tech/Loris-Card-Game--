@@ -66,8 +66,11 @@ Status: implementation target for the draft release branch. This document is a s
 - LORIS, trump, ordinary trick win, round win, round loss, match win and match loss each need distinct sound and visual treatment.
 - Round/match outcome overlays must show the winning team, score delta and updated match totals without hiding the table state.
 
-## 10. Audio and accessibility
+## 10. Audio, ambient music and accessibility
 - Provide separate authored sound assets for shuffle, each card deal, card landing, bid, pass, trump selection/reveal, trump play, LORIS play, 16-call, trick win/collection, round win/loss and match win/loss.
+- Include optional, low-volume ambient background music that creates a refined premium card-club atmosphere (instrumental lounge/jazz ambience; no licensed commercial songs or unlicensed recordings).
+- Background music must be independently switchable and have its own volume control, separate from sound effects. Remember the user's choice between sessions where app settings support persistence.
+- Music should automatically duck or pause under important announcements and dramatic game effects; avoid competing with card sounds or spoken cues.
 - Mix and duck sounds to avoid overlapping announcements. Provide sound/music toggles and haptic cues.
 - Important information must remain visible as text/icons even when audio is muted.
 
