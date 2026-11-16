@@ -1884,9 +1884,9 @@ await DealerRevealDialog.show(
                       foregroundColor: isHighest || isHuman
                           ? LorisApp.navy
                           : Colors.white,
-                      child: Text(
-                        _playerAvatars[index],
-                        style: const TextStyle(fontSize: 18),
+                      child: _LorisPortraitAvatar(
+                        variant: index,
+                        size: 38,
                       ),
                     ),
                     const SizedBox(height: 7),
@@ -1957,15 +1957,16 @@ await DealerRevealDialog.show(
       height: 390,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: LorisApp.tableGreen,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF147C91), Color(0xFF07506A), Color(0xFF032F45)],
+        ),
         borderRadius: BorderRadius.circular(150),
-        border: Border.all(color: LorisApp.gold, width: 5),
+        border: Border.all(color: const Color(0xFFFFD879), width: 5),
         boxShadow: const [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
+          BoxShadow(color: Colors.black54, blurRadius: 18, offset: Offset(0, 7)),
+          BoxShadow(color: Color(0xFF8B4DCC), blurRadius: 0, spreadRadius: 3),
         ],
       ),
       child: Stack(
@@ -1979,22 +1980,32 @@ await DealerRevealDialog.show(
                 constraints: const BoxConstraints(maxWidth: 92),
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
                 decoration: BoxDecoration(
-                  color: currentPlayer == index
-                      ? LorisApp.gold.withValues(alpha: .28)
-                      : LorisApp.navy.withValues(alpha: .72),
-                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    colors: currentPlayer == index
+                        ? [const Color(0xFF9A4D3F), const Color(0xFF54221F)]
+                        : [const Color(0xCC182A49), const Color(0xDD07152E)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: currentPlayer == index
-                        ? LorisApp.gold
-                        : Colors.white24,
-                    width: currentPlayer == index ? 2 : 1,
+                        ? const Color(0xFFFFD879)
+                        : const Color(0xFFB88A52),
+                    width: currentPlayer == index ? 2.5 : 1.2,
                   ),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 4)),
+                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_playerAvatars[index],
-                        style: const TextStyle(fontSize: 25)),
+                    _LorisPortraitAvatar(
+                      variant: index,
+                      size: 54,
+                      highlighted: currentPlayer == index,
+                    ),
                     Text(
                       _playerNames[index],
                       maxLines: 1,
@@ -2022,9 +2033,16 @@ await DealerRevealDialog.show(
               constraints: const BoxConstraints(maxWidth: 245, maxHeight: 190),
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF043D2D).withValues(alpha: .88),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: Colors.white24),
+                gradient: const LinearGradient(
+                  colors: [Color(0xD91A7890), Color(0xE904344A)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: const Color(0xFFFFD879), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black45, blurRadius: 12, offset: Offset(0, 5)),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -2173,4 +2191,125 @@ await DealerRevealDialog.show(
       ),
     );
   }
+
+// Stylised human portrait used for every player seat (no animal emoji).
+class _LorisPortraitAvatar extends StatelessWidget {
+  const _LorisPortraitAvatar({
+    required this.variant,
+    this.size = 54,
+    this.highlighted = false,
+  });
+
+  final int variant;
+  final double size;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFFF0A8), Color(0xFFD18B32), Color(0xFFFFD978)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .35),
+            blurRadius: highlighted ? 12 : 6,
+            spreadRadius: highlighted ? 1 : 0,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: CustomPaint(
+          painter: _LorisPortraitPainter(variant: variant),
+          child: const SizedBox.expand(),
+        ),
+      ),
+    );
+  }
+}
+
+class _LorisPortraitPainter extends CustomPainter {
+  const _LorisPortraitPainter({required this.variant});
+  final int variant;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final skinTones = [
+      const Color(0xFFF2C6A0), const Color(0xFFD99A70),
+      const Color(0xFFB87550), const Color(0xFF8D563F),
+      const Color(0xFFE7B18B), const Color(0xFFC98A68),
+    ];
+    final hairColors = [
+      const Color(0xFF211A20), const Color(0xFF3C241D),
+      const Color(0xFF171C2A), const Color(0xFF5B3325),
+    ];
+    final clothes = [
+      const Color(0xFF315B83), const Color(0xFF8D3542),
+      const Color(0xFF356B5B), const Color(0xFF5B4388),
+      const Color(0xFFB07832), const Color(0xFF34445B),
+    ];
+    final skin = Paint()..color = skinTones[variant % skinTones.length];
+    final hair = Paint()..color = hairColors[variant % hairColors.length];
+    final outfit = Paint()..color = clothes[variant % clothes.length];
+    final bg = Paint()..shader = const LinearGradient(
+      colors: [Color(0xFF8FC4D4), Color(0xFF294A69)],
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, bg);
+    canvas.drawCircle(Offset(w * .5, h * 1.08), w * .43, outfit);
+    canvas.drawOval(Rect.fromCenter(
+      center: Offset(w * .5, h * .47),
+      width: w * .48,
+      height: h * .59,
+    ), skin);
+    canvas.drawOval(Rect.fromCenter(
+      center: Offset(w * .5, h * .29),
+      width: w * .55,
+      height: h * .39,
+    ), hair);
+    // Face is painted over the hair cap to keep a clear human portrait.
+    canvas.drawOval(Rect.fromCenter(
+      center: Offset(w * .5, h * .51),
+      width: w * .43,
+      height: h * .52,
+    ), skin);
+    final eye = Paint()..color = const Color(0xFF30201B);
+    canvas.drawCircle(Offset(w * .40, h * .49), w * .025, eye);
+    canvas.drawCircle(Offset(w * .60, h * .49), w * .025, eye);
+    final brow = Paint()
+      ..color = hair.color
+      ..strokeWidth = w * .035
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(w * .35, h * .445), Offset(w * .44, h * .44), brow);
+    canvas.drawLine(Offset(w * .56, h * .44), Offset(w * .65, h * .445), brow);
+    final nose = Paint()
+      ..color = const Color(0xFF9C5D49)
+      ..strokeWidth = w * .022
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(w * .5, h * .50), Offset(w * .48, h * .57), nose);
+    final smile = Paint()
+      ..color = const Color(0xFF793B39)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * .025;
+    final mouth = Path()
+      ..moveTo(w * .43, h * .63)
+      ..quadraticBezierTo(w * .5, h * .68, w * .57, h * .63);
+    canvas.drawPath(mouth, smile);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LorisPortraitPainter oldDelegate) =>
+      oldDelegate.variant != variant;
+}
+
 }
