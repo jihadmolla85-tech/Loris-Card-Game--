@@ -255,7 +255,9 @@ class GameMatchController {
     final round = currentRound;
     final winnerIndex = round.completeTrick();
 
-    if (round.isRoundEnded && !_dealerAdvanced) {
+    // The dealer changes only after their own team has a positive
+    // cumulative match score, and never after the match itself has ended.
+    if (round.isRoundEnded && !_dealerAdvanced && !isMatchOver) {
       dealerIndex = round.getNextDealerIndex();
       _dealerAdvanced = true;
     }
