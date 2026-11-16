@@ -362,5 +362,37 @@ void main() {
       expect(newHands.every((hand) => hand.length == 8), isTrue);
       expect(match.dealerIndex, 3);
     });
+
+    test('Restores a saved match after the final trick of a round', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      final snapshot = match.createSnapshot();
+      expect(snapshot.completedTricks, 8);
+      expect(snapshot.trickPlays, isEmpty);
+
+      final restored = GameMatchController(
+        initialDealerIndex: snapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+
+      restored.restoreSnapshot(snapshot);
+
+      expect(restored.hasStarted, isTrue);
+      expect(restored.currentRound.isRoundEnded, isTrue);
+      expect(restored.currentRound.completedTricks, 8);
+      expect(restored.matchScoreEngine.teamAScore, 4);
+      expect(restored.matchScoreEngine.teamBScore, -4);
+    });
+
   });
 }
