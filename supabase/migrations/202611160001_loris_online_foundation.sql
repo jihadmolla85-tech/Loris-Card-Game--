@@ -318,3 +318,11 @@ begin
   alter publication supabase_realtime add table public.loris_game_events;
 exception when duplicate_object then null;
 end $$;
+
+-- Clients may edit only their public identity fields. XP, rating and premium
+-- entitlement are server-managed and cannot be self-awarded by a client.
+revoke insert, update on public.player_profiles from authenticated;
+grant insert (user_id, display_name, avatar_id)
+  on public.player_profiles to authenticated;
+grant update (display_name, avatar_id, updated_at)
+  on public.player_profiles to authenticated;
