@@ -70,20 +70,6 @@ class GameMatchController {
     return _selectDealerFromDraw(deck: deck, playerCount: playerCount, random: random);
   }
 
-  /// Every new round uses a fresh one-card-at-a-time Jack draw.
-  /// The first player to receive a Jack becomes that round's dealer.
-  DealerSelectionResult selectDealerForNextRound({
-    required List<Card> deck,
-    required int playerCount,
-    Random? random,
-  }) {
-    if (_currentRound == null || !_currentRound!.isRoundEnded) {
-      throw StateError('The current round must end before selecting the next dealer.');
-    }
-
-    return _selectDealerFromDraw(deck: deck, playerCount: playerCount, random: random);
-  }
-
   DealerSelectionResult _selectDealerFromDraw({
     required List<Card> deck,
     required int playerCount,
