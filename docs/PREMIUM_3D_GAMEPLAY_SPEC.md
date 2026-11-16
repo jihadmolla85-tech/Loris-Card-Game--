@@ -61,7 +61,7 @@ Status: implementation target for the draft release branch. This document is a s
 - Keep current trick's led suit visible until the trick is fully collected.
 
 ## 9. 16-call, round and match outcomes
-- 16-call: dedicated sound, visual banner, avatar reaction and gold/energy effect. The timing must follow the agreed rule: after the bidding team has already won its bid number of tricks, it must win the next trick before the call is available.
+- 16-call: dedicated sound, visual banner, avatar reaction and gold/energy effect. The timing must follow the agreed rule: immediately after the bidding team wins exactly its bid number of tricks, provided the opponents have won zero tricks in the round. The winner of that target-reaching trick may CALL 16 or PASS; PASS permanently closes the option for that round.
 - Successful 16-call and failed 16-call have distinct outcome animations and score transitions.
 - LORIS, trump, ordinary trick win, round win, round loss, match win and match loss each need distinct sound and visual treatment.
 - Round/match outcome overlays must show the winning team, score delta and updated match totals without hiding the table state.
