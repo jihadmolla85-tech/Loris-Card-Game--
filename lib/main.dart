@@ -717,13 +717,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         random: _random,
       );
 await DealerRevealDialog.show(
-  context,
-  drawnCards: dealerSelection.drawnCards,
-  playerCount: widget.playerCount,
-  dealerIndex: dealerSelection.dealerIndex,
-  dealerName: _playerNames[dealerSelection.dealerIndex],
-  dealerAvatar: _playerAvatars[dealerSelection.dealerIndex],
-);
+        context,
+        drawnCards: dealerSelection.drawnCards,
+        playerCount: widget.playerCount,
+        dealerIndex: dealerSelection.dealerIndex,
+        firstPlayerIndex: dealerSelection.firstPlayerIndex,
+        playerNames: _playerNames,
+        playerAvatars: _playerAvatars,
+      );
       _shuffleController.stop();
       if (mounted) setState(() => _isShuffling = false);
 
@@ -1535,10 +1536,27 @@ await DealerRevealDialog.show(
         random: _random,
       );
 
-      final newHands = _dealController.deal(
+      final dealerSelection = _matchController.selectDealerForNextRound(
         deck: deck,
         playerCount: widget.playerCount,
-        dealerIndex: _matchController.dealerIndex,
+        random: _random,
+      );
+
+      await DealerRevealDialog.show(
+        context,
+        drawnCards: dealerSelection.drawnCards,
+        playerCount: widget.playerCount,
+        dealerIndex: dealerSelection.dealerIndex,
+        firstPlayerIndex: dealerSelection.firstPlayerIndex,
+        playerNames: _playerNames,
+        playerAvatars: _playerAvatars,
+      );
+      if (!mounted) return;
+
+      final newHands = _dealController.deal(
+        deck: dealerSelection.shuffledDeck,
+        playerCount: widget.playerCount,
+        dealerIndex: dealerSelection.dealerIndex,
       );
 
       setState(() {
