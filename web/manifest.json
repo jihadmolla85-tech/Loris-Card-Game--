@@ -1,11 +1,11 @@
 {
-    "name": "loris_card_game",
-    "short_name": "loris_card_game",
+    "name": "LORIS – The Ultimate Card Game",
+    "short_name": "LORIS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#07152E",
+    "theme_color": "#102B55",
+    "description": "Play LORIS offline against AI in four-player and six-player team matches.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
