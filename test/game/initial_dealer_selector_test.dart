@@ -50,6 +50,22 @@ void main() {
       expect(result.drawnCards.length, 8);
     });
 
+    test('rule A continues cyclic draws across multiple table rotations until Jack', () {
+      final deck = orderedDeck(PlayerCount.four, 17);
+
+      final result = InitialDealerSelector.select(
+        deck: deck,
+        playerCount: 4,
+        firstPlayerIndex: 2,
+        random: Random(23),
+      );
+
+      expect(result.drawnCards.length, 18);
+      expect(result.dealerIndex, 3);
+      expect(result.jackCard.rank, 11);
+      expect(result.drawnCards.take(17).every((card) => card.rank != 11), isTrue);
+    });
+
     test('all cards return and are shuffled', () {
       final deck = orderedDeck(PlayerCount.four, 6);
 
