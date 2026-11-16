@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
 import 'game/widgets/dealer_reveal_dialog.dart';
@@ -2837,6 +2838,9 @@ await DealerRevealDialog.show(
   // CARD WIDGET
   // ----------------------------------------------------------
 
+  bool _isCourtCard(loris.Card card) =>
+      !card.isLoris && card.rank != null && card.rank! >= 11;
+
   Widget _buildCard(
     loris.Card card, {
     bool enabled = false,
@@ -2894,12 +2898,269 @@ await DealerRevealDialog.show(
                       if (!compact) Text('LORIS', style: TextStyle(color: ink, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
                     ],
                   )
-                : Text(_suitSymbol(card.suit),
-                    style: TextStyle(color: ink, fontSize: compact ? 22 : 31, fontWeight: FontWeight.w900, shadows: const [Shadow(color: Color(0x22000000), blurRadius: 1, offset: Offset(1, 1))])),
+                : _isCourtCard(card)
+                    ? CustomPaint(
+                        size: Size(compact ? 34 : 45, compact ? 43 : 61),
+                        painter: _CourtCardPainter(
+                          rank: card.rank!,
+                          suitSymbol: _suitSymbol(card.suit),
+                          ink: ink,
+                          accent: isRed
+                              ? const Color(0xFFB51F32)
+                              : const Color(0xFF173B68),
+                        ),
+                      )
+                    : Text(_suitSymbol(card.suit),
+                        style: TextStyle(color: ink, fontSize: compact ? 22 : 31, fontWeight: FontWeight.w900, shadows: const [Shadow(color: Color(0x22000000), blurRadius: 1, offset: Offset(1, 1))])),
           ),
         ],
       ),
     );
   }
+
+
+/// Original illustrated court-card artwork. Each face card has its own
+/// silhouette, costume and ornament rather than a plain suit pip.
+class _CourtCardPainter extends CustomPainter {
+  const _CourtCardPainter({
+    required this.rank,
+    required this.suitSymbol,
+    required this.ink,
+    required this.accent,
+  });
+
+  final int rank;
+  final String suitSymbol;
+  final Color ink;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    final panel = RRect.fromRectAndRadius(
+      bounds.deflate(1),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(
+      panel,
+      Paint()
+        ..color = const Color(0xFFFFFDF5)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRRect(
+      panel,
+      Paint()
+        ..color = accent.withValues(alpha: .72)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+
+    if (rank == 14) {
+      _paintAce(canvas, size);
+      return;
+    }
+
+    // Two opposing, mirrored royal portraits evoke traditional court cards.
+    canvas.save();
+    _paintPortrait(canvas, size);
+    canvas.translate(size.width, size.height);
+    canvas.rotate(math.pi);
+    _paintPortrait(canvas, size);
+    canvas.restore();
+
+    final divider = Paint()
+      ..color = accent.withValues(alpha: .75)
+      ..strokeWidth = .8;
+    canvas.drawLine(
+      Offset(size.width * .16, size.height * .5),
+      Offset(size.width * .84, size.height * .5),
+      divider,
+    );
+    final center = Offset(size.width * .5, size.height * .5);
+    canvas.drawCircle(center, size.width * .105, Paint()..color = const Color(0xFFFFFDF5));
+    _drawSuit(canvas, center, size.width * .12);
+  }
+
+  void _paintPortrait(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final outfit = Paint()
+      ..color = rank == 11
+          ? const Color(0xFF245C79)
+          : rank == 12
+              ? const Color(0xFF8B3150)
+              : const Color(0xFF263B61);
+    final gold = Paint()..color = const Color(0xFFD4A84F);
+    final dark = Paint()..color = const Color(0xFF382B2B);
+    final skin = Paint()..color = const Color(0xFFE8B98E);
+
+    // Shoulder armour / royal robe.
+    final robe = Path()
+      ..moveTo(w * .12, h * .48)
+      ..quadraticBezierTo(w * .18, h * .34, w * .5, h * .36)
+      ..quadraticBezierTo(w * .82, h * .34, w * .88, h * .48)
+      ..lineTo(w * .92, h * .5)
+      ..lineTo(w * .08, h * .5)
+      ..close();
+    canvas.drawPath(robe, outfit);
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * .5, h * .37)
+        ..lineTo(w * .39, h * .49)
+        ..lineTo(w * .61, h * .49)
+        ..close(),
+      gold,
+    );
+
+    // Neck and face.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * .41, h * .27, w * .18, h * .13),
+        Radius.circular(w * .04),
+      ),
+      skin,
+    );
+    canvas.drawOval(
+      Rect.fromLTWH(w * .31, h * .08, w * .38, h * .28),
+      skin,
+    );
+
+    // Hair, beard and crown differ by court rank.
+    if (rank == 13) {
+      canvas.drawArc(
+        Rect.fromLTWH(w * .29, h * .055, w * .42, h * .34),
+        math.pi,
+        math.pi,
+        false,
+        Paint()
+          ..color = const Color(0xFF4B3028)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w * .09,
+      );
+      final beard = Path()
+        ..moveTo(w * .34, h * .27)
+        ..quadraticBezierTo(w * .5, h * .48, w * .66, h * .27)
+        ..lineTo(w * .61, h * .37)
+        ..lineTo(w * .5, h * .43)
+        ..lineTo(w * .39, h * .37)
+        ..close();
+      canvas.drawPath(beard, dark);
+    } else if (rank == 12) {
+      canvas.drawOval(
+        Rect.fromLTWH(w * .24, h * .07, w * .52, h * .31),
+        Paint()..color = const Color(0xFF4A263A),
+      );
+      canvas.drawOval(
+        Rect.fromLTWH(w * .32, h * .09, w * .36, h * .25),
+        skin,
+      );
+    } else {
+      canvas.drawArc(
+        Rect.fromLTWH(w * .28, h * .04, w * .44, h * .27),
+        math.pi,
+        math.pi,
+        false,
+        Paint()
+          ..color = const Color(0xFF4A3026)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w * .08,
+      );
+      // Jack's feather.
+      canvas.drawPath(
+        Path()
+          ..moveTo(w * .52, h * .10)
+          ..quadraticBezierTo(w * .78, h * -.04, w * .70, h * .17)
+          ..quadraticBezierTo(w * .60, h * .21, w * .52, h * .10),
+        Paint()..color = accent,
+      );
+    }
+
+    // Eyes and nose.
+    final eye = Paint()
+      ..color = const Color(0xFF342B28)
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(w * .39, h * .21), Offset(w * .45, h * .21), eye);
+    canvas.drawLine(Offset(w * .55, h * .21), Offset(w * .61, h * .21), eye);
+    canvas.drawLine(Offset(w * .5, h * .22), Offset(w * .48, h * .27), eye);
+
+    // Crown / head ornament.
+    final crown = Path()
+      ..moveTo(w * .32, h * .12)
+      ..lineTo(w * .34, h * .015)
+      ..lineTo(w * .45, h * .085)
+      ..lineTo(w * .5, h * -.005)
+      ..lineTo(w * .55, h * .085)
+      ..lineTo(w * .66, h * .015)
+      ..lineTo(w * .68, h * .12)
+      ..close();
+    if (rank != 11) {
+      canvas.drawPath(crown, gold);
+      canvas.drawLine(
+        Offset(w * .34, h * .12),
+        Offset(w * .66, h * .12),
+        Paint()
+          ..color = accent
+          ..strokeWidth = 1.2,
+      );
+    } else {
+      canvas.drawCircle(Offset(w * .5, h * .055), w * .045, gold);
+    }
+  }
+
+  void _paintAce(Canvas canvas, Size size) {
+    final center = Offset(size.width * .5, size.height * .5);
+    final radius = size.width * .34;
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFFFFF8DF)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFFD4A84F)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
+    );
+    _drawSuit(canvas, center, size.width * .29);
+    for (var i = 0; i < 8; i++) {
+      final angle = i * math.pi / 4;
+      final point = Offset(
+        center.dx + math.cos(angle) * size.width * .43,
+        center.dy + math.sin(angle) * size.height * .43,
+      );
+      canvas.drawCircle(point, size.width * .025, Paint()..color = accent);
+    }
+  }
+
+  void _drawSuit(Canvas canvas, Offset center, double fontSize) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: suitSymbol,
+        style: TextStyle(
+          color: ink,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CourtCardPainter oldDelegate) =>
+      oldDelegate.rank != rank ||
+      oldDelegate.suitSymbol != suitSymbol ||
+      oldDelegate.ink != ink ||
+      oldDelegate.accent != accent;
+}
 
 }
