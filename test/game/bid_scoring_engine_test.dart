@@ -29,14 +29,14 @@ void main() {
       expect(engine.teamBScore, 7);
     });
 
-    test('Successful bid 8 gives +16 and -16', () {
+    test('Successful bid 8 gives +8 and -8', () {
       engine.calculateAndApply(
         biddingTeam: 0,
         bidAmount: 8,
         tricksWonByBiddingTeam: 8,
       );
-      expect(engine.teamAScore, 16);
-      expect(engine.teamBScore, -16);
+      expect(engine.teamAScore, 8);
+      expect(engine.teamBScore, -8);
     });
 
     test('Failed bid 5 gives -10 and +10', () {
