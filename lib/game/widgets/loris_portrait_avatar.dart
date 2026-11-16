@@ -92,28 +92,133 @@ class _LorisPortraitPainter extends CustomPainter {
       width: w * .43,
       height: h * .52,
     ), skin);
-    final eye = Paint()..color = const Color(0xFF30201B);
-    canvas.drawCircle(Offset(w * .40, h * .49), w * .025, eye);
-    canvas.drawCircle(Offset(w * .60, h * .49), w * .025, eye);
+    // Six distinct expressions make the table feel like a live match.
+    final expression = variant % 6;
+    final eyeWhite = Paint()..color = const Color(0xFFFFF8E9);
+    final iris = Paint()..color = const Color(0xFF493126);
+    final pupil = Paint()..color = const Color(0xFF17131A);
+    final shine = Paint()..color = Colors.white;
+    final eyeY = expression == 2 ? .485 : .49;
+    final eyeHeight = expression == 2 ? .075 : .052;
+
+    // A wink for one portrait; the others have expressive, detailed eyes.
+    if (expression == 5) {
+      canvas.drawOval(Rect.fromCenter(
+        center: Offset(w * .40, h * eyeY),
+        width: w * .13,
+        height: h * eyeHeight,
+      ), eyeWhite);
+      canvas.drawCircle(Offset(w * .405, h * eyeY), w * .025, iris);
+      canvas.drawCircle(Offset(w * .412, h * (eyeY - .012)), w * .009, shine);
+      final wink = Paint()
+        ..color = const Color(0xFF30201B)
+        ..strokeWidth = w * .045
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(Offset(w * .55, h * .49), Offset(w * .66, h * .49), wink);
+    } else {
+      for (final x in [.40, .60]) {
+        canvas.drawOval(Rect.fromCenter(
+          center: Offset(w * x, h * eyeY),
+          width: w * .13,
+          height: h * eyeHeight,
+        ), eyeWhite);
+        final lookY = expression == 1 ? eyeY + .008 : eyeY;
+        canvas.drawCircle(Offset(w * x, h * lookY), w * .032, iris);
+        canvas.drawCircle(Offset(w * x, h * lookY), w * .018, pupil);
+        canvas.drawCircle(Offset(w * (x - .009), h * (lookY - .012)), w * .008, shine);
+      }
+    }
+
     final brow = Paint()
       ..color = hair.color
-      ..strokeWidth = w * .035
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(w * .35, h * .445), Offset(w * .44, h * .44), brow);
-    canvas.drawLine(Offset(w * .56, h * .44), Offset(w * .65, h * .445), brow);
+      ..strokeWidth = w * .038
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final leftBrow = Path();
+    final rightBrow = Path();
+    switch (expression) {
+      case 0: // Warm, cheerful smile.
+        leftBrow.moveTo(w * .34, h * .435);
+        leftBrow.quadraticBezierTo(w * .40, h * .415, w * .46, h * .44);
+        rightBrow.moveTo(w * .54, h * .44);
+        rightBrow.quadraticBezierTo(w * .60, h * .415, w * .66, h * .435);
+        break;
+      case 1: // Focused competitor.
+        leftBrow.moveTo(w * .34, h * .435);
+        leftBrow.lineTo(w * .46, h * .465);
+        rightBrow.moveTo(w * .54, h * .465);
+        rightBrow.lineTo(w * .66, h * .435);
+        break;
+      case 2: // Surprised.
+        leftBrow.moveTo(w * .34, h * .405);
+        leftBrow.quadraticBezierTo(w * .40, h * .37, w * .46, h * .405);
+        rightBrow.moveTo(w * .54, h * .405);
+        rightBrow.quadraticBezierTo(w * .60, h * .37, w * .66, h * .405);
+        break;
+      case 3: // Confident.
+        leftBrow.moveTo(w * .34, h * .445);
+        leftBrow.lineTo(w * .46, h * .425);
+        rightBrow.moveTo(w * .54, h * .425);
+        rightBrow.lineTo(w * .66, h * .445);
+        break;
+      case 4: // Worried.
+        leftBrow.moveTo(w * .34, h * .425);
+        leftBrow.quadraticBezierTo(w * .40, h * .46, w * .46, h * .45);
+        rightBrow.moveTo(w * .54, h * .45);
+        rightBrow.quadraticBezierTo(w * .60, h * .46, w * .66, h * .425);
+        break;
+      default: // Playful wink.
+        leftBrow.moveTo(w * .34, h * .43);
+        leftBrow.quadraticBezierTo(w * .40, h * .405, w * .46, h * .43);
+        rightBrow.moveTo(w * .55, h * .435);
+        rightBrow.lineTo(w * .66, h * .435);
+    }
+    canvas.drawPath(leftBrow, brow);
+    canvas.drawPath(rightBrow, brow);
+
     final nose = Paint()
       ..color = const Color(0xFF9C5D49)
       ..strokeWidth = w * .022
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(w * .5, h * .50), Offset(w * .48, h * .57), nose);
-    final smile = Paint()
+    canvas.drawLine(Offset(w * .5, h * .51), Offset(w * .48, h * .57), nose);
+
+    final mouthPaint = Paint()
       ..color = const Color(0xFF793B39)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = w * .025;
-    final mouth = Path()
-      ..moveTo(w * .43, h * .63)
-      ..quadraticBezierTo(w * .5, h * .68, w * .57, h * .63);
-    canvas.drawPath(mouth, smile);
+      ..strokeWidth = w * .032
+      ..strokeCap = StrokeCap.round;
+    if (expression == 2) {
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(w * .5, h * .635), width: w * .105, height: h * .10),
+        mouthPaint..style = PaintingStyle.fill,
+      );
+    } else {
+      final mouth = Path()..moveTo(w * .42, h * .63);
+      switch (expression) {
+        case 0:
+          mouth.quadraticBezierTo(w * .5, h * .715, w * .58, h * .63);
+          break;
+        case 1:
+          mouth.lineTo(w * .58, h * .63);
+          break;
+        case 3:
+          mouth.quadraticBezierTo(w * .53, h * .675, w * .59, h * .62);
+          break;
+        case 4:
+          mouth.quadraticBezierTo(w * .5, h * .59, w * .58, h * .63);
+          break;
+        default:
+          mouth.quadraticBezierTo(w * .5, h * .69, w * .58, h * .63);
+      }
+      canvas.drawPath(mouth, mouthPaint);
+    }
+
+    // Subtle cheek highlights help the small portraits read more clearly.
+    final blush = Paint()..color = const Color(0x55D66B63);
+    if (expression == 0 || expression == 5) {
+      canvas.drawOval(Rect.fromCenter(center: Offset(w * .34, h * .59), width: w * .09, height: h * .035), blush);
+      canvas.drawOval(Rect.fromCenter(center: Offset(w * .66, h * .59), width: w * .09, height: h * .035), blush);
+    }
   }
 
   @override
