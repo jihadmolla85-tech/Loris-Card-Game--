@@ -619,7 +619,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     await Future.delayed(const Duration(milliseconds: 35));
     if (!mounted) return;
     setState(() => _flightStarted = true);
-    await Future.delayed(const Duration(milliseconds: 520));
+    await Future.delayed(const Duration(milliseconds: 460));
     if (!mounted) return;
     setState(() {
       _flyingCard = null;
@@ -2728,11 +2728,11 @@ await DealerRevealDialog.show(
                     alignment: _flightStarted
                         ? Alignment.center
                         : seatAlignments[_flyingFromPlayer!],
-                    duration: Duration(milliseconds: _flightStarted ? 520 : 1),
+                    duration: Duration(milliseconds: _flightStarted ? 460 : 1),
                     curve: Curves.easeInOutCubic,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: _flightStarted ? 1.0 : 0.0),
-                      duration: const Duration(milliseconds: 520),
+                      duration: const Duration(milliseconds: 460),
                       curve: Curves.easeInOutCubic,
                       builder: (context, progress, child) {
                         final transform = Matrix4.identity()
