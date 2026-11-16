@@ -2192,6 +2192,7 @@ await DealerRevealDialog.show(
     );
   }
 
+}
 // Stylised human portrait used for every player seat (no animal emoji).
 class _LorisPortraitAvatar extends StatelessWidget {
   const _LorisPortraitAvatar({
@@ -2312,4 +2313,4 @@ class _LorisPortraitPainter extends CustomPainter {
       oldDelegate.variant != variant;
 }
 
-}
+
