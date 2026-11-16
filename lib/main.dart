@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/services.dart';
 import 'game/widgets/dealer_reveal_dialog.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
 import 'game/engine/game_settings_service.dart';
@@ -81,6 +82,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _shuffleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
     _loadSettings();
   }
 
@@ -483,7 +485,7 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
-class _GameScreenState extends State<GameScreen> {
+class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin {
   final GameSaveService _saveService = GameSaveService();
   final Random _random = Random();
 
@@ -519,6 +521,8 @@ class _GameScreenState extends State<GameScreen> {
   bool _started = false;
   bool _finished = false;
   bool _busy = false;
+  bool _isShuffling = false;
+  late final AnimationController _shuffleController;
 
   String _status = 'Press START MATCH to begin.';
   String? _error;
@@ -563,6 +567,25 @@ class _GameScreenState extends State<GameScreen> {
 
     if (snapshot != null) {
       _restoreSavedGame(snapshot);
+    }
+  }
+
+  @override
+  void dispose() {
+    _shuffleController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playCardFeedback() async {
+    await SystemSound.play(SystemSoundType.click);
+    await HapticFeedback.lightImpact();
+  }
+
+  Future<void> _playShuffleSound() async {
+    for (var i = 0; i < 7; i++) {
+      if (!mounted) return;
+      await SystemSound.play(SystemSoundType.click);
+      await Future.delayed(const Duration(milliseconds: 105));
     }
   }
 
@@ -612,10 +635,17 @@ class _GameScreenState extends State<GameScreen> {
 
     setState(() {
       _busy = true;
+      _isShuffling = true;
       _error = null;
     });
+    _shuffleController.repeat(reverse: true);
 
     try {
+      await _playShuffleSound();
+      await Future.delayed(const Duration(milliseconds: 450));
+      if (!mounted) return;
+      _shuffleController.stop();
+      setState(() => _isShuffling = false);
       final deck = loris_deck.LorisDeck.create(
         widget.playerCount == 4
             ? loris.PlayerCount.four
@@ -655,7 +685,11 @@ await DealerRevealDialog.show(
       });
     } finally {
       if (mounted) {
-        setState(() => _busy = false);
+        _shuffleController.stop();
+        setState(() {
+          _busy = false;
+          _isShuffling = false;
+        });
       }
     }
   }
