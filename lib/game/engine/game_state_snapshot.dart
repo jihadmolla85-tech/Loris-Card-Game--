@@ -96,12 +96,17 @@ class GameStateSnapshot {
       };
 
   factory GameStateSnapshot.fromJson(Map<String, dynamic> json) {
+    final version = _intValue(json, 'version', 1);
+    if (version != 1) {
+      throw FormatException('Unsupported saved game version: $version');
+    }
+
     final rawHands = json['hands'] as List? ?? const [];
     final rawDeck = json['originalDeck'] as List? ?? const [];
     final rawPlays = json['trickPlays'] as List? ?? const [];
 
     return GameStateSnapshot(
-      version: _intValue(json, 'version', 1),
+      version: version,
       dealerIndex: _intValue(json, 'dealerIndex'),
       dealerAdvanced: _boolValue(json, 'dealerAdvanced'),
       teamAScore: _intValue(json, 'teamAScore'),
