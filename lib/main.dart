@@ -1598,11 +1598,52 @@ await DealerRevealDialog.show(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.style,
-              size: 76,
-              color: LorisApp.gold,
+            SizedBox(
+              width: 180,
+              height: 112,
+              child: _isShuffling
+                  ? AnimatedBuilder(
+                      animation: _shuffleController,
+                      builder: (context, child) {
+                        final phase = _shuffleController.value * 2 * pi;
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            for (var i = 0; i < 5; i++)
+                              Transform.translate(
+                                offset: Offset(
+                                  sin(phase + i * .85) * 30,
+                                  cos(phase + i * .85) * 9,
+                                ),
+                                child: Transform.rotate(
+                                  angle: sin(phase + i * .85) * .20,
+                                  child: Container(
+                                    width: 48,
+                                    height: 70,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(7),
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF315F9A), Color(0xFF102747)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      border: Border.all(color: LorisApp.gold, width: 1.5),
+                                      boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 4))],
+                                    ),
+                                    child: const Center(child: Icon(Icons.auto_awesome, color: LorisApp.gold, size: 18)),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    )
+                  : const Icon(Icons.style, size: 76, color: LorisApp.gold),
             ),
+            if (_isShuffling) ...[
+              const SizedBox(height: 4),
+              const Text('SHUFFLING THE DECK', style: TextStyle(color: LorisApp.gold, fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w900)),
+            ],
             const SizedBox(height: 20),
             Text(
               '${widget.playerCount} PLAYERS',
