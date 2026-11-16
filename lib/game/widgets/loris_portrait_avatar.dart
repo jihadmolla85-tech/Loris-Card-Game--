@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 /// Detailed illustrated player portrait with a varied global character roster.
@@ -193,9 +195,17 @@ class _LorisPortraitPainter extends CustomPainter {
     if (style == 3 || style == 8) {
       final wrap = Paint()..color = style == 3
           ? const Color(0xFF9D3E46) : const Color(0xFF315A75);
-      canvas.drawArc(Rect.fromLTWH(w * .24, h * .08, w * .52, h * .30),
-          math.pi, math.pi, false,
-          Paint()..color = wrap.color..style = PaintingStyle.stroke..strokeWidth = h * .12);
+      final wrapPaint = Paint()
+        ..color = wrap.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = h * .12;
+      canvas.drawArc(
+        Rect.fromLTWH(w * .24, h * .08, w * .52, h * .30),
+        math.pi,
+        math.pi,
+        false,
+        wrapPaint,
+      );
       canvas.drawLine(Offset(w * .31, h * .20), Offset(w * .69, h * .20),
           Paint()..color = const Color(0x88F6D58B)..strokeWidth = w * .025);
     }
