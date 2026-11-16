@@ -69,9 +69,18 @@ void main() {
       );
     });
 
+    test('Requires one additional trick after reaching the bid', () {
+      engine = createEngine();
+      winFirstFour(engine);
+      expect(engine.canCall, isFalse);
+      engine.recordTrickWinner(2);
+      expect(engine.canCall, isTrue);
+    });
+
     test('Only previous trick winner can call', () {
       engine = createEngine();
       winFirstFour(engine);
+      engine.recordTrickWinner(2);
 
       expect(engine.canCall, isTrue);
       expect(
@@ -86,6 +95,7 @@ void main() {
       engine.recordTrickWinner(1);
       engine.recordTrickWinner(3);
       engine.recordTrickWinner(1);
+      engine.recordTrickWinner(3);
       engine.recordTrickWinner(0);
 
       expect(
@@ -97,6 +107,7 @@ void main() {
     test('Previous trick winner can make 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
+      engine.recordTrickWinner(2);
 
       engine.call16(callerPlayerIndex: 2);
 
