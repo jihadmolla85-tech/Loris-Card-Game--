@@ -1,9 +1,11 @@
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:loris_card_game/main.dart';
 
 void main() {
   testWidgets('LORIS home screen loads', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LorisApp());
 
     expect(find.text('LORIS'), findsOneWidget);
