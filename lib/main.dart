@@ -150,6 +150,75 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
     );
   }
 
+  void _openRules() {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: LorisApp.blue,
+        title: const Text('HOW TO PLAY LORIS'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                _RuleSection(
+                  title: 'GAME SETUP',
+                  body: 'Choose 4 or 6 players. Every player receives 8 cards. '
+                      'Teams alternate around the table: A-B-A-B (or A-B-A-B-A-B). '
+                      'The first team to reach 32 points wins.',
+                ),
+                _RuleSection(
+                  title: 'DECK',
+                  body: 'Four-player games use ranks 7 through Ace. Six-player '
+                      'games use ranks 3 through Ace. The designated Spades card '
+                      'is replaced by the special LORIS card.',
+                ),
+                _RuleSection(
+                  title: 'BIDDING & TRUMP',
+                  body: 'Bidding starts with the player to the dealer’s right. '
+                      'Players may pass. A bid must be higher than the current '
+                      'highest bid. The winning bidder selects a trump suit they '
+                      'also hold. A teammate may reveal one eligible card for '
+                      'that selection; their other cards remain private.',
+                ),
+                _RuleSection(
+                  title: 'PLAYING TRICKS',
+                  body: 'Follow the suit led whenever possible. If you cannot '
+                      'follow suit, you must play trump when you have one. If a '
+                      'higher trump is available, you must overtrump. LORIS may '
+                      'be played at any time and is the highest card.',
+                ),
+                _RuleSection(
+                  title: 'SCORING',
+                  body: 'A successful normal bid scores the bid amount; a failed '
+                      'bid gives the opposing team twice the bid. A successful '
+                      '8 bid requires all 8 tricks and scores +16, while the '
+                      'opponents score -16. A failed 8 bid scores -16 and the '
+                      'opponents score +16.',
+                ),
+                _RuleSection(
+                  title: 'CALL 16',
+                  body: 'After winning the number of tricks equal to your bid, '
+                      'a player may call 16 after winning the next trick. Their '
+                      'team must then win every remaining trick. Losing even '
+                      'one remaining trick gives that team -16.',
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openSettings() {
     showDialog<void>(
       context: context,
@@ -273,6 +342,12 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                     Icons.settings,
                     _openSettings,
                   ),
+                  const SizedBox(height: 16),
+                  _menuButton(
+                    'HOW TO PLAY',
+                    Icons.menu_book,
+                    _openRules,
+                  ),
                   const SizedBox(height: 42),
                   const Text(
                     'STRATEGY • TEAMWORK • VICTORY',
@@ -318,6 +393,35 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 side: const BorderSide(color: LorisApp.gold),
               ),
             ),
+    );
+  }
+}
+
+class _RuleSection extends StatelessWidget {
+  const _RuleSection({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: LorisApp.gold,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(body, style: const TextStyle(height: 1.4)),
+        ],
+      ),
     );
   }
 }
