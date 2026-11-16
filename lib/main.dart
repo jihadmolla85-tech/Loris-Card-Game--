@@ -1913,7 +1913,7 @@ await DealerRevealDialog.show(
             ),
             child: Text(
               'HIGHEST BID: ${bidding.highestBid ?? "-"}'
-              '${bidding.highestBidder == null ? "" : "  •  PLAYER ${bidding.highestBidder! + 1}"}',
+              '${bidding.highestBidder == null ? "" : "  •  ${_playerNames[bidding.highestBidder!]}"}',
               style: const TextStyle(
                 color: LorisApp.gold,
                 fontWeight: FontWeight.bold,
@@ -1933,17 +1933,30 @@ await DealerRevealDialog.show(
     List<TrickPlay> plays,
     int? currentPlayer,
   ) {
+    final seatAlignments = widget.playerCount == 4
+        ? const <Alignment>[
+            Alignment(0, .92),
+            Alignment(-.92, 0),
+            Alignment(0, -.92),
+            Alignment(.92, 0),
+          ]
+        : const <Alignment>[
+            Alignment(0, .94),
+            Alignment(-.82, .48),
+            Alignment(-.82, -.48),
+            Alignment(0, -.94),
+            Alignment(.82, -.48),
+            Alignment(.82, .48),
+          ];
+
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 260),
-      padding: const EdgeInsets.all(18),
+      height: 390,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: LorisApp.tableGreen,
-        borderRadius: BorderRadius.circular(110),
-        border: Border.all(
-          color: LorisApp.gold,
-          width: 5,
-        ),
+        borderRadius: BorderRadius.circular(150),
+        border: Border.all(color: LorisApp.gold, width: 5),
         boxShadow: const [
           BoxShadow(
             color: Colors.black54,
@@ -1952,89 +1965,133 @@ await DealerRevealDialog.show(
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          Text(
-            currentPlayer == null
-                ? 'ROUND COMPLETE'
-                : 'TURN: ${_playerNames[currentPlayer]}',
-            style: const TextStyle(
-              color: LorisApp.gold,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
-          ),
-
-          const SizedBox(height: 18),
-
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 10,
-            runSpacing: 12,
-            children: List.generate(widget.playerCount, (index) {
-              final playerPlays = plays
-                  .where((play) => play.playerIndex == index)
-                  .toList();
-
-              return SizedBox(
-                width: 62,
+          // Player seats stay around the edge of the table.
+          for (var index = 0; index < widget.playerCount; index++)
+            Align(
+              alignment: seatAlignments[index],
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 92),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+                decoration: BoxDecoration(
+                  color: currentPlayer == index
+                      ? LorisApp.gold.withValues(alpha: .28)
+                      : LorisApp.navy.withValues(alpha: .72),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: currentPlayer == index
+                        ? LorisApp.gold
+                        : Colors.white24,
+                    width: currentPlayer == index ? 2 : 1,
+                  ),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      _playerAvatars[index],
-                      style: const TextStyle(fontSize: 20),
-                    ),
+                    Text(_playerAvatars[index],
+                        style: const TextStyle(fontSize: 25)),
                     Text(
                       _playerNames[index],
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 9,
+                        color: Colors.white,
+                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 5),
-                    if (playerPlays.isEmpty)
-                      Container(
-                        width: 52,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.white24,
-                          ),
-                          borderRadius: BorderRadius.circular(7),
-                        ),
-                      )
-                    else
-                      TweenAnimationBuilder<double>(
-                        key: ValueKey('${playerPlays.last.playerIndex}-${playerPlays.last.card.hashCode}'),
-                        tween: Tween(begin: 0.72, end: 1),
-                        duration: const Duration(milliseconds: 420),
-                        curve: Curves.easeOutBack,
-                        builder: (context, scale, child) => Transform.scale(
-                          scale: scale,
-                          child: child,
-                        ),
-                        child: _buildCard(playerPlays.last.card, compact: true),
-                      ),
+                    Text('TEAM ${index.isEven ? "A" : "B"}',
+                        style: const TextStyle(
+                          color: LorisApp.gold,
+                          fontSize: 8,
+                        )),
                   ],
                 ),
-              );
-            }),
+              ),
+            ),
+
+          // Played cards are collected in the centre of the felt.
+          Align(
+            alignment: Alignment.center,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 245, maxHeight: 190),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF043D2D).withValues(alpha: .88),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.white24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    currentPlayer == null
+                        ? 'ROUND COMPLETE'
+                        : 'TURN: ${_playerNames[currentPlayer]}',
+                    style: const TextStyle(
+                      color: LorisApp.gold,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: plays.map((play) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _playerNames[play.playerIndex],
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 9,
+                            ),
+                          ),
+                          TweenAnimationBuilder<double>(
+                            key: ValueKey(
+                              '${play.playerIndex}-${play.card.hashCode}',
+                            ),
+                            tween: Tween(begin: .72, end: 1),
+                            duration: const Duration(milliseconds: 420),
+                            curve: Curves.easeOutBack,
+                            builder: (context, scale, child) =>
+                                Transform.scale(scale: scale, child: child),
+                            child: _buildCard(play.card, compact: true),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                  if (plays.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'PLAY YOUR CARD',
+                        style: TextStyle(
+                          color: Colors.white38,
+                          letterSpacing: 2,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
 
-          const SizedBox(height: 14),
-
           if (_trumpSuit != null)
-            Align(
-              alignment: Alignment.bottomRight,
+            Positioned(
+              right: 4,
+              bottom: 4,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
+                  horizontal: 10,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
                   color: LorisApp.navy,
@@ -2046,6 +2103,7 @@ await DealerRevealDialog.show(
                   style: const TextStyle(
                     color: LorisApp.gold,
                     fontWeight: FontWeight.bold,
+                    fontSize: 11,
                   ),
                 ),
               ),
