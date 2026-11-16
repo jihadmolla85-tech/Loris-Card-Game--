@@ -627,23 +627,21 @@ await DealerRevealDialog.show(
 
     if (hands == null) return;
 
-    final eligibleCards = <MapEntry<int, loris.Card>>[];
+    final ownCards = hands[bidder]
+        .where((card) => !card.isLoris && card.suit != null)
+        .toList();
 
+    // Teammate hands stay hidden. The bidder may reveal one hidden card,
+    // but only cards whose suit the bidder also holds are eligible.
+    final teammateCards = <int, List<loris.Card>>{};
     for (var player = 0; player < hands.length; player++) {
-      if (player % 2 != bidder % 2) continue;
-
-      for (final card in hands[player]) {
-        if (!card.isLoris && card.suit != null) {
-          eligibleCards.add(MapEntry(player, card));
-        }
-      }
-    }
-
-    if (eligibleCards.isEmpty) {
-      setState(() {
-        _error = 'No eligible trump card found.';
-      });
-      return;
+      if (player == bidder || player % 2 != bidder % 2) continue;
+      final eligible = hands[player].where((card) {
+        return !card.isLoris &&
+            card.suit != null &&
+            ownCards.any((ownCard) => ownCard.suit == card.suit);
+      }).toList();
+      if (eligible.isNotEmpty) teammateCards[player] = eligible;
     }
 
     final selected = await showDialog<MapEntry<int, loris.Card>>(
@@ -655,29 +653,74 @@ await DealerRevealDialog.show(
           title: const Text('SELECT TRUMP'),
           content: SizedBox(
             width: double.maxFinite,
-            height: 360,
-            child: ListView.builder(
-              itemCount: eligibleCards.length,
-              itemBuilder: (context, index) {
-                final item = eligibleCards[index];
-
-                return ListTile(
-                  title: Text(_cardName(item.value)),
-                  subtitle: Text(
-                    item.key == bidder
-                        ? 'Your card'
-                        : 'Teammate ${item.key + 1}',
-                  ),
-                  trailing: const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 15,
+            height: 420,
+            child: ListView(
+              children: [
+                const Text(
+                  'YOUR CARDS',
+                  style: TextStyle(
                     color: LorisApp.gold,
+                    fontWeight: FontWeight.bold,
                   ),
-                  onTap: () {
-                    Navigator.pop(dialogContext, item);
-                  },
-                );
-              },
+                ),
+                const SizedBox(height: 8),
+                ...ownCards.map((card) => ListTile(
+                      title: Text(_cardName(card)),
+                      subtitle: const Text('Select this card as trump'),
+                      onTap: () => Navigator.pop(
+                        dialogContext,
+                        MapEntry(bidder, card),
+                      ),
+                    )),
+                if (teammateCards.isNotEmpty) ...[
+                  const Divider(color: Colors.white24),
+                  const Text(
+                    'REVEAL ONE HIDDEN TEAMMATE CARD',
+                    style: TextStyle(
+                      color: LorisApp.gold,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  ...teammateCards.entries.map((entry) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Text('TEAMMATE ${entry.key + 1}'),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: List.generate(entry.value.length, (index) {
+                              final card = entry.value[index];
+                              return InkWell(
+                                onTap: () => Navigator.pop(
+                                  dialogContext,
+                                  MapEntry(entry.key, card),
+                                ),
+                                borderRadius: BorderRadius.circular(7),
+                                child: Container(
+                                  width: 46,
+                                  height: 64,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF17345C),
+                                    border: Border.all(color: LorisApp.gold),
+                                    borderRadius: BorderRadius.circular(7),
+                                  ),
+                                  child: const Icon(
+                                    Icons.style,
+                                    color: LorisApp.gold,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ],
+                      )),
+                ],
+              ],
             ),
           ),
         );
