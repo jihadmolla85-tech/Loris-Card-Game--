@@ -1249,6 +1249,20 @@ await DealerRevealDialog.show(
             : 'Player ${next + 1} to play.';
       });
     }
+
+    // Persist after every card so an unexpected app close does not discard
+    // the latest turn. Save failures are surfaced without interrupting play.
+    await _autoSaveGame();
+  }
+
+  Future<void> _autoSaveGame() async {
+    try {
+      await _matchController.saveGame(_saveService);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'Auto-save failed: $e');
+      }
+    }
   }
 
   // ----------------------------------------------------------
