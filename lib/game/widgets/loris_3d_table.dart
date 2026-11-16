@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -33,7 +32,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
   Future<void> _setupScene() async {
     try {
       _three.scene = three.Scene();
-      _three.scene.background = three.Color(0x08090D);
+      _three.scene.background = three.Color.fromHex32(0xFF08090D);
       _three.camera = three.PerspectiveCamera(
         37,
         _three.width / math.max(1, _three.height),
