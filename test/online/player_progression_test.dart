@@ -1,82 +1,68 @@
-enum PremiumStatus { free, active, gracePeriod, expired, cancelled }
+import 'package:flutter_test/flutter_test.dart';
+import 'package:loris_card_game/online/models/player_progression.dart';
 
-class PlayerLevelProgress {
-  const PlayerLevelProgress({
-    required this.level,
-    required this.totalXp,
-    required this.xpIntoLevel,
-    required this.xpForNextLevel,
-  })  : assert(level >= 1),
-        assert(totalXp >= 0),
-        assert(xpIntoLevel >= 0),
-        assert(xpForNextLevel > 0),
-        assert(xpIntoLevel < xpForNextLevel);
-
-  final int level;
-  final int totalXp;
-  final int xpIntoLevel;
-  final int xpForNextLevel;
-
-  double get progress => xpIntoLevel / xpForNextLevel;
-}
-
-class PlayerProfile {
-  const PlayerProfile({
-    required this.playerId,
-    required this.displayName,
-    required this.avatarId,
-    required this.level,
-    required this.premiumStatus,
-    this.premiumExpiresAt,
+void main() {
+  group('PlayerLevelProgress', () {
+    test('calculates progress within the current level', () {
+      const progress = PlayerLevelProgress(
+        level: 3,
+        totalXp: 250,
+        xpIntoLevel: 50,
+        xpForNextLevel: 100,
+      );
+      expect(progress.progress, 0.5);
+    });
   });
 
-  final String playerId;
-  final String displayName;
-  final String avatarId;
-  final PlayerLevelProgress level;
-  final PremiumStatus premiumStatus;
-  final DateTime? premiumExpiresAt;
+  group('PlayerProfile', () {
+    PlayerProfile profile(PremiumStatus status) => PlayerProfile(
+          playerId: 'player-1',
+          displayName: 'LORIS Player',
+          avatarId: 'owl-1',
+          level: const PlayerLevelProgress(
+            level: 1,
+            totalXp: 0,
+            xpIntoLevel: 0,
+            xpForNextLevel: 100,
+          ),
+          premiumStatus: status,
+        );
 
-  bool get hasPremiumBadge => premiumStatus == PremiumStatus.active ||
-      premiumStatus == PremiumStatus.gracePeriod;
-}
+    test('shows premium badge only for active and grace period', () {
+      expect(profile(PremiumStatus.active).hasPremiumBadge, isTrue);
+      expect(profile(PremiumStatus.gracePeriod).hasPremiumBadge, isTrue);
+      expect(profile(PremiumStatus.free).hasPremiumBadge, isFalse);
+      expect(profile(PremiumStatus.expired).hasPremiumBadge, isFalse);
+      expect(profile(PremiumStatus.cancelled).hasPremiumBadge, isFalse);
+    });
+  });
 
-class LeaderboardEntry {
-  const LeaderboardEntry({
-    required this.playerId,
-    required this.displayName,
-    required this.avatarId,
-    required this.rank,
-    required this.rating,
-    required this.level,
-    required this.isPremium,
-  })  : assert(rank > 0),
-        assert(rating >= 0);
+  group('SeasonSummary', () {
+    final startsAt = DateTime.utc(2026, 1, 1);
+    final endsAt = DateTime.utc(2026, 2, 1);
 
-  final String playerId;
-  final String displayName;
-  final String avatarId;
-  final int rank;
-  final int rating;
-  final int level;
-  final bool isPremium;
-}
+    test('is running inside its active date range', () {
+      final season = SeasonSummary(
+        seasonId: 'season-1',
+        name: 'Season One',
+        startsAt: startsAt,
+        endsAt: endsAt,
+        isActive: true,
+      );
+      expect(season.isRunningAt(DateTime.utc(2026, 1, 15)), isTrue);
+      expect(season.isRunningAt(startsAt), isTrue);
+      expect(season.isRunningAt(endsAt), isFalse);
+    });
 
-class SeasonSummary {
-  const SeasonSummary({
-    required this.seasonId,
-    required this.name,
-    required this.startsAt,
-    required this.endsAt,
-    required this.isActive,
-  }) : assert(seasonId != '');
-
-  final String seasonId;
-  final String name;
-  final DateTime startsAt;
-  final DateTime endsAt;
-  final bool isActive;
-
-  bool isRunningAt(DateTime time) =>
-      isActive && !time.isBefore(startsAt) && time.isBefore(endsAt);
+    test('inactive season is never running', () {
+      final season = SeasonSummary(
+        seasonId: 'season-2',
+        name: 'Archived Season',
+        startsAt: startsAt,
+        endsAt: endsAt,
+        isActive: false,
+      );
+      expect(season.isRunningAt(DateTime.utc(2026, 1, 15)), isFalse);
+    });
+  });
 }
