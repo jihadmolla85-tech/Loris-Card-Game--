@@ -522,6 +522,8 @@ class _GameScreenState extends State<GameScreen> {
   int? _dealerIndex;
 
   int _trickNumber = 0;
+  List<TrickPlay> _revealedTrickPlays = [];
+  int? _revealedTrickWinner;
   
   @override
   void initState() {
@@ -1203,13 +1205,25 @@ await DealerRevealDialog.show(
     final round = _matchController.currentRound;
 
     if (round.trickEngine.isComplete) {
-      final winner = _matchController.completeTrick();
+      // Hold the completed trick on the table before advancing to the next one.
+      final completedPlays = List<TrickPlay>.from(round.trickEngine.plays);
+      final winnerPreview = round.trickEngine.winnerIndex;
+      setState(() {
+        _revealedTrickPlays = completedPlays;
+        _revealedTrickWinner = winnerPreview;
+        _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} is winning';
+      });
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (!mounted) return;
 
+      final winner = _matchController.completeTrick();
       _trickNumber = round.completedTricks;
 
       setState(() {
-        _status = 'Trick $_trickNumber won by Player ${winner + 1}.';
+        _status = 'Trick $_trickNumber won by ${_playerNames[winner]}.';
         _finished = round.isRoundEnded;
+        _revealedTrickPlays = [];
+        _revealedTrickWinner = null;
       });
 
       // AI automatically makes a valid 16 call when eligible.
@@ -1246,7 +1260,7 @@ await DealerRevealDialog.show(
         final next = round.nextPlayerIndex;
         _status = next == null
             ? 'Round complete.'
-            : 'Player ${next + 1} to play.';
+            : '${_playerNames[next]} to play.';
       });
     }
 
@@ -1593,7 +1607,7 @@ await DealerRevealDialog.show(
                 ),
               ),
           ] else ...[
-            _buildTableSurface(plays, currentPlayer),
+            _buildTableSurface(\n              _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,\n              currentPlayer,\n            ),
 
             const SizedBox(height: 12),
 
@@ -1944,7 +1958,7 @@ await DealerRevealDialog.show(
           Text(
             currentPlayer == null
                 ? 'ROUND COMPLETE'
-                : 'TURN: PLAYER ${currentPlayer + 1}',
+                : 'TURN: ${_playerNames[currentPlayer]}',
             style: const TextStyle(
               color: LorisApp.gold,
               fontWeight: FontWeight.bold,
@@ -1995,9 +2009,16 @@ await DealerRevealDialog.show(
                         ),
                       )
                     else
-                      _buildCard(
-                        playerPlays.last.card,
-                        compact: true,
+                      TweenAnimationBuilder<double>(
+                        key: ValueKey('${playerPlays.last.playerIndex}-${playerPlays.last.card.hashCode}'),
+                        tween: Tween(begin: 0.72, end: 1),
+                        duration: const Duration(milliseconds: 420),
+                        curve: Curves.easeOutBack,
+                        builder: (context, scale, child) => Transform.scale(
+                          scale: scale,
+                          child: child,
+                        ),
+                        child: _buildCard(playerPlays.last.card, compact: true),
                       ),
                   ],
                 ),
@@ -2021,7 +2042,7 @@ await DealerRevealDialog.show(
                   border: Border.all(color: LorisApp.gold),
                 ),
                 child: Text(
-                  'TRUMP ${_suitSymbol(_trumpSuit)}',
+                  'TRUMP: ${_suitName(_trumpSuit!)} ${_suitSymbol(_trumpSuit)}',
                   style: const TextStyle(
                     color: LorisApp.gold,
                     fontWeight: FontWeight.bold,
