@@ -1264,6 +1264,7 @@ await DealerRevealDialog.show(
     });
 
     try {
+      await _playCardFeedback();
       _matchController.playCard(0, card);
 
       await _afterCardPlayed();
@@ -1295,6 +1296,7 @@ await DealerRevealDialog.show(
       try {
         final card = _chooseAiCard(playerIndex);
 
+        await _playCardFeedback();
         _matchController.playCard(playerIndex, card);
 
         await _afterCardPlayed();
@@ -1696,6 +1698,7 @@ await DealerRevealDialog.show(
           padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
           child: Column(
             children: [
+              _buildTurnBanner(currentPlayer),
               _buildCompactMatchHeader(),
               if (_error != null) _buildErrorBanner(),
               Expanded(
@@ -1873,6 +1876,40 @@ await DealerRevealDialog.show(
                 ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTurnBanner(int? currentPlayer) {
+    final isHuman = currentPlayer == 0;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFFFE7A0), Color(0xFFB77A2D)]),
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          Icon(isHuman ? Icons.touch_app_rounded : Icons.hourglass_top_rounded,
+              color: const Color(0xFF2B1B0C), size: 17),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              currentPlayer == null
+                  ? 'ROUND COMPLETE'
+                  : 'NOW PLAYING  •  ${_playerNames[currentPlayer]}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFF2B1B0C), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: .8),
+            ),
+          ),
+          if (isHuman)
+            const Text('YOUR TURN', style: TextStyle(color: Color(0xFF2B1B0C), fontSize: 9, fontWeight: FontWeight.w900)),
         ],
       ),
     );
@@ -2262,6 +2299,19 @@ await DealerRevealDialog.show(
                             'TEAM ${index.isEven ? "A" : "B"}',
                             style: const TextStyle(color: Color(0xFFFFD978), fontSize: 7, fontWeight: FontWeight.bold),
                           ),
+                          if (currentPlayer == index)
+                            Container(
+                              margin: const EdgeInsets.only(top: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFE7A0),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                index == 0 ? 'YOUR TURN' : 'PLAYING',
+                                style: const TextStyle(color: Color(0xFF2B1B0C), fontSize: 6, fontWeight: FontWeight.w900),
+                              ),
+                            ),
                           if (index != 0)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
@@ -2309,8 +2359,12 @@ await DealerRevealDialog.show(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       Text(
-                        currentPlayer == null ? 'ROUND COMPLETE' : 'YOUR TABLE',
-                        style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.3),
+                        currentPlayer == null
+                            ? 'ROUND COMPLETE'
+                            : 'NOW PLAYING • ${_playerNames[currentPlayer]}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: .7),
                       ),
                       if (plays.isEmpty)
                         const Text('PLAY A CARD', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1.5, fontWeight: FontWeight.bold))
