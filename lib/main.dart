@@ -708,29 +708,99 @@ await DealerRevealDialog.show(
 
     final selectedBid = await showDialog<int>(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: LorisApp.blue,
-          title: const Text('YOUR BID'),
-          content: Text(
-            'Current highest bid: ${bidding.highestBid ?? "-"}',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, -1),
-              child: const Text('PASS'),
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 22),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB94F43), Color(0xFF762B2B), Color(0xFF4B1B24)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(color: const Color(0xFFFFD66F), width: 4),
+              boxShadow: const [
+                BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12)),
+              ],
             ),
-            ...List.generate(5, (index) {
-              final value = index + 4;
-
-              return TextButton(
-                onPressed: value > highestBid
-                    ? () => Navigator.pop(dialogContext, value)
-                    : null,
-                child: Text('$value'),
-              );
-            }),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Transform.translate(
+                  offset: const Offset(0, -17),
+                  child: Container(
+                    width: 190,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFD978), Color(0xFFB86A24)],
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: const Color(0xFFFFF0AE), width: 2),
+                    ),
+                    child: const Text('CALL', textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF762B2B), fontSize: 24,
+                        fontWeight: FontWeight.w900, letterSpacing: 2)),
+                  ),
+                ),
+                Text('CURRENT HIGHEST BID: ${bidding.highestBid ?? "-"}',
+                  style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 18),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: List.generate(5, (index) {
+                    final value = index + 4;
+                    final enabled = value > highestBid;
+                    return SizedBox(
+                      width: 68,
+                      height: 66,
+                      child: ElevatedButton(
+                        onPressed: enabled ? () => Navigator.pop(dialogContext, value) : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF17833D),
+                          disabledBackgroundColor: const Color(0xFF424242),
+                          foregroundColor: const Color(0xFFFFE28A),
+                          disabledForegroundColor: Colors.white24,
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: const BorderSide(color: Color(0xFFFFD66F), width: 2),
+                          ),
+                          elevation: 7,
+                        ),
+                        child: Text('$value', style: const TextStyle(
+                          fontSize: 27, fontWeight: FontWeight.w900)),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: 180,
+                  height: 58,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogContext, -1),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF087C98),
+                      foregroundColor: const Color(0xFFFFE28A),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: Color(0xFFFFD66F), width: 2),
+                      ),
+                    ),
+                    child: const Text('PASS', style: TextStyle(
+                      fontSize: 23, fontWeight: FontWeight.w900, letterSpacing: 2)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
