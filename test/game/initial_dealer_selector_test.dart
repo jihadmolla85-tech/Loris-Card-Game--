@@ -31,6 +31,7 @@ void main() {
       );
 
       expect(result.dealerIndex, 3);
+      expect(result.firstPlayerIndex, 1);
       expect(result.jackCard.rank, 11);
       expect(result.drawnCards.length, 7);
     });
@@ -46,6 +47,7 @@ void main() {
       );
 
       expect(result.dealerIndex, 5);
+      expect(result.firstPlayerIndex, 4);
       expect(result.jackCard.rank, 11);
       expect(result.drawnCards.length, 8);
     });
