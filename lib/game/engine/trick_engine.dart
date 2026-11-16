@@ -98,37 +98,91 @@ class TrickEngine {
     return firstCard.isLoris ? Suit.spades : firstCard.suit;
   }
 
-  void playCard(int playerIndex, Card card) {
+  /// Returns every card the player is allowed to play on this turn.
+  ///
+  /// LORIS is always playable. Otherwise players must follow the led suit.
+  /// If void in the led suit, they must trump when they hold a trump card.
+  /// Whenever a trump has already been played, a higher trump must be used
+  /// when the player is void in the led suit (or when trump itself was led)
+  /// and such a higher trump is held.
+  List<Card> legalCardsFor(int playerIndex) {
     if (isComplete) {
       throw StateError('Trick is already complete.');
     }
-
     if (playerIndex != currentPlayerIndex) {
       throw StateError('It is not this player’s turn.');
     }
 
     final hand = hands[playerIndex];
-
-    if (!hand.contains(card)) {
-      throw ArgumentError('Card is not in this player’s hand.');
-    }
-
+    final lorisCards = hand.where((card) => card.isLoris).toList();
     final currentLedSuit = ledSuit;
 
-    // LORIS যেকোনো সময় খেলা যাবে।
-    // অন্য কার্ড খেললে হাতে led suit থাকলে সেটি অনুসরণ করতে হবে।
-    if (currentLedSuit != null && !card.isLoris) {
-      final hasLedSuit = hand.any(
-        (heldCard) =>
-            !heldCard.isLoris &&
-            heldCard.suit == currentLedSuit,
-      );
+    if (currentLedSuit == null) {
+      return List.unmodifiable(hand);
+    }
 
-      if (hasLedSuit && card.suit != currentLedSuit) {
-        throw ArgumentError('You must follow the led suit.');
+    final ledSuitCards = hand
+        .where((card) => !card.isLoris && card.suit == currentLedSuit)
+        .toList();
+
+    if (ledSuitCards.isNotEmpty) {
+      // When trump was led, follow suit and overtrump if possible.
+      if (currentLedSuit == trumpSuit) {
+        final highestTrump = _highestTrumpRankAlreadyPlayed();
+        if (highestTrump != null && !plays.any((play) => play.card.isLoris)) {
+          final higher = ledSuitCards
+              .where((card) => (card.rank ?? 0) > highestTrump)
+              .toList();
+          if (higher.isNotEmpty) {
+            return List.unmodifiable([...higher, ...lorisCards]);
+          }
+        }
+      }
+      return List.unmodifiable([...ledSuitCards, ...lorisCards]);
+    }
+
+    // The player is void in the led suit. Trump is compulsory when held.
+    final trumps = hand
+        .where((card) => !card.isLoris && card.suit == trumpSuit)
+        .toList();
+    if (trumps.isEmpty) {
+      return List.unmodifiable(hand);
+    }
+
+    // LORIS is already unbeatable, so no ordinary trump can overtrump it.
+    if (plays.any((play) => play.card.isLoris)) {
+      return List.unmodifiable([...trumps, ...lorisCards]);
+    }
+
+    final highestTrump = _highestTrumpRankAlreadyPlayed();
+    if (highestTrump != null) {
+      final higher = trumps
+          .where((card) => (card.rank ?? 0) > highestTrump)
+          .toList();
+      if (higher.isNotEmpty) {
+        return List.unmodifiable([...higher, ...lorisCards]);
       }
     }
 
+    return List.unmodifiable([...trumps, ...lorisCards]);
+  }
+
+  int? _highestTrumpRankAlreadyPlayed() {
+    final ranks = plays
+        .where((play) => !play.card.isLoris && play.card.suit == trumpSuit)
+        .map((play) => play.card.rank ?? 0)
+        .toList();
+    if (ranks.isEmpty) return null;
+    return ranks.reduce((a, b) => a > b ? a : b);
+  }
+
+  void playCard(int playerIndex, Card card) {
+    final legalCards = legalCardsFor(playerIndex);
+    if (!legalCards.contains(card)) {
+      throw ArgumentError('This card cannot be played under LORIS rules.');
+    }
+
+    final hand = hands[playerIndex];
     hand.remove(card);
     plays.add(TrickPlay(playerIndex: playerIndex, card: card));
   }
