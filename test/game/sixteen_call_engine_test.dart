@@ -69,18 +69,27 @@ void main() {
       );
     });
 
-    test('Requires one additional trick after reaching the bid', () {
+    test('Allows 16 Call immediately after reaching the bid without losing a trick', () {
       engine = createEngine();
       winFirstFour(engine);
-      expect(engine.canCall, isFalse);
-      engine.recordTrickWinner(2);
       expect(engine.canCall, isTrue);
+    });
+
+    test('Disables 16 Call if opponents have won any trick', () {
+      engine = createEngine();
+      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(1);
+      engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(2);
+      expect(engine.biddingTeamTricks, 4);
+      expect(engine.canCall, isFalse);
+      expect(() => engine.call16(callerPlayerIndex: 2), throwsStateError);
     });
 
     test('Only previous trick winner can call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(2);
 
       expect(engine.canCall, isTrue);
       expect(
@@ -107,7 +116,6 @@ void main() {
     test('Previous trick winner can make 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(2);
 
       engine.call16(callerPlayerIndex: 2);
 
@@ -120,13 +128,13 @@ void main() {
     test('Winning all remaining tricks succeeds', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(2);
       engine.call16(callerPlayerIndex: 2);
 
-      // Five tricks have already been completed; only three remain.
+      // Four tricks have already been completed; four remain.
       engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
+      engine.recordTrickWinner(2);
 
       expect(
         engine.status,
