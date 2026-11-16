@@ -317,6 +317,7 @@ void main() {
         trumpSuit: Suit.spades,
       );
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
+      hands[2].add(card(Suit.spades, 14));
       game.playCard(1, card(Suit.hearts, 12));
       game.playCard(2, card(Suit.spades, 14));
 
