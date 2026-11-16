@@ -487,8 +487,10 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin {
   final GameSaveService _saveService = GameSaveService();
+  final GameSettingsService _settingsService = GameSettingsService();
   final LorisAudioService _audio = LorisAudioService();
   final Random _random = Random();
+  bool _soundEnabled = true;
 
   static const List<String> _namePool = [
     // Names requested by the player.
@@ -542,6 +544,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    _loadAudioSettings();
     _shuffleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
 
     final shuffledNames = List<String>.from(_namePool)..shuffle(_random);
@@ -574,6 +577,16 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     if (snapshot != null) {
       _restoreSavedGame(snapshot);
+    }
+  }
+
+  Future<void> _loadAudioSettings() async {
+    try {
+      final settings = await _settingsService.load();
+      if (!mounted) return;
+      setState(() => _soundEnabled = settings.soundEnabled);
+    } catch (_) {
+      // Keep sound effects enabled if preferences are unavailable.
     }
   }
 
@@ -610,6 +623,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _playCardFeedback(loris.Card card) async {
+    if (!_soundEnabled) return;
     if (card.isLoris) {
       await _audio.play('loris');
       await HapticFeedback.heavyImpact();
@@ -623,6 +637,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _playShuffleSound() async {
+    if (!_soundEnabled) return;
     await _audio.play('shuffle');
     await HapticFeedback.lightImpact();
   }
@@ -1363,7 +1378,7 @@ await DealerRevealDialog.show(
         _collectingTrickWinner = null;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
-      await _audio.play('trick_win');
+      if (_soundEnabled) await _audio.play('trick_win');
       await HapticFeedback.heavyImpact();
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
@@ -1408,11 +1423,11 @@ await DealerRevealDialog.show(
 
       if (_finished) {
         if (_matchController.isMatchOver) {
-          await _audio.play('match_win');
+          if (_soundEnabled) await _audio.play('match_win');
           await HapticFeedback.vibrate();
           if (mounted) setState(() => _winCelebration = 'MATCH CHAMPION!');
         } else {
-          await _audio.play('round_win');
+          if (_soundEnabled) await _audio.play('round_win');
           await HapticFeedback.heavyImpact();
           if (mounted) setState(() => _winCelebration = 'ROUND WON!');
         }
