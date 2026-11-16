@@ -745,15 +745,23 @@ await DealerRevealDialog.show(
     var bestCount = -1;
     var cardOwner = bidder;
 
+    // The bidder may only declare a suit that is also present in their
+    // own hand, even when the revealed card belongs to a teammate.
+    final bidderSuits = hands[bidder]
+        .where((card) => !card.isLoris && card.suit != null)
+        .map((card) => card.suit!)
+        .toSet();
+
     for (var player = 0; player < hands.length; player++) {
       if (player % 2 != bidder % 2) continue;
 
       final counts = <loris.Suit, int>{
-        for (final suit in loris.Suit.values) suit: 0,
+        for (final suit in bidderSuits) suit: 0,
       };
 
       for (final card in hands[player]) {
-        if (!card.isLoris && card.suit != null) {
+        if (!card.isLoris && card.suit != null &&
+            bidderSuits.contains(card.suit)) {
           counts[card.suit!] = counts[card.suit!]! + 1;
         }
       }
