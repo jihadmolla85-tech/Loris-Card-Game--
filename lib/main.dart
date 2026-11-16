@@ -2092,7 +2092,7 @@ await DealerRevealDialog.show(
     int target, {
     required bool isBiddingTeam,
   }) {
-    final progress = target <= 0 ? 1.0 : (won / target).clamp(0.0, 1.0);
+    final double progress = target <= 0 ? 1.0 : (won / target).clamp(0.0, 1.0).toDouble();
     final accent = isBiddingTeam
         ? const Color(0xFFFFD477)
         : const Color(0xFFE7B6BE);
