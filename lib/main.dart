@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
@@ -2018,6 +2019,10 @@ await DealerRevealDialog.show(
               ),
             ],
           ),
+          if (_matchController.hasStarted) ...[
+            const SizedBox(height: 7),
+            _buildTrickTargetProgress(),
+          ],
           const SizedBox(height: 4),
           Row(
             children: [
@@ -2038,6 +2043,119 @@ await DealerRevealDialog.show(
                 ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrickTargetProgress() {
+    final round = _matchController.currentRound;
+    final teamATricks = round.biddingTeam == 0
+        ? round.biddingTeamTricks
+        : round.completedTricks - round.biddingTeamTricks;
+    final teamBTricks = round.biddingTeam == 1
+        ? round.biddingTeamTricks
+        : round.completedTricks - round.biddingTeamTricks;
+    final teamATarget = round.biddingTeam == 0
+        ? round.bidAmount
+        : 8 - round.bidAmount;
+    final teamBTarget = round.biddingTeam == 1
+        ? round.bidAmount
+        : 8 - round.bidAmount;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _trickProgressTile(
+            'TEAM A',
+            teamATricks,
+            teamATarget,
+            isBiddingTeam: round.biddingTeam == 0,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _trickProgressTile(
+            'TEAM B',
+            teamBTricks,
+            teamBTarget,
+            isBiddingTeam: round.biddingTeam == 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _trickProgressTile(
+    String label,
+    int won,
+    int target, {
+    required bool isBiddingTeam,
+  }) {
+    final progress = target <= 0 ? 1.0 : (won / target).clamp(0.0, 1.0);
+    final accent = isBiddingTeam
+        ? const Color(0xFFFFD477)
+        : const Color(0xFFE7B6BE);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF100D12).withValues(alpha: .78),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: accent.withValues(alpha: isBiddingTeam ? .85 : .42),
+          width: isBiddingTeam ? 1.1 : .7,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 7,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .8,
+                ),
+              ),
+              Text(
+                '$won/$target',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 3,
+              backgroundColor: Colors.white12,
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+          if (isBiddingTeam)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Text(
+                'BIDDING TEAM',
+                style: TextStyle(
+                  color: Color(0xFFFFD477),
+                  fontSize: 5.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .6,
+                ),
+              ),
+            ),
         ],
       ),
     );
