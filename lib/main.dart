@@ -1284,9 +1284,17 @@ await DealerRevealDialog.show(
       final winnerPreview = round.trickEngine.winnerIndex;
       setState(() {
         _revealedTrickPlays = completedPlays;
-        _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} is winning';
+        _collectingTrickWinner = null;
+        _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
-      await Future.delayed(const Duration(milliseconds: 1500));
+      // Briefly show the completed trick, then animate every card into
+      // the winning player's seat before the next trick is dealt.
+      await Future.delayed(const Duration(milliseconds: 550));
+      if (!mounted) return;
+      setState(() {
+        _collectingTrickWinner = winnerPreview;
+      });
+      await Future.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
 
       final winner = _matchController.completeTrick();
@@ -1296,6 +1304,7 @@ await DealerRevealDialog.show(
         _status = 'Trick $_trickNumber won by ${_playerNames[winner]}.';
         _finished = round.isRoundEnded;
         _revealedTrickPlays = [];
+        _collectingTrickWinner = null;
       });
 
       // AI automatically makes a valid 16 call when eligible.
