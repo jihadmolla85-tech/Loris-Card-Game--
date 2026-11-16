@@ -105,8 +105,8 @@ void main() {
       engine.recordTrickWinner(3);
       engine.recordTrickWinner(1);
       engine.recordTrickWinner(3);
-      engine.recordTrickWinner(0);
 
+      expect(engine.canCall, isTrue);
       expect(
         () => engine.call16(callerPlayerIndex: 0),
         throwsStateError,
@@ -148,7 +148,6 @@ void main() {
     test('Losing one trick ends round immediately', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(2);
       engine.call16(callerPlayerIndex: 2);
 
       engine.recordTrickWinner(1);
