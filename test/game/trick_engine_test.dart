@@ -263,5 +263,71 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('must play trump when void in the led suit and holding trump', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: Suit.spades,
+      );
+      hands[2].removeWhere((c) => c.suit == Suit.hearts);
+      game.playCard(1, card(Suit.hearts, 12));
+
+      expect(
+        () => game.playCard(2, card(Suit.clubs, 7)),
+        throwsArgumentError,
+      );
+      expect(
+        game.legalCardsFor(2).every(
+          (c) => c.isLoris || c.suit == Suit.spades,
+        ),
+        isTrue,
+      );
+    });
+
+    test('must overtrump when void in led suit and a higher trump is held', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: Suit.spades,
+      );
+      hands[2].removeWhere((c) => c.suit == Suit.hearts);
+      hands[2].add(card(Suit.spades, 14));
+      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(2, card(Suit.spades, 11));
+
+      hands[3].removeWhere((c) => c.suit == Suit.hearts);
+      hands[3].add(card(Suit.spades, 8));
+
+      expect(
+        () => game.playCard(3, card(Suit.spades, 8)),
+        throwsArgumentError,
+      );
+      expect(
+        game.legalCardsFor(3).where((c) => c.suit == Suit.spades)
+            .every((c) => (c.rank ?? 0) > 11),
+        isTrue,
+      );
+    });
+
+    test('may play a lower trump when no higher trump is held', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: Suit.spades,
+      );
+      hands[2].removeWhere((c) => c.suit == Suit.hearts);
+      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(2, card(Suit.spades, 14));
+
+      hands[3].removeWhere((c) => c.suit == Suit.hearts);
+      expect(
+        game.legalCardsFor(3).any((c) => c.suit == Suit.spades),
+        isTrue,
+      );
+      game.playCard(3, card(Suit.spades, 13));
+      expect(game.plays.length, 3);
+    });
+
   });
 }
