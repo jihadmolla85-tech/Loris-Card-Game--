@@ -449,8 +449,14 @@ class _GameScreenState extends State<GameScreen> {
   final Random _random = Random();
 
   static const List<String> _namePool = [
-    'Ayaan', 'Rayan', 'Zara', 'Mika', 'Noah', 'Lina',
-    'Aria', 'Omar', 'Iris', 'Ethan', 'Maya', 'Leo',
+    // Names requested by the player.
+    'Jihad', 'Tamim', 'Himel', 'Rana', 'Nahid', 'Shakib', 'Robin',
+    'Jannat', 'Ayesha', 'Sheto', 'Shima', 'Roma',
+    // Additional names to keep match line-ups varied.
+    'Adnan', 'Fahim', 'Rafi', 'Nabil', 'Imran', 'Farhan',
+    'Hasan', 'Arif', 'Sami', 'Rayhan', 'Mahin', 'Tanvir',
+    'Mitu', 'Tania', 'Nusrat', 'Mim', 'Sumi', 'Rima',
+    'Nila', 'Faria', 'Sumaiya', 'Tisha', 'Anika', 'Maliha',
   ];
   static const List<String> _avatarPool = [
     '🦊', '🐼', '🦁', '🐯', '🐸', '🐨',
