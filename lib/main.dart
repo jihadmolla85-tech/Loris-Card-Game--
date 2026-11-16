@@ -1536,27 +1536,10 @@ await DealerRevealDialog.show(
         random: _random,
       );
 
-      final dealerSelection = _matchController.selectDealerForNextRound(
+      final newHands = _dealController.deal(
         deck: deck,
         playerCount: widget.playerCount,
-        random: _random,
-      );
-
-      await DealerRevealDialog.show(
-        context,
-        drawnCards: dealerSelection.drawnCards,
-        playerCount: widget.playerCount,
-        dealerIndex: dealerSelection.dealerIndex,
-        firstPlayerIndex: dealerSelection.firstPlayerIndex,
-        playerNames: _playerNames,
-        playerAvatars: _playerAvatars,
-      );
-      if (!mounted) return;
-
-      final newHands = _dealController.deal(
-        deck: dealerSelection.shuffledDeck,
-        playerCount: widget.playerCount,
-        dealerIndex: dealerSelection.dealerIndex,
+        dealerIndex: _matchController.dealerIndex,
       );
 
       setState(() {
