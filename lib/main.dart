@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
 import 'game/widgets/dealer_reveal_dialog.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
+import 'game/widgets/loris_3d_table.dart';
 import 'game/engine/game_settings_service.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -37,10 +38,10 @@ void main() {
 class LorisApp extends StatelessWidget {
   const LorisApp({super.key});
 
-  static const Color navy = Color(0xFF07152E);
-  static const Color blue = Color(0xFF102B55);
-  static const Color gold = Color(0xFFD6B15E);
-  static const Color tableGreen = Color(0xFF075239);
+  static const Color navy = Color(0xFF08090D);
+  static const Color blue = Color(0xFF17141C);
+  static const Color gold = Color(0xFFD4AF62);
+  static const Color tableGreen = Color(0xFF501923);
 
   @override
   Widget build(BuildContext context) {
@@ -2558,7 +2559,7 @@ await DealerRevealDialog.show(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFE9A3), Color(0xFF9A642A), Color(0xFFFFD36A), Color(0xFF57351D)],
+              colors: [Color(0xFFFFE8B0), Color(0xFFB77A36), Color(0xFFE6C078), Color(0xFF49212A)],
             ),
             boxShadow: const [
               BoxShadow(color: Colors.black87, blurRadius: 18, offset: Offset(0, 9)),
@@ -2572,7 +2573,7 @@ await DealerRevealDialog.show(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF0B6048), Color(0xFF064331), Color(0xFF022A22)],
+                colors: [Color(0xFF6A2331), Color(0xFF3A111C), Color(0xFF170B11)],
               ),
               border: Border.all(color: const Color(0xFFFFE6A0), width: 1.5),
             ),
@@ -2581,19 +2582,9 @@ await DealerRevealDialog.show(
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(130),
-                        border: Border.all(color: const Color(0x55E8D09A), width: 1),
-                        gradient: const RadialGradient(
-                          center: Alignment(0, -.25),
-                          radius: 1.15,
-                          colors: [Color(0xFF16795A), Color(0xFF032D25)],
-                        ),
-                      ),
-                    ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(130),
+                    child: const Loris3DTable(playerCount: 4),
                   ),
                 ),
                 for (var index = 0; index < widget.playerCount; index++)
