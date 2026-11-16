@@ -537,6 +537,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   int? _flyingFromPlayer;
   bool _flightStarted = false;
   String? _playEffect;
+  String? _winCelebration;
   
   @override
   void initState() {
@@ -1382,6 +1383,7 @@ await DealerRevealDialog.show(
         _finished = round.isRoundEnded;
         _revealedTrickPlays = [];
         _collectingTrickWinner = null;
+        _winCelebration = 'TRICK WON • ${_playerNames[winner]}';
       });
 
       // AI automatically makes a valid 16 call when eligible.
@@ -1408,9 +1410,11 @@ await DealerRevealDialog.show(
         if (_matchController.isMatchOver) {
           await _audio.play('match_win');
           await HapticFeedback.vibrate();
+          if (mounted) setState(() => _winCelebration = 'MATCH CHAMPION!');
         } else {
           await _audio.play('round_win');
           await HapticFeedback.heavyImpact();
+          if (mounted) setState(() => _winCelebration = 'ROUND WON!');
         }
         final score = _matchController.matchScoreEngine;
 
@@ -1432,6 +1436,10 @@ await DealerRevealDialog.show(
     // Persist after every card so an unexpected app close does not discard
     // the latest turn. Save failures are surfaced without interrupting play.
     await _autoSaveGame();
+    if (mounted && _winCelebration != null) {
+      await Future.delayed(const Duration(milliseconds: 1150));
+      if (mounted) setState(() => _winCelebration = null);
+    }
   }
 
   Future<void> _autoSaveGame() async {
@@ -2245,17 +2253,17 @@ await DealerRevealDialog.show(
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
             Alignment(0, .82),
-            Alignment(-.84, 0),
-            Alignment(0, -.82),
-            Alignment(.84, 0),
+            Alignment(-.88, 0),
+            Alignment(0, -.84),
+            Alignment(.88, 0),
           ]
         : const <Alignment>[
-            Alignment(0, .82),
-            Alignment(-.82, .46),
-            Alignment(-.82, -.46),
-            Alignment(0, -.82),
-            Alignment(.82, -.46),
-            Alignment(.82, .46),
+            Alignment(0, .85),
+            Alignment(-.87, .53),
+            Alignment(-.87, -.53),
+            Alignment(0, -.85),
+            Alignment(.87, -.53),
+            Alignment(.87, .53),
           ];
 
     final trickCollectionTargets = widget.playerCount == 4
@@ -2277,8 +2285,8 @@ await DealerRevealDialog.show(
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
-        final avatarSize = widget.playerCount == 6 ? 31.0 : 35.0;
-        final seatWidth = widget.playerCount == 6 ? 74.0 : 82.0;
+        final avatarSize = widget.playerCount == 6 ? 34.0 : 38.0;
+        final seatWidth = widget.playerCount == 6 ? 68.0 : 76.0;
         final centerWidth = (constraints.maxWidth * .46).clamp(126.0, 166.0);
         final centerHeight = (tableHeight * .32).clamp(94.0, 126.0);
 
@@ -2521,6 +2529,36 @@ await DealerRevealDialog.show(
                           child: Text(
                             _playEffect!,
                             style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_winCelebration != null)
+                  Positioned(
+                    top: tableHeight * .27,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: .65, end: 1),
+                          duration: const Duration(milliseconds: 420),
+                          curve: Curves.elasticOut,
+                          builder: (context, scale, child) =>
+                              Transform.scale(scale: scale, child: child),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 9),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Color(0xFFFFE9A3), Color(0xFFB77A2D)]),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(color: Colors.white, width: 1),
+                              boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 18, spreadRadius: 2)],
+                            ),
+                            child: Text(
+                              _winCelebration!,
+                              style: const TextStyle(color: Color(0xFF27190B), fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                            ),
                           ),
                         ),
                       ),
