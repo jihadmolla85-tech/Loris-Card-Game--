@@ -123,10 +123,10 @@ void main() {
       engine.recordTrickWinner(2);
       engine.call16(callerPlayerIndex: 2);
 
+      // Five tricks have already been completed; only three remain.
       engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
-      engine.recordTrickWinner(2);
 
       expect(
         engine.status,
