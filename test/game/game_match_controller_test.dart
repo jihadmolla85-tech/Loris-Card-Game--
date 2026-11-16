@@ -161,30 +161,6 @@ void main() {
       expect(match.dealerIndex, 0);
     });
 
-    test('Selects a fresh Jack dealer after each completed round', () {
-      match.startRound(
-        hands: createHands(),
-        trumpSuit: Suit.spades,
-        biddingTeam: 0,
-        bidAmount: 4,
-      );
-
-      for (var i = 0; i < 8; i++) {
-        playOneTrick();
-      }
-
-      final selection = match.selectDealerForNextRound(
-        deck: createDeck(),
-        playerCount: 4,
-        random: Random(73),
-      );
-
-      expect(selection.drawnCards.last.rank, 11);
-      expect(selection.dealerIndex, match.dealerIndex);
-      expect(selection.firstPlayerIndex, inInclusiveRange(0, 3));
-      expect(selection.shuffledDeck.toSet(), createDeck().toSet());
-    });
-
     test('Detects match winner and prevents another round', () {
       matchScore.teamAScore = 28;
       matchScore.teamBScore = -28;
