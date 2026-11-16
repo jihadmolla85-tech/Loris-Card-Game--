@@ -22,6 +22,7 @@ import 'game/engine/game_state_snapshot.dart';
 import 'game/engine/bidding_round_controller.dart';
 import 'game/engine/trump_selection_engine.dart';
 import 'game/engine/trick_engine.dart';
+import 'game/ai/ai_card_play_strategy.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1237,72 +1238,14 @@ await DealerRevealDialog.show(
   // CARD PLAY
   // ----------------------------------------------------------
 
+  final AiCardPlayStrategy _aiCardPlayStrategy = const AiCardPlayStrategy();
+
   loris.Card _chooseAiCard(int playerIndex) {
     final engine = _matchController.currentRound.trickEngine;
-    final hand = engine.hands[playerIndex];
-
-    if (hand.isEmpty) {
-      throw StateError('AI player has no cards.');
-    }
-
-    final legalCards = engine.legalCardsFor(playerIndex);
-    if (legalCards.length == 1) return legalCards.first;
-
-    int winningPlayer(List<TrickPlay> trick) {
-      final lorisPlay = trick.where((play) => play.card.isLoris);
-      if (lorisPlay.isNotEmpty) return lorisPlay.first.playerIndex;
-
-      final firstCard = trick.first.card;
-      final ledSuit = firstCard.isLoris
-          ? loris.Suit.spades
-          : firstCard.suit;
-      final trumpPlays = trick
-          .where((play) => !play.card.isLoris &&
-              play.card.suit == engine.trumpSuit)
-          .toList();
-      final candidates = trumpPlays.isNotEmpty
-          ? trumpPlays
-          : trick.where((play) => play.card.suit == ledSuit).toList();
-
-      candidates.sort((a, b) =>
-          (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
-      return candidates.first.playerIndex;
-    }
-
-    int compareCardCost(loris.Card a, loris.Card b) {
-      if (a.isLoris) return b.isLoris ? 0 : 1;
-      if (b.isLoris) return -1;
-      return (a.rank ?? 0).compareTo(b.rank ?? 0);
-    }
-
-    final nonLoris = legalCards.where((card) => !card.isLoris).toList()
-      ..sort(compareCardCost);
-    final currentPlays = List<TrickPlay>.from(engine.plays);
-
-    // When leading, keep the special card and high cards for later.
-    if (currentPlays.isEmpty) {
-      return nonLoris.isNotEmpty ? nonLoris.first : legalCards.first;
-    }
-
-    final currentWinner = winningPlayer(currentPlays);
-
-    // Do not overtake a teammate who is already winning the trick.
-    if (currentWinner % 2 == playerIndex % 2) {
-      return nonLoris.isNotEmpty ? nonLoris.first : legalCards.first;
-    }
-
-    // If an opponent is winning, use the cheapest card that takes the lead.
-    final winningCards = legalCards.where((card) {
-      final simulated = [
-        ...currentPlays,
-        TrickPlay(playerIndex: playerIndex, card: card),
-      ];
-      return winningPlayer(simulated) == playerIndex;
-    }).toList()
-      ..sort(compareCardCost);
-
-    if (winningCards.isNotEmpty) return winningCards.first;
-    return nonLoris.isNotEmpty ? nonLoris.first : legalCards.first;
+    return _aiCardPlayStrategy.chooseCard(
+      engine: engine,
+      playerIndex: playerIndex,
+    );
   }
 
   Future<void> _playHumanCard(loris.Card card) async {
