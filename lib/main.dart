@@ -523,6 +523,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   bool _started = false;
   bool _finished = false;
+  bool _passed16 = false;
   bool _busy = false;
   bool _isShuffling = false;
   late final AnimationController _shuffleController;
@@ -1477,9 +1478,19 @@ await DealerRevealDialog.show(
     final engine =
         _matchController.currentRound.sixteenCallEngine;
 
-    return engine != null &&
+    return !_passed16 &&
+        engine != null &&
         engine.canCall &&
         engine.lastTrickWinnerIndex == 0;
+  }
+
+  void _pass16() {
+    if (!_humanCanCall16 || _busy) return;
+
+    setState(() {
+      _passed16 = true;
+      _status = 'You passed the 16 Call. Continue playing normally.';
+    });
   }
 
   Future<void> _call16() async {
@@ -1559,6 +1570,7 @@ await DealerRevealDialog.show(
 
         _started = false;
         _finished = false;
+        _passed16 = false;
 
         _trumpSuit = null;
 
@@ -1824,14 +1836,32 @@ await DealerRevealDialog.show(
                 SizedBox(
                   height: 38,
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _busy ? null : _call16,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: LorisApp.gold,
-                      foregroundColor: LorisApp.navy,
-                      padding: EdgeInsets.zero,
-                    ),
-                    child: const Text('CALL 16', style: TextStyle(fontWeight: FontWeight.w900)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _busy ? null : _call16,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: LorisApp.gold,
+                            foregroundColor: LorisApp.navy,
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: const Text('CALL 16', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _busy ? null : _pass16,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: const Text('PASS', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               if (_finished)
