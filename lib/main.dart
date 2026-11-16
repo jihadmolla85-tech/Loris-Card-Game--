@@ -599,7 +599,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     await Future.delayed(const Duration(milliseconds: 35));
     if (!mounted) return;
     setState(() => _flightStarted = true);
-    await Future.delayed(const Duration(milliseconds: 470));
+    await Future.delayed(const Duration(milliseconds: 1120));
     if (!mounted) return;
     setState(() {
       _flyingCard = null;
@@ -2498,18 +2498,26 @@ await DealerRevealDialog.show(
                     alignment: _flightStarted
                         ? Alignment.center
                         : seatAlignments[_flyingFromPlayer!],
-                    duration: Duration(milliseconds: _flightStarted ? 470 : 1),
+                    duration: Duration(milliseconds: _flightStarted ? 1120 : 1),
                     curve: Curves.easeInOutCubic,
-                    child: Transform.rotate(
-                      angle: _flightStarted ? 0 : -.22,
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: .72, end: _flightStarted ? 1.0 : .72),
-                        duration: const Duration(milliseconds: 470),
-                        curve: Curves.easeOutBack,
-                        builder: (context, scale, child) =>
-                            Transform.scale(scale: scale, child: child),
-                        child: _buildCard(_flyingCard!, compact: true),
-                      ),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: _flightStarted ? 1.0 : 0.0),
+                      duration: const Duration(milliseconds: 1120),
+                      curve: Curves.easeInOutCubic,
+                      builder: (context, progress, child) {
+                        final transform = Matrix4.identity()
+                          ..setEntry(3, 2, 0.0014)
+                          ..rotateX((1 - progress) * .72)
+                          ..rotateY((1 - progress) * -.88)
+                          ..rotateZ((1 - progress) * -.34)
+                          ..scale(.70 + (progress * .30));
+                        return Transform(
+                          alignment: Alignment.center,
+                          transform: transform,
+                          child: child,
+                        );
+                      },
+                      child: _buildCard(_flyingCard!, compact: true),
                     ),
                   ),
                 if (_playEffect != null)
