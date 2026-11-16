@@ -92,13 +92,15 @@ void main() {
     });
 
     test('Applies 16 Call success points only once', () {
-      for (var i = 0; i < 4; i++) {
+      // The team must take one trick beyond its four-trick bid.
+      for (var i = 0; i < 5; i++) {
         playOneTrick();
       }
 
       controller.call16(callerPlayerIndex: 0);
 
-      for (var i = 0; i < 4; i++) {
+      // Three tricks remain in the eight-trick round.
+      for (var i = 0; i < 3; i++) {
         playOneTrick();
       }
 
