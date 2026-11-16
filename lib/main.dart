@@ -82,7 +82,6 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
   @override
   void initState() {
     super.initState();
-    _shuffleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
     _loadSettings();
   }
 
@@ -532,10 +531,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   int _trickNumber = 0;
   List<TrickPlay> _revealedTrickPlays = [];
   int? _collectingTrickWinner;
+  loris.Card? _flyingCard;
+  int? _flyingFromPlayer;
+  bool _flightStarted = false;
+  String? _playEffect;
   
   @override
   void initState() {
     super.initState();
+    _shuffleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
 
     final shuffledNames = List<String>.from(_namePool)..shuffle(_random);
     final shuffledAvatars = List<String>.from(_avatarPool)..shuffle(_random);
@@ -576,7 +580,45 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  Future<void> _playCardFeedback() async {
+  Future<void> _animateCardToTable(int playerIndex, loris.Card card) async {
+    if (!mounted) return;
+    setState(() {
+      _flyingCard = card;
+      _flyingFromPlayer = playerIndex;
+      _flightStarted = false;
+      _playEffect = card.isLoris
+          ? 'LORIS!'
+          : card.suit == _trumpSuit
+              ? 'TRUMP!'
+              : null;
+    });
+    await Future.delayed(const Duration(milliseconds: 35));
+    if (!mounted) return;
+    setState(() => _flightStarted = true);
+    await Future.delayed(const Duration(milliseconds: 470));
+    if (!mounted) return;
+    setState(() {
+      _flyingCard = null;
+      _flyingFromPlayer = null;
+      _flightStarted = false;
+      _playEffect = null;
+    });
+  }
+
+  Future<void> _playCardFeedback(loris.Card card) async {
+    if (card.isLoris) {
+      await SystemSound.play(SystemSoundType.alert);
+      await HapticFeedback.heavyImpact();
+    } else if (card.suit == _trumpSuit) {
+      await SystemSound.play(SystemSoundType.alert);
+      await HapticFeedback.mediumImpact();
+    } else {
+      await SystemSound.play(SystemSoundType.click);
+      await HapticFeedback.lightImpact();
+    }
+  }
+
+  Future<void> _playShuffleSound() async {
     await SystemSound.play(SystemSoundType.click);
     await HapticFeedback.lightImpact();
   }
@@ -1264,7 +1306,8 @@ await DealerRevealDialog.show(
     });
 
     try {
-      await _playCardFeedback();
+      await _animateCardToTable(0, card);
+      await _playCardFeedback(card);
       _matchController.playCard(0, card);
 
       await _afterCardPlayed();
@@ -1296,7 +1339,8 @@ await DealerRevealDialog.show(
       try {
         final card = _chooseAiCard(playerIndex);
 
-        await _playCardFeedback();
+        await _animateCardToTable(playerIndex, card);
+        await _playCardFeedback(card);
         _matchController.playCard(playerIndex, card);
 
         await _afterCardPlayed();
@@ -1323,6 +1367,8 @@ await DealerRevealDialog.show(
         _collectingTrickWinner = null;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
+      await SystemSound.play(SystemSoundType.alert);
+      await HapticFeedback.heavyImpact();
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
       await Future.delayed(const Duration(milliseconds: 550));
@@ -1364,6 +1410,15 @@ await DealerRevealDialog.show(
       }
 
       if (_finished) {
+        await SystemSound.play(SystemSoundType.alert);
+        await HapticFeedback.vibrate();
+        if (_matchController.isMatchOver) {
+          await Future.delayed(const Duration(milliseconds: 350));
+          if (mounted) {
+            await SystemSound.play(SystemSoundType.alert);
+            await HapticFeedback.vibrate();
+          }
+        }
         final score = _matchController.matchScoreEngine;
 
         setState(() {
@@ -2435,6 +2490,47 @@ await DealerRevealDialog.show(
                       curve: Curves.easeInOut,
                       builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
                       child: _buildCard(plays[i].card, compact: true),
+                    ),
+                  ),
+                if (_flyingCard != null && _flyingFromPlayer != null)
+                  AnimatedAlign(
+                    alignment: _flightStarted
+                        ? Alignment.center
+                        : seatAlignments[_flyingFromPlayer!],
+                    duration: Duration(milliseconds: _flightStarted ? 470 : 1),
+                    curve: Curves.easeInOutCubic,
+                    child: Transform.rotate(
+                      angle: _flightStarted ? 0 : -.22,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: .72, end: _flightStarted ? 1.0 : .72),
+                        duration: const Duration(milliseconds: 470),
+                        curve: Curves.easeOutBack,
+                        builder: (context, scale, child) =>
+                            Transform.scale(scale: scale, child: child),
+                        child: _buildCard(_flyingCard!, compact: true),
+                      ),
+                    ),
+                  ),
+                if (_playEffect != null)
+                  Positioned(
+                    top: tableHeight * .34,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: _playEffect == 'LORIS!'
+                              ? const Color(0xFF6C3BC1).withValues(alpha: .94)
+                              : const Color(0xFFD6B15E).withValues(alpha: .96),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, spreadRadius: 2)],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                          child: Text(
+                            _playEffect!,
+                            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 2),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 if (_trumpSuit != null)
