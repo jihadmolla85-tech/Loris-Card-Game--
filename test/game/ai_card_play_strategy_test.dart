@@ -1,0 +1,112 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:loris_card_game/game/ai/ai_card_play_strategy.dart';
+import 'package:loris_card_game/game/engine/trick_engine.dart';
+import 'package:loris_card_game/game/models/loris_card.dart';
+
+Card c(Suit suit, int rank) => Card.normal(suit: suit, rank: rank);
+
+List<List<Card>> handsWith(List<Card> playerZero, List<Card> playerOne,
+    List<Card> playerTwo) {
+  final used = {...playerZero, ...playerOne, ...playerTwo};
+  final deck = <Card>[
+    for (final suit in Suit.values)
+      for (var rank = 3; rank <= 14; rank++) c(suit, rank),
+  ]..removeWhere(used.contains);
+  return [
+    playerZero,
+    playerOne,
+    playerTwo,
+    deck.take(8).toList(),
+  ];
+}
+
+void main() {
+  const strategy = AiCardPlayStrategy();
+
+  group('AI card-play strategy', () {
+    test('follows suit and preserves a partner winning the trick', () {
+      final hand = [
+        c(Suit.hearts, 7), c(Suit.hearts, 11), c(Suit.clubs, 4),
+        c(Suit.clubs, 5), c(Suit.diamonds, 6), c(Suit.diamonds, 7),
+        c(Suit.spades, 14), const Card.loris(replacesRank: 7),
+      ];
+      final engine = TrickEngine(
+        hands: handsWith(
+          [c(Suit.hearts, 14), ...List.generate(7, (i) => c(Suit.clubs, i + 3))],
+          [c(Suit.hearts, 8), ...List.generate(7, (i) => c(Suit.diamonds, i + 3))],
+          hand,
+        ),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+      );
+      engine.playCard(0, c(Suit.hearts, 14));
+      engine.playCard(1, c(Suit.hearts, 8));
+
+      final chosen = strategy.chooseCard(engine: engine, playerIndex: 2);
+      expect(chosen, c(Suit.hearts, 7));
+      expect(engine.legalCardsFor(2), contains(chosen));
+    });
+
+    test('uses the cheapest legal card that beats an opponent', () {
+      final hand = [
+        c(Suit.hearts, 9), c(Suit.hearts, 11), c(Suit.hearts, 14),
+        c(Suit.clubs, 4), c(Suit.clubs, 5), c(Suit.diamonds, 6),
+        c(Suit.diamonds, 7), const Card.loris(replacesRank: 7),
+      ];
+      final engine = TrickEngine(
+        hands: handsWith(
+          [c(Suit.hearts, 8), ...List.generate(7, (i) => c(Suit.clubs, i + 3))],
+          [c(Suit.hearts, 10), ...List.generate(7, (i) => c(Suit.diamonds, i + 3))],
+          hand,
+        ),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+      );
+      engine.playCard(0, c(Suit.hearts, 8));
+      engine.playCard(1, c(Suit.hearts, 10));
+
+      expect(strategy.chooseCard(engine: engine, playerIndex: 2), c(Suit.hearts, 11));
+    });
+
+    test('leads from a long side suit and does not waste LORIS', () {
+      final hand = [
+        c(Suit.clubs, 4), c(Suit.clubs, 5), c(Suit.clubs, 6),
+        c(Suit.hearts, 14), c(Suit.hearts, 7), c(Suit.diamonds, 8),
+        c(Suit.diamonds, 9), const Card.loris(replacesRank: 7),
+      ];
+      final engine = TrickEngine(
+        hands: handsWith(
+          hand,
+          List.generate(8, (i) => c(Suit.hearts, i + 3)),
+          List.generate(8, (i) => c(Suit.diamonds, i + 3)),
+        ),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+      );
+
+      expect(strategy.chooseCard(engine: engine, playerIndex: 0), c(Suit.clubs, 4));
+    });
+
+    test('never returns a card outside the rules engine legal set', () {
+      final hand = [
+        c(Suit.clubs, 4), c(Suit.hearts, 7), c(Suit.hearts, 9),
+        c(Suit.diamonds, 6), c(Suit.diamonds, 8), c(Suit.spades, 10),
+        c(Suit.spades, 12), const Card.loris(replacesRank: 7),
+      ];
+      final engine = TrickEngine(
+        hands: handsWith(
+          [c(Suit.hearts, 14), ...List.generate(7, (i) => c(Suit.clubs, i + 3))],
+          List.generate(8, (i) => c(Suit.diamonds, i + 3)),
+          hand,
+        ),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+      );
+      engine.playCard(0, c(Suit.hearts, 14));
+      engine.playCard(1, c(Suit.diamonds, 3));
+
+      final chosen = strategy.chooseCard(engine: engine, playerIndex: 2);
+      expect(engine.legalCardsFor(2), contains(chosen));
+    });
+  });
+}
