@@ -531,6 +531,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   int? _dealTargetPlayer;
   int _dealBatch = 0;
   int _dealCardNumber = 0;
+  List<int> _dealCounts = const [];
   late final AnimationController _shuffleController;
 
   String _status = 'Press START MATCH to begin.';
@@ -2295,7 +2296,8 @@ await DealerRevealDialog.show(
                 children: [
                   Text(_playerAvatars[index], style: const TextStyle(fontSize: 20)),
                   const SizedBox(width: 3),
-                  Text(_playerNames[index], style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                  Text('${_playerNames[index]} ${_dealCounts.length > index ? _dealCounts[index] : 0}/8',
+                    style: const TextStyle(color: Colors.white70, fontSize: 10)),
                 ],
               )),
             ),
@@ -2321,6 +2323,7 @@ await DealerRevealDialog.show(
   }
 
   Future<void> _animateDeal(int dealerIndex) async {
+    setState(() => _dealCounts = List<int>.filled(widget.playerCount, 0));
     final firstPlayer = (dealerIndex + 1) % widget.playerCount;
     for (var batch = 0; batch < 2; batch++) {
       for (var cardNumber = 0; cardNumber < 4; cardNumber++) {
@@ -2337,7 +2340,10 @@ await DealerRevealDialog.show(
           setState(() => _dealTargetPlayer = player);
           await Future.delayed(const Duration(milliseconds: 115));
           if (!mounted) return;
-          setState(() => _dealTargetPlayer = null);
+          setState(() {
+            _dealCounts[player]++;
+            _dealTargetPlayer = null;
+          });
           await Future.delayed(const Duration(milliseconds: 22));
         }
       }
