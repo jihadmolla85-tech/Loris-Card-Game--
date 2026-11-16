@@ -858,20 +858,19 @@ await DealerRevealDialog.show(
       throw StateError('AI player has no cards.');
     }
 
-    if (engine.plays.isNotEmpty) {
-      final ledSuit = engine.ledSuit;
+    final legalCards = engine.legalCardsFor(playerIndex);
 
-      final legalCards = hand.where((card) {
-        return card.isLoris ||
-            (card.suit != null && card.suit == ledSuit);
-      }).toList();
+    // Prefer a legal card that is likely to preserve stronger cards.
+    // The legality engine has already enforced follow-suit and trump rules.
+    if (legalCards.length == 1) return legalCards.first;
 
-      if (legalCards.isNotEmpty) {
-        return legalCards.first;
-      }
+    final nonLoris = legalCards.where((card) => !card.isLoris).toList();
+    if (nonLoris.isNotEmpty) {
+      nonLoris.sort((a, b) => (a.rank ?? 0).compareTo(b.rank ?? 0));
+      return nonLoris.first;
     }
 
-    return hand.first;
+    return legalCards.first;
   }
 
   Future<void> _playHumanCard(loris.Card card) async {
@@ -1252,6 +1251,11 @@ await DealerRevealDialog.show(
 
     final plays =
         round?.trickEngine.plays ?? const <TrickPlay>[];
+    final legalHumanCards = _started &&
+            !_finished &&
+            currentPlayer == 0
+        ? round!.trickEngine.legalCardsFor(0)
+        : const <loris.Card>[];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(14),
@@ -1381,7 +1385,8 @@ await DealerRevealDialog.show(
               final playable = _started &&
                   !_finished &&
                   !_busy &&
-                  currentPlayer == 0;
+                  currentPlayer == 0 &&
+                  legalHumanCards.contains(card);
 
               return GestureDetector(
                 onTap: playable
