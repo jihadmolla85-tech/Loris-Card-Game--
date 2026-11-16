@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
@@ -2749,6 +2748,7 @@ await DealerRevealDialog.show(
                             ),
                             child: LorisPortraitAvatar(
                               variant: index,
+                              expression: _avatarExpressionFor(index),
                               size: avatarSize,
                               highlighted: currentPlayer == index || _collectingTrickWinner == index,
                             ),
@@ -3022,6 +3022,56 @@ await DealerRevealDialog.show(
   bool _isCourtCard(loris.Card card) =>
       !card.isLoris && card.rank != null && card.rank! >= 11;
 
+  List<Offset> _pipPositions(int rank) {
+    // Coordinates follow familiar casino-deck pip layouts (0..1 card space).
+    const layouts = <int, List<Offset>>{
+      7: [Offset(.5,.16), Offset(.25,.29), Offset(.75,.29), Offset(.5,.42), Offset(.25,.57), Offset(.75,.57), Offset(.5,.80)],
+      8: [Offset(.5,.13), Offset(.25,.27), Offset(.75,.27), Offset(.5,.40), Offset(.5,.60), Offset(.25,.73), Offset(.75,.73), Offset(.5,.87)],
+      9: [Offset(.25,.15), Offset(.75,.15), Offset(.25,.32), Offset(.75,.32), Offset(.5,.50), Offset(.25,.68), Offset(.75,.68), Offset(.25,.85), Offset(.75,.85)],
+      10: [Offset(.25,.12), Offset(.75,.12), Offset(.5,.25), Offset(.25,.34), Offset(.75,.34), Offset(.25,.66), Offset(.75,.66), Offset(.5,.75), Offset(.25,.88), Offset(.75,.88)],
+    };
+    if (rank == 2) return const [Offset(.5,.28), Offset(.5,.72)];
+    if (rank == 3) return const [Offset(.5,.2), Offset(.5,.5), Offset(.5,.8)];
+    if (rank == 4) return const [Offset(.28,.25), Offset(.72,.25), Offset(.28,.75), Offset(.72,.75)];
+    if (rank == 5) return const [Offset(.28,.22), Offset(.72,.22), Offset(.5,.5), Offset(.28,.78), Offset(.72,.78)];
+    if (rank == 6) return const [Offset(.28,.18), Offset(.72,.18), Offset(.28,.5), Offset(.72,.5), Offset(.28,.82), Offset(.72,.82)];
+    return layouts[rank] ?? const [Offset(.5,.5)];
+  }
+
+  Widget _buildPipFace(loris.Card card, Color ink, bool compact) {
+    final positions = _pipPositions(card.rank!);
+    final pipSize = compact ? 9.5 : 13.5;
+    return LayoutBuilder(
+      builder: (context, constraints) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (final point in positions)
+            Positioned(
+              left: point.dx * constraints.maxWidth - pipSize / 2,
+              top: point.dy * constraints.maxHeight - pipSize / 2,
+              child: Text(
+                _suitSymbol(card.suit),
+                style: TextStyle(
+                  color: ink,
+                  fontSize: pipSize,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  int _avatarExpressionFor(int index) {
+    if (_collectingTrickWinner == index) return 0; // celebrating the trick
+    if (currentPlayer == index) return 1; // concentrating on the decision
+    if (_biddingController?.highestBidder == index) return 3; // confident bidder
+    if (_playEffect != null && index == 0) return 2; // surprised reaction
+    return (_trickNumber + index) % 4 == 0 ? 4 : 1;
+  }
+
   Widget _buildCard(
     loris.Card card, {
     bool enabled = false,
@@ -3091,8 +3141,7 @@ await DealerRevealDialog.show(
                               : const Color(0xFF173B68),
                         ),
                       )
-                    : Text(_suitSymbol(card.suit),
-                        style: TextStyle(color: ink, fontSize: compact ? 22 : 31, fontWeight: FontWeight.w900, shadows: const [Shadow(color: Color(0x22000000), blurRadius: 1, offset: Offset(1, 1))])),
+                    : _buildPipFace(card, ink, compact),
           ),
         ],
       ),
