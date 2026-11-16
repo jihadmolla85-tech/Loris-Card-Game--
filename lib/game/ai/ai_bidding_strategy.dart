@@ -1,4 +1,3 @@
-
 import '../models/loris_card.dart';
 
 class AiBidDecision {
@@ -13,6 +12,11 @@ class AiBidDecision {
   bool get shouldPass => bidAmount == null;
 }
 
+/// Estimates trick-taking strength from the AI's own eight cards only.
+///
+/// The estimate deliberately avoids looking at undealt/opponents' cards. It
+/// rewards sure winners, protected honours and a long suit that can become
+/// trump, while discounting unsupported middle honours.
 class AiBiddingStrategy {
   const AiBiddingStrategy();
 
@@ -25,35 +29,21 @@ class AiBiddingStrategy {
     if (hand.length != 8) {
       throw ArgumentError('AI hand must contain 8 cards.');
     }
+    if (playerIndex < 0) {
+      throw ArgumentError.value(playerIndex, 'playerIndex');
+    }
 
-    // Never compete against a teammate's bid.
-    if (highestBidder != null &&
-        highestBidder % 2 == playerIndex % 2) {
-      return const AiBidDecision(
+    // A partner has already committed the team's contract. Do not compete.
+    if (highestBidder != null && highestBidder % 2 == playerIndex % 2) {
+      return AiBidDecision(
         bidAmount: null,
-        estimatedStrength: 0,
+        estimatedStrength: evaluateHand(hand),
       );
     }
 
     final strength = evaluateHand(hand);
-
-    int targetBid;
-
-    if (strength >= 7.2) {
-      targetBid = 8;
-    } else if (strength >= 6.4) {
-      targetBid = 7;
-    } else if (strength >= 5.6) {
-      targetBid = 6;
-    } else if (strength >= 4.8) {
-      targetBid = 5;
-    } else if (strength >= 4.0) {
-      targetBid = 4;
-    } else {
-      targetBid = 0;
-    }
-
-    if (highestBid != null && targetBid <= highestBid) {
+    final targetBid = _bidForStrength(strength);
+    if (targetBid == null || (highestBid != null && targetBid <= highestBid)) {
       return AiBidDecision(
         bidAmount: null,
         estimatedStrength: strength,
@@ -61,54 +51,76 @@ class AiBiddingStrategy {
     }
 
     return AiBidDecision(
-      bidAmount: targetBid == 0 ? null : targetBid,
+      bidAmount: targetBid,
       estimatedStrength: strength,
     );
   }
 
+  /// Returns an approximate number of tricks the hand can support.
   double evaluateHand(List<Card> hand) {
-    double strength = 2.3;
+    if (hand.length != 8) {
+      throw ArgumentError('AI hand must contain 8 cards.');
+    }
 
-    final suitCounts = <Suit, int>{
-      for (final suit in Suit.values) suit: 0,
-    };
+    final suitCounts = <Suit, int>{for (final suit in Suit.values) suit: 0};
+    for (final card in hand) {
+      if (!card.isLoris && card.suit != null) {
+        suitCounts[card.suit!] = suitCounts[card.suit!]! + 1;
+      }
+    }
 
+    var strength = 0.65; // baseline for leading and positional opportunities
     for (final card in hand) {
       if (card.isLoris) {
-        strength += 1.7;
+        strength += 1.45; // the guaranteed highest card
         continue;
       }
 
       final suit = card.suit;
       final rank = card.rank;
-
       if (suit == null || rank == null) continue;
-
-      suitCounts[suit] = (suitCounts[suit] ?? 0) + 1;
+      final length = suitCounts[suit] ?? 0;
 
       switch (rank) {
-        case 14:
-          strength += 1.0;
+        case 14: // Ace is normally a near-certain winner.
+          strength += 0.95;
           break;
-        case 13:
-          strength += 0.7;
+        case 13: // King is much safer when supported by another card.
+          strength += length >= 2 ? 0.58 : 0.28;
           break;
         case 12:
-          strength += 0.45;
+          strength += length >= 3 ? 0.34 : 0.12;
           break;
         case 11:
-          strength += 0.25;
+          strength += length >= 4 ? 0.18 : 0.05;
+          break;
+        default:
           break;
       }
     }
 
-    // Reward longer suits.
-    for (final count in suitCounts.values) {
-      if (count > 3) {
-        strength += (count - 3) * 0.25;
-      }
+    // A long suit offers a plausible trump source and can create extra tricks.
+    final lengths = suitCounts.values.toList()..sort();
+    for (final length in lengths) {
+      if (length == 4) strength += 0.35;
+      if (length == 5) strength += 0.65;
+      if (length >= 6) strength += 0.65 + ((length - 5) * 0.28);
     }
 
+    // Short side suits can be useful once a trump suit is established, but
+    // give only a modest bonus because the AI does not know the chosen trump.
+    final voids = suitCounts.values.where((count) => count == 0).length;
+    strength += voids * 0.08;
+
     return strength;
+  }
+
+  int? _bidForStrength(double strength) {
+    if (strength >= 7.0) return 8;
+    if (strength >= 6.1) return 7;
+    if (strength >= 5.2) return 6;
+    if (strength >= 4.3) return 5;
+    if (strength >= 3.4) return 4;
+    return null;
   }
 }
