@@ -526,7 +526,6 @@ class _GameScreenState extends State<GameScreen> {
 
   int _trickNumber = 0;
   List<TrickPlay> _revealedTrickPlays = [];
-  int? _revealedTrickWinner;
   
   @override
   void initState() {
@@ -1213,7 +1212,6 @@ await DealerRevealDialog.show(
       final winnerPreview = round.trickEngine.winnerIndex;
       setState(() {
         _revealedTrickPlays = completedPlays;
-        _revealedTrickWinner = winnerPreview;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} is winning';
       });
       await Future.delayed(const Duration(milliseconds: 1500));
@@ -1226,7 +1224,6 @@ await DealerRevealDialog.show(
         _status = 'Trick $_trickNumber won by ${_playerNames[winner]}.';
         _finished = round.isRoundEnded;
         _revealedTrickPlays = [];
-        _revealedTrickWinner = null;
       });
 
       // AI automatically makes a valid 16 call when eligible.
@@ -1610,7 +1607,10 @@ await DealerRevealDialog.show(
                 ),
               ),
           ] else ...[
-            _buildTableSurface(\n              _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,\n              currentPlayer,\n            ),
+            _buildTableSurface(
+              _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,
+              currentPlayer,
+            ),
 
             const SizedBox(height: 12),
 
