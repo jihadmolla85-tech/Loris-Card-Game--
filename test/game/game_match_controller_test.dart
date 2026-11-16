@@ -161,14 +161,14 @@ void main() {
       expect(match.dealerIndex, 0);
     });
 
-    test('Detects match winner and prevents another round', () {
-      matchScore.teamAScore = 28;
-      matchScore.teamBScore = -28;
+    test('Ends the match without advancing the dealer again', () {
+      matchScore.teamAScore = -28;
+      matchScore.teamBScore = 28;
 
       match.startRound(
-        hands: createHands(),
+        hands: createHands(teamBWins: true),
         trumpSuit: Suit.spades,
-        biddingTeam: 0,
+        biddingTeam: 1,
         bidAmount: 4,
       );
 
@@ -177,7 +177,8 @@ void main() {
       }
 
       expect(match.isMatchOver, isTrue);
-      expect(match.matchWinner, MatchWinner.teamA);
+      expect(match.matchWinner, MatchWinner.teamB);
+      expect(match.dealerIndex, 3);
 
       expect(
         () => match.startRound(
