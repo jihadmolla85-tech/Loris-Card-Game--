@@ -2084,18 +2084,34 @@ await DealerRevealDialog.show(
   ) {
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
-            Alignment(0, .96),
-            Alignment(-.96, 0),
-            Alignment(0, -.96),
-            Alignment(.96, 0),
+            Alignment(0, .82),
+            Alignment(-.84, 0),
+            Alignment(0, -.82),
+            Alignment(.84, 0),
           ]
         : const <Alignment>[
-            Alignment(0, .96),
-            Alignment(-.94, .55),
-            Alignment(-.94, -.55),
-            Alignment(0, -.96),
-            Alignment(.94, -.55),
-            Alignment(.94, .55),
+            Alignment(0, .82),
+            Alignment(-.82, .46),
+            Alignment(-.82, -.46),
+            Alignment(0, -.82),
+            Alignment(.82, -.46),
+            Alignment(.82, .46),
+          ];
+
+    final trickCollectionTargets = widget.playerCount == 4
+        ? const <Alignment>[
+            Alignment(0, .63),
+            Alignment(-.64, 0),
+            Alignment(0, -.63),
+            Alignment(.64, 0),
+          ]
+        : const <Alignment>[
+            Alignment(0, .63),
+            Alignment(-.62, .38),
+            Alignment(-.62, -.38),
+            Alignment(0, -.63),
+            Alignment(.62, -.38),
+            Alignment(.62, .38),
           ];
 
     return LayoutBuilder(
@@ -2281,7 +2297,7 @@ await DealerRevealDialog.show(
                             -.38 + (i % 3) * .38,
                             -.25 + (i ~/ 3) * .50,
                           )
-                        : seatAlignments[_collectingTrickWinner!],
+                        : trickCollectionTargets[_collectingTrickWinner!],
                     duration: Duration(milliseconds: _collectingTrickWinner == null ? 260 : 850),
                     curve: _collectingTrickWinner == null ? Curves.easeOutBack : Curves.easeInCubic,
                     child: TweenAnimationBuilder<double>(
