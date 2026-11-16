@@ -49,7 +49,8 @@ class SixteenCallEngine {
       status == SixteenCallStatus.notCalled &&
       completedTricks > 0 &&
       completedTricks < 8 &&
-      biddingTeamTricks > bidAmount &&
+      biddingTeamTricks == bidAmount &&
+      completedTricks == biddingTeamTricks &&
       lastTrickWinnerIndex != null &&
       (lastTrickWinnerIndex! % 2) == biddingTeam;
 
@@ -64,9 +65,10 @@ class SixteenCallEngine {
       );
     }
 
-    if (biddingTeamTricks <= bidAmount) {
+    if (biddingTeamTricks != bidAmount ||
+        completedTricks != biddingTeamTricks) {
       throw StateError(
-        'Bidding team must win one more trick after reaching its bid.',
+        'Bidding team must reach its bid without losing a trick.',
       );
     }
 
