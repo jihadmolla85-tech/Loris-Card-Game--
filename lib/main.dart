@@ -1747,27 +1747,70 @@ await DealerRevealDialog.show(
 
           const SizedBox(height: 10),
 
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 7,
-            runSpacing: 9,
-            children: hands[0].map((card) {
-              final playable = _started &&
-                  !_finished &&
-                  !_busy &&
-                  currentPlayer == 0 &&
-                  legalHumanCards.contains(card);
+          SizedBox(
+            height: 124,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final count = hands[0].length;
+                final cardWidth = 62.0;
+                final overlap = count > 1
+                    ? ((constraints.maxWidth - cardWidth) / (count - 1))
+                        .clamp(25.0, 48.0)
+                    : cardWidth;
+                final totalWidth = count == 0
+                    ? 0.0
+                    : cardWidth + overlap * (count - 1);
 
-              return GestureDetector(
-                onTap: playable
-                    ? () => _playHumanCard(card)
-                    : null,
-                child: _buildCard(
-                  card,
-                  enabled: playable,
-                ),
-              );
-            }).toList(),
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: SizedBox(
+                    width: totalWidth.clamp(constraints.maxWidth, 1200.0),
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      clipBehavior: Clip.none,
+                      children: [
+                        for (var index = 0; index < count; index++)
+                          Positioned(
+                            left: index * overlap,
+                            bottom: 4,
+                            child: Builder(
+                              builder: (context) {
+                                final card = hands[0][index];
+                                final playable = _started &&
+                                    !_finished &&
+                                    !_busy &&
+                                    currentPlayer == 0 &&
+                                    legalHumanCards.contains(card);
+                                final middle = (count - 1) / 2;
+                                final angle = (index - middle) * 0.035;
+
+                                return GestureDetector(
+                                  onTap: playable
+                                      ? () => _playHumanCard(card)
+                                      : null,
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 180),
+                                    curve: Curves.easeOut,
+                                    transform: Matrix4.identity()
+                                      ..translate(0.0, playable ? -9.0 : 0.0)
+                                      ..rotateZ(angle),
+                                    transformAlignment: Alignment.bottomCenter,
+                                    child: _buildCard(
+                                      card,
+                                      enabled: playable,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
 
           if (_started &&
