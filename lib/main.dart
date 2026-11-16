@@ -2510,7 +2510,11 @@ await DealerRevealDialog.show(
                           ..rotateX((1 - progress) * .72)
                           ..rotateY((1 - progress) * -.88)
                           ..rotateZ((1 - progress) * -.34)
-                          ..scale(.70 + (progress * .30));
+                          ..scaleByDouble(
+                            .70 + (progress * .30),
+                            .70 + (progress * .30),
+                            1.0,
+                          );
                         return Transform(
                           alignment: Alignment.center,
                           transform: transform,
