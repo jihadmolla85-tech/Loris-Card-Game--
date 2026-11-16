@@ -13,6 +13,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: quality-check-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-and-test:
     name: Analyze, Test and Build
