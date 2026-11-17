@@ -1,134 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:material_ui/material_ui.dart';
-import 'package:three_js/three_js.dart' as three;
 
-/// A real-time Three.js scene used as the LORIS table surface.
-///
-/// Flutter continues to render the interactive cards, seats and HUD above this
-/// scene, while the table itself is rendered with perspective 3D geometry.
-class Loris3DTable extends StatefulWidget {
-  const Loris3DTable({super.key});
-
-  @override
-  State<Loris3DTable> createState() => _Loris3DTableState();
-}
-
-class _Loris3DTableState extends State<Loris3DTable> {
-  late final three.ThreeJS _three;
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _three = three.ThreeJS(
-      setup: _setup,
-      onSetupComplete: () {
-        if (mounted) setState(() => _ready = true);
-      },
-    );
-  }
-
-  Future<void> _setup() async {
-    final width = math.max(1.0, _three.width);
-    final height = math.max(1.0, _three.height);
-
-    _three.scene = three.Scene();
-    _three.scene.background = three.Color(0xFFE7C78D);
-
-    final camera = three.PerspectiveCamera(52, width / height, 0.1, 120);
-    camera.position.setValues(0, 14, 22.5);
-    camera.lookAt(_three.scene.position);
-    _three.camera = camera;
-
-    _three.scene.add(three.AmbientLight(0xFFF0D4, 0.82));
-
-    final keyLight = three.DirectionalLight(0xFFF0D4, 1.45);
-    keyLight.position.setValues(-5, 12, 7);
-    _three.scene.add(keyLight);
-
-    final redFill = three.PointLight(0x8D2437, 0.72);
-    redFill.position.setValues(5, 4, -5);
-    _three.scene.add(redFill);
-
-    final floor = three.Mesh(
-      three.PlaneGeometry(90, 90),
-      three.MeshPhongMaterial.fromMap({
-        'color': 0xFFD7B77A,
-        'shininess': 18,
-      }),
-    );
-    floor.rotation.x = -math.pi / 2;
-    floor.position.y = -0.08;
-    _three.scene.add(floor);
-
-    // Sculpted dark-walnut table body, rendered as actual 3D geometry.
-    final pedestal = three.Mesh(
-      three.CylinderGeometry(2.5, 3.2, 0.82, 64),
-      three.MeshPhongMaterial.fromMap({
-        'color': 0xFF6B351F,
-        'shininess': 65,
-      }),
-    );
-    pedestal.position.y = 0.43;
-    pedestal.scale.setValues(1.38, 1, 0.88);
-    _three.scene.add(pedestal);
-
-    final goldUnderRim = three.Mesh(
-      three.CylinderGeometry(5.82, 5.82, 0.18, 72),
-      three.MeshPhongMaterial.fromMap({
-        'color': 0xC58A36,
-        'shininess': 105,
-      }),
-    );
-    goldUnderRim.position.y = 0.88;
-    goldUnderRim.scale.setValues(1.38, 1, 0.88);
-    _three.scene.add(goldUnderRim);
-
-    final tabletop = three.Mesh(
-      three.CylinderGeometry(5.72, 5.72, 0.22, 96),
-      three.MeshPhongMaterial.fromMap({
-        'color': 0xFF0B6849,
-        'shininess': 92,
-      }),
-    );
-    tabletop.position.y = 1.04;
-    tabletop.scale.setValues(1.48, 1, 0.9);
-    _three.scene.add(tabletop);
-
-    final outerGoldRing = three.Mesh(
-      three.TorusGeometry(5.58, 0.055, 12, 96),
-      three.MeshPhongMaterial.fromMap({
-        'color': 0xF4CC78,
-        'shininess': 120,
-      }),
-    );
-    outerGoldRing.rotation.x = math.pi / 2;
-    outerGoldRing.position.y = 1.17;
-    outerGoldRing.scale.setValues(1.38, 0.88, 1);
-    _three.scene.add(outerGoldRing);
-
-    final innerGoldRing = three.Mesh(
-      three.TorusGeometry(5.18, 0.018, 8, 96),
-      three.MeshPhongMaterial.fromMap({
-        'color': 0xB98A45,
-        'shininess': 100,
-      }),
-    );
-    innerGoldRing.rotation.x = math.pi / 2;
-    innerGoldRing.position.y = 1.17;
-    innerGoldRing.scale.setValues(1.48, 0.9, 1);
-    _three.scene.add(innerGoldRing);
-
-    // Keep the camera fixed in the requested elevated Far View.
-    camera.lookAt(three.Vector3(0, 0.9, 0));
-  }
-
-  @override
-  void dispose() {
-    _three.dispose();
-    super.dispose();
-  }
+/// Full-screen virtual LORIS table surface.
+/// The screen itself becomes the playing felt; there is no separate table model.
+class LorisTableSurface extends StatelessWidget {
+  const LorisTableSurface({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -137,19 +12,52 @@ class _Loris3DTableState extends State<Loris3DTable> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          const ColoredBox(color: Color(0xFFE7C78D)),
-          _three.build(),
-          if (!_ready)
-            const Center(
-              child: SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFFE7BD69),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF9A2938),
+                  Color(0xFF741A2A),
+                  Color(0xFF4A0D1B),
+                  Color(0xFF2B0712),
+                ],
+              ),
+            ),
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -0.25),
+                radius: 1.15,
+                colors: [Color(0x33FFD88A), Color(0x00FFD88A), Color(0x5530000B)],
+                stops: [0, 0.58, 1],
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(9),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(132),
+                  border: Border.all(color: const Color(0x99FFE1A0), width: 1.4),
                 ),
               ),
             ),
+          ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.all(17),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(124),
+                  border: Border.all(color: const Color(0x33FFE7B2), width: 1),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
