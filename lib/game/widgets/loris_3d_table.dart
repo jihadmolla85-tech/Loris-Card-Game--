@@ -8,7 +8,7 @@ import '../models/loris_card.dart' as loris;
 /// Native 3D LORIS table scene. All visible table props in this layer are
 /// actual meshes rendered with perspective, PBR materials and real lighting.
 class LorisTableSurface extends StatefulWidget {
-  const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const [], this.playedBy = const [], this.flyingCard, this.flyingFromPlayer, this.flightStarted = false});
+  const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const [], this.playedBy = const [], this.flyingCard, this.flyingFromPlayer, this.flightStarted = false, this.dealing = false, this.dealerIndex = 0});
 
   final int playerCount;
   final List<List<loris.Card>>? hands;
@@ -17,6 +17,8 @@ class LorisTableSurface extends StatefulWidget {
   final loris.Card? flyingCard;
   final int? flyingFromPlayer;
   final bool flightStarted;
+  final bool dealing;
+  final int dealerIndex;
 
   @override
   State<LorisTableSurface> createState() => _LorisTableSurfaceState();
@@ -28,6 +30,10 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   bool _ready = false;
   Node? _flyingNode;
   Duration? _flightStartElapsed;
+  Duration? _dealStartElapsed;
+  final List<Node> _dealNodes = [];
+  final List<vm.Vector3> _dealStarts = [];
+  final List<vm.Vector3> _dealTargets = [];
   Object? _loadError;
 
   @override
@@ -43,7 +49,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
         ? 'undealt'
         : hands.map((hand) => hand.map((card) => card.toString()).join(',')).join('|');
     final playedSignature = widget.playedCards.map((card) => card.toString()).join(',');
-    return '$handSignature#played:$playedSignature#by:${widget.playedBy.join(',')}#flight:${widget.flyingCard}:${widget.flyingFromPlayer}:${widget.flightStarted}';
+    return '$handSignature#played:$playedSignature#by:${widget.playedBy.join(',')}#flight:${widget.flyingCard}:${widget.flyingFromPlayer}:${widget.flightStarted}#deal:${widget.dealing}:${widget.dealerIndex}';
   }
 
   @override
@@ -206,6 +212,10 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
 
     final count = widget.playerCount == 4 ? 4 : 6;
     final hands = widget.hands;
+    if (widget.dealing && hands != null) {
+      _addDealingCards(hands);
+      return;
+    }
     for (var seat = 0; seat < count; seat++) {
       final angle = math.pi / 2 + (math.pi * 2 * seat / count);
       final cx = math.cos(angle) * 1.48;
@@ -242,6 +252,50 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
         _scene.add(card);
       }
     }
+  }
+
+  void _addDealingCards(List<List<loris.Card>> hands) {
+    final count = widget.playerCount;
+    final dealerAngle = math.pi / 2 + math.pi * 2 * widget.dealerIndex / count;
+    final start = vm.Vector3(
+      math.cos(dealerAngle) * 2.05,
+      0.78,
+      math.sin(dealerAngle) * 1.48,
+    );
+    final cardBack = _pbr(0x8B1E30, metallic: 0.28, roughness: 0.36);
+    final gold = _pbr(0xD7AE59, metallic: 0.96, roughness: 0.2);
+    final pattern = _pbr(0xD5A64A, metallic: 0.82, roughness: 0.25);
+
+    // Eight clockwise rounds: one card per seat, starting to the dealer's right.
+    for (var round = 0; round < 8; round++) {
+      for (var step = 1; step <= count; step++) {
+        final seat = (widget.dealerIndex + step) % count;
+        final angle = math.pi / 2 + math.pi * 2 * seat / count;
+        final cx = math.cos(angle) * 1.48;
+        final cz = math.sin(angle) * 1.04;
+        final tangentX = -math.sin(angle);
+        final tangentZ = math.cos(angle);
+        final spread = (round - 3.5) * 0.105;
+        final target = vm.Vector3(
+          cx + tangentX * spread,
+          0.665 + round * 0.0015,
+          cz + tangentZ * spread,
+        );
+        final node = Node(name: 'dealing_card_${round}_${seat}');
+        node.position = start.clone();
+        node.add(_child(CuboidGeometry(vm.Vector3(0.34, 0.025, 0.49)), cardBack, vm.Vector3.zero()));
+        node.add(_child(CuboidGeometry(vm.Vector3(0.324, 0.003, 0.474)), gold, vm.Vector3(0, 0.014, 0)));
+        node.add(_child(CuboidGeometry(vm.Vector3(0.312, 0.004, 0.462)), cardBack, vm.Vector3(0, 0.017, 0)));
+        node.add(_child(CuboidGeometry(vm.Vector3(0.235, 0.002, 0.012)), pattern, vm.Vector3(0, 0.020, 0)));
+        node.add(_child(CuboidGeometry(vm.Vector3(0.012, 0.002, 0.32)), pattern, vm.Vector3(0, 0.020, 0)));
+        node.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), dealerAngle + math.pi);
+        _scene.add(node);
+        _dealNodes.add(node);
+        _dealStarts.add(start.clone());
+        _dealTargets.add(target);
+      }
+    }
+    _dealStartElapsed = null;
   }
 
   void _addCardFace(Node card, loris.Card value, Material gold) {
@@ -409,6 +463,28 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   double _flightStartAngle = 0;
 
   void _tickCardFlight(Duration elapsed, double deltaSeconds) {
+    if (_dealNodes.isNotEmpty) {
+      _dealStartElapsed ??= elapsed;
+      final seconds = (elapsed - _dealStartElapsed!).inMicroseconds / 1000000;
+      for (var i = 0; i < _dealNodes.length; i++) {
+        final local = ((seconds - i * 0.09) / 0.32).clamp(0.0, 1.0);
+        if (local <= 0) continue;
+        final eased = 1 - math.pow(1 - local, 3).toDouble();
+        final start = _dealStarts[i];
+        final target = _dealTargets[i];
+        final arc = math.sin(local * math.pi) * 0.22;
+        _dealNodes[i].position = vm.Vector3(
+          start.x + (target.x - start.x) * eased,
+          start.y + (target.y - start.y) * eased + arc,
+          start.z + (target.z - start.z) * eased,
+        );
+        final dealerAngle = math.pi / 2 + math.pi * 2 * widget.dealerIndex / widget.playerCount;
+        _dealNodes[i].rotation = vm.Quaternion.axisAngle(
+          vm.Vector3(0, 1, 0),
+          dealerAngle * (1 - eased),
+        );
+      }
+    }
     final node = _flyingNode;
     final start = _flightStartPosition;
     final target = _flightTargetPosition;
