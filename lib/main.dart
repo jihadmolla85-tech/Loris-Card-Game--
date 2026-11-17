@@ -1,8 +1,6 @@
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
-import 'game/widgets/dealer_reveal_dialog.dart';
-import 'game/widgets/loris_portrait_avatar.dart';
 import 'game/widgets/loris_3d_table.dart';
 import 'game/engine/game_settings_service.dart';
 import 'package:material_ui/material_ui.dart';
@@ -536,6 +534,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _busy = false;
   bool _isShuffling = false;
   bool _showSixteenCallEffect = false;
+  List<loris.Card>? _dealerDrawnCards;
+  int _dealerRevealVisibleCount = 0;
+  int _dealerFirstPlayerIndex = 0;
+  bool _isDealingCards = false;
+  int _dealtCardCount = 0;
+  bool _awaitingTrumpSelection = false;
+  int? _pendingTrumpBidder;
+  List<MapEntry<int, loris.Card>> _pendingTrumpChoices = [];
   late final AnimationController _shuffleController;
 
   String _status = 'Press START MATCH to begin.';
@@ -602,33 +608,27 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     setState(() {
       _flyingCard = card;
       _flyingFromPlayer = playerIndex;
-      _flightStarted = false;
-      _playEffect = card.isLoris
-          ? 'LORIS!'
-          : card.suit == _trumpSuit
-              ? 'TRUMP!'
-              : null;
+      _flightStarted = true;
+      _playEffect = card.isLoris ? 'LORIS!' : null;
     });
-    await Future.delayed(const Duration(milliseconds: 35));
-    if (!mounted) return;
-    setState(() => _flightStarted = true);
-    await Future.delayed(const Duration(milliseconds: 470));
+    await Future.delayed(const Duration(milliseconds: 680));
     if (!mounted) return;
     setState(() {
       _flyingCard = null;
       _flyingFromPlayer = null;
       _flightStarted = false;
-      _playEffect = null;
     });
+    if (card.isLoris) {
+      await Future.delayed(const Duration(milliseconds: 760));
+      if (!mounted) return;
+      setState(() => _playEffect = null);
+    }
   }
 
   Future<void> _playCardFeedback(loris.Card card) async {
     if (card.isLoris) {
       await _audio.play('loris');
       await HapticFeedback.heavyImpact();
-    } else if (card.suit == _trumpSuit) {
-      await _audio.play('trump');
-      await HapticFeedback.mediumImpact();
     } else {
       await _audio.play('card_place');
       await HapticFeedback.lightImpact();
@@ -695,14 +695,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   Future<void> _startMatch() async {
     if (_busy || _hands != null) return;
-
     setState(() {
       _busy = true;
       _isShuffling = true;
       _error = null;
     });
     _shuffleController.repeat(reverse: true);
-
     try {
       await _playShuffleSound();
       await Future.delayed(const Duration(milliseconds: 450));
@@ -710,42 +708,61 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _shuffleController.stop();
       setState(() => _isShuffling = false);
       final deck = loris_deck.LorisDeck.create(
-        widget.playerCount == 4
-            ? loris.PlayerCount.four
-            : loris.PlayerCount.six,
+        widget.playerCount == 4 ? loris.PlayerCount.four : loris.PlayerCount.six,
         random: _random,
       );
-
       final dealerSelection = _matchController.selectInitialDealer(
         deck: deck,
         playerCount: widget.playerCount,
         random: _random,
       );
-await DealerRevealDialog.show(
-  context,
-  drawnCards: dealerSelection.drawnCards,
-  playerCount: widget.playerCount,
-  dealerIndex: dealerSelection.dealerIndex,
-  dealerName: _playerNames[dealerSelection.dealerIndex],
-  dealerAvatar: _playerAvatars[dealerSelection.dealerIndex],
-);
+      _dealerFirstPlayerIndex =
+          (dealerSelection.dealerIndex - (dealerSelection.drawnCards.length - 1)) %
+              widget.playerCount;
+      setState(() {
+        _dealerDrawnCards = dealerSelection.drawnCards;
+        _dealerRevealVisibleCount = 0;
+        _dealerIndex = dealerSelection.dealerIndex;
+        _status = 'Random dealer draw • first Jack becomes dealer';
+      });
+      for (var i = 0; i < dealerSelection.drawnCards.length; i++) {
+        await Future.delayed(const Duration(milliseconds: 560));
+        if (!mounted) return;
+        setState(() => _dealerRevealVisibleCount = i + 1);
+        final card = dealerSelection.drawnCards[i];
+        if (!card.isLoris && card.rank == 11) {
+          await HapticFeedback.heavyImpact();
+          break;
+        }
+      }
+      await Future.delayed(const Duration(milliseconds: 650));
+      if (!mounted) return;
       final dealtHands = _dealController.deal(
         deck: dealerSelection.shuffledDeck,
         playerCount: widget.playerCount,
         dealerIndex: dealerSelection.dealerIndex,
       );
-
       setState(() {
-        _dealerIndex = dealerSelection.dealerIndex;
+        _dealerDrawnCards = null;
         _hands = dealtHands;
+        _isDealingCards = true;
+        _dealtCardCount = 0;
+        _status = '${_playerNames[dealerSelection.dealerIndex]} is dealing 8 cards to each player';
+      });
+      final totalCards = widget.playerCount * 8;
+      for (var dealt = 1; dealt <= totalCards; dealt++) {
+        await Future.delayed(const Duration(milliseconds: 72));
+        if (!mounted) return;
+        setState(() => _dealtCardCount = dealt);
+      }
+      if (!mounted) return;
+      setState(() {
+        _isDealingCards = false;
         _status = 'Cards dealt. Bidding begins.';
       });
-
       _startBidding();
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) {
         _shuffleController.stop();
@@ -792,129 +809,17 @@ await DealerRevealDialog.show(
     }
   }
 
-  Future<void> _humanBid() async {
+  Future<void> _humanBid(int? selectedBid) async {
     final bidding = _biddingController;
-
-    if (bidding == null ||
-        !bidding.isHumanTurn ||
-        bidding.isComplete ||
-        _busy) {
-      return;
-    }
-
+    if (bidding == null || !bidding.isHumanTurn || bidding.isComplete || _busy) return;
     final highestBid = bidding.highestBid ?? 3;
-
-    final selectedBid = await showDialog<int>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 22),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFB94F43), Color(0xFF762B2B), Color(0xFF4B1B24)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: const Color(0xFFFFD66F), width: 4),
-              boxShadow: const [
-                BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12)),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Transform.translate(
-                  offset: const Offset(0, -17),
-                  child: Container(
-                    width: 190,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFD978), Color(0xFFB86A24)],
-                      ),
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: const Color(0xFFFFF0AE), width: 2),
-                    ),
-                    child: const Text('CALL', textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF762B2B), fontSize: 24,
-                        fontWeight: FontWeight.w900, letterSpacing: 2)),
-                  ),
-                ),
-                Text('CURRENT HIGHEST BID: ${bidding.highestBid ?? "-"}',
-                  style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 18),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: List.generate(5, (index) {
-                    final value = index + 4;
-                    final enabled = value > highestBid;
-                    return SizedBox(
-                      width: 68,
-                      height: 66,
-                      child: ElevatedButton(
-                        onPressed: enabled ? () => Navigator.pop(dialogContext, value) : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF17833D),
-                          disabledBackgroundColor: const Color(0xFF424242),
-                          foregroundColor: const Color(0xFFFFE28A),
-                          disabledForegroundColor: Colors.white24,
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            side: const BorderSide(color: Color(0xFFFFD66F), width: 2),
-                          ),
-                          elevation: 7,
-                        ),
-                        child: Text('$value', style: const TextStyle(
-                          fontSize: 27, fontWeight: FontWeight.w900)),
-                      ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: 180,
-                  height: 58,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(dialogContext, -1),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF087C98),
-                      foregroundColor: const Color(0xFFFFE28A),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(color: Color(0xFFFFD66F), width: 2),
-                      ),
-                    ),
-                    child: const Text('PASS', style: TextStyle(
-                      fontSize: 23, fontWeight: FontWeight.w900, letterSpacing: 2)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (!mounted || selectedBid == null) return;
-
+    if (selectedBid != null && selectedBid <= highestBid) return;
     setState(() {
       _busy = true;
       _error = null;
     });
-
     try {
-      bidding.submitHumanBid(
-        selectedBid == -1 ? null : selectedBid,
-      );
-
+      bidding.submitHumanBid(selectedBid);
       setState(() {
         _status = bidding.isComplete
             ? 'Bidding complete.'
@@ -922,16 +827,11 @@ await DealerRevealDialog.show(
                 ? 'Your turn to bid.'
                 : 'AI players are bidding.';
       });
-
-      if (bidding.isComplete) {
-        await _finishBidding();
-      }
+      if (bidding.isComplete) await _finishBidding();
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
-      if (mounted) {
-        setState(() => _busy = false);
-      }
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -969,116 +869,26 @@ await DealerRevealDialog.show(
 
   Future<void> _chooseHumanTrump(int bidder) async {
     final hands = _hands;
-
     if (hands == null) return;
-
-    final ownCards = hands[bidder]
-        .where((card) => !card.isLoris && card.suit != null)
-        .toList();
-
-    // Teammate hands stay hidden. The bidder may reveal one hidden card,
-    // but only cards whose suit the bidder also holds are eligible.
-    final teammateCards = <int, List<loris.Card>>{};
+    final choices = <MapEntry<int, loris.Card>>[];
+    for (final card in hands[bidder]) {
+      if (!card.isLoris && card.suit != null) choices.add(MapEntry(bidder, card));
+    }
     for (var player = 0; player < hands.length; player++) {
       if (player == bidder || player % 2 != bidder % 2) continue;
-      final eligible = hands[player].where((card) {
-        return !card.isLoris &&
-            card.suit != null &&
-            ownCards.any((ownCard) => ownCard.suit == card.suit);
-      }).toList();
-      if (eligible.isNotEmpty) teammateCards[player] = eligible;
+      for (final card in hands[player]) {
+        if (!card.isLoris && card.suit != null &&
+            hands[bidder].any((own) => own.suit == card.suit)) {
+          choices.add(MapEntry(player, card));
+        }
+      }
     }
-
-    final selected = await showDialog<MapEntry<int, loris.Card>>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: LorisApp.blue,
-          title: const Text('SELECT TRUMP'),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 420,
-            child: ListView(
-              children: [
-                const Text(
-                  'YOUR CARDS',
-                  style: TextStyle(
-                    color: LorisApp.gold,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...ownCards.map((card) => ListTile(
-                      title: Text(_cardName(card)),
-                      subtitle: const Text('Select this card as trump'),
-                      onTap: () => Navigator.pop(
-                        dialogContext,
-                        MapEntry(bidder, card),
-                      ),
-                    )),
-                if (teammateCards.isNotEmpty) ...[
-                  const Divider(color: Colors.white24),
-                  const Text(
-                    'REVEAL ONE HIDDEN TEAMMATE CARD',
-                    style: TextStyle(
-                      color: LorisApp.gold,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  ...teammateCards.entries.map((entry) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Text('TEAMMATE ${entry.key + 1}'),
-                          ),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: List.generate(entry.value.length, (index) {
-                              final card = entry.value[index];
-                              return InkWell(
-                                onTap: () => Navigator.pop(
-                                  dialogContext,
-                                  MapEntry(entry.key, card),
-                                ),
-                                borderRadius: BorderRadius.circular(7),
-                                child: Container(
-                                  width: 46,
-                                  height: 64,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF17345C),
-                                    border: Border.all(color: LorisApp.gold),
-                                    borderRadius: BorderRadius.circular(7),
-                                  ),
-                                  child: const Icon(
-                                    Icons.style,
-                                    color: LorisApp.gold,
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ],
-                      )),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (!mounted || selected == null) return;
-
-    await _applyTrump(
-      bidder,
-      selected.key,
-      selected.value,
-    );
+    setState(() {
+      _pendingTrumpBidder = bidder;
+      _pendingTrumpChoices = choices;
+      _awaitingTrumpSelection = true;
+      _status = 'Select a trump card from your hand or reveal an eligible teammate card.';
+    });
   }
 
   Future<void> _chooseAiTrump(int bidder) async {
@@ -1147,6 +957,11 @@ await DealerRevealDialog.show(
     if (hands == null || bidding == null) return;
 
     try {
+      setState(() {
+        _awaitingTrumpSelection = false;
+        _pendingTrumpBidder = null;
+        _pendingTrumpChoices = [];
+      });
       final result = TrumpSelectionEngine.select(
         hands: hands,
         bidderIndex: bidder,
@@ -1664,7 +1479,9 @@ await DealerRevealDialog.show(
       ),
       body: SafeArea(
         child: hands == null
-            ? _buildStartPanel()
+            ? (_dealerDrawnCards != null
+                ? _buildDealerSelectionPanel()
+                : _buildStartPanel())
             : _buildGamePanel(hands),
       ),
     );
@@ -1790,28 +1607,56 @@ await DealerRevealDialog.show(
     // Bidding remains scrollable; the live match itself is a fixed,
     // screen-fitted layout so the table and all eight cards stay visible.
     if (!_started) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            _buildScoreBoard(),
-            const SizedBox(height: 10),
-            _infoStrip('DEALER', _dealerIndex == null
-                ? '-'
-                : '${_playerAvatars[_dealerIndex!]} ${_playerNames[_dealerIndex!]}'),
-            _infoStrip('STATUS', _status),
-            if (_error != null) _buildErrorBanner(),
-            _buildBiddingTable(bidding),
-            if (bidding != null && bidding.isHumanTurn && !bidding.isComplete)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _busy ? null : _humanBid,
-                  child: const Text('MAKE YOUR BID'),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final biddingPlayer = bidding != null && !bidding.isComplete
+              ? bidding.engine.currentPlayerIndex
+              : null;
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
+            child: Column(
+              children: [
+                _buildCompactMatchHeader(),
+                if (_error != null) _buildErrorBanner(),
+                if (_isDealingCards)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Column(
+                      children: [
+                        Text(
+                          'DEALING CARDS  $_dealtCardCount / ${widget.playerCount * 8}',
+                          style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12),
+                        ),
+                        const SizedBox(height: 4),
+                        LinearProgressIndicator(
+                          value: _dealtCardCount / (widget.playerCount * 8),
+                          minHeight: 5,
+                          backgroundColor: Colors.white24,
+                          color: LorisApp.gold,
+                        ),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: _buildTableSurface(
+                    const <TrickPlay>[],
+                    biddingPlayer,
+                    hands.map((hand) => hand.length).toList(),
+                  ),
                 ),
-              ),
-          ],
-        ),
+                if (!_isDealingCards && _awaitingTrumpSelection)
+                  _buildTrumpSelectionControls(),
+                if (!_isDealingCards && !_awaitingTrumpSelection &&
+                    bidding != null && bidding.isHumanTurn && !bidding.isComplete)
+                  _buildBiddingControls(bidding),
+                SizedBox(
+                  height: constraints.maxHeight < 650 ? 96 : 112,
+                  child: _buildHandStrip(hands[0]),
+                ),
+              ],
+            ),
+          );
+        },
       );
     }
 
@@ -1944,6 +1789,194 @@ await DealerRevealDialog.show(
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBiddingControls(BiddingRoundController bidding) {
+    final highest = bidding.highestBid ?? 3;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4B1821),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: LorisApp.gold, width: 1.5),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'YOUR BID  •  HIGHEST: ${bidding.highestBid ?? "-"}',
+            style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12),
+          ),
+          const SizedBox(height: 7),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 7,
+            runSpacing: 6,
+            children: [
+              for (var value = 4; value <= 8; value++)
+                SizedBox(
+                  width: 46,
+                  height: 42,
+                  child: ElevatedButton(
+                    onPressed: !_busy && value > highest ? () => _humanBid(value) : null,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      backgroundColor: const Color(0xFF1B7A43),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.white12,
+                      disabledForegroundColor: Colors.white30,
+                    ),
+                    child: Text('$value', style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w900)),
+                  ),
+                ),
+              SizedBox(
+                height: 42,
+                child: OutlinedButton(
+                  onPressed: _busy ? null : () => _humanBid(null),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: LorisApp.gold,
+                    side: const BorderSide(color: LorisApp.gold),
+                  ),
+                  child: const Text('PASS', style: TextStyle(fontWeight: FontWeight.w900)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrumpSelectionControls() {
+    final bidder = _pendingTrumpBidder;
+    if (bidder == null) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4B1821),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: LorisApp.gold),
+      ),
+      child: Column(
+        children: [
+          const Text('SELECT TRUMP CARD', style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12)),
+          const SizedBox(height: 5),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 6,
+            runSpacing: 5,
+            children: _pendingTrumpChoices.map((choice) {
+              final isOwn = choice.key == bidder;
+              return OutlinedButton(
+                onPressed: _busy ? null : () => _applyTrump(bidder, choice.key, choice.value),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: isOwn ? LorisApp.gold : Colors.white54),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                ),
+                child: Text(
+                  isOwn ? _cardName(choice.value) : 'TEAMMATE ${choice.key + 1} • REVEAL',
+                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHandStrip(List<loris.Card> cards) {
+    if (_isDealingCards) {
+      return const Center(
+        child: Text(
+          'CARDS ARE BEING DEALT AROUND THE TABLE',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: LorisApp.gold, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
+        ),
+      );
+    }
+    return Column(
+      children: [
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'YOUR HAND  •  REVIEW BEFORE BIDDING',
+            style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Expanded(
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: cards.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 3),
+            itemBuilder: (context, index) => _buildCard(cards[index]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDealerSelectionPanel() {
+    final cards = _dealerDrawnCards ?? const <loris.Card>[];
+    final visible = cards.take(_dealerRevealVisibleCount).toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+      child: Column(
+        children: [
+          _buildCompactMatchHeader(),
+          const SizedBox(height: 7),
+          const Text('RANDOM DEALER DRAW', style: TextStyle(color: LorisApp.gold, fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+          const Text(
+            'One card to each player clockwise • first JACK becomes dealer',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white, fontSize: 12),
+          ),
+          Expanded(
+            child: _buildTableSurface(const <TrickPlay>[], null, List<int>.filled(widget.playerCount, 0)),
+          ),
+          SizedBox(
+            height: 112,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: visible.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 5),
+              itemBuilder: (context, index) {
+                final card = visible[index];
+                final player = (_dealerFirstPlayerIndex + index) % widget.playerCount;
+                final isJack = !card.isLoris && card.rank == 11;
+                return Container(
+                  width: 72,
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: isJack ? const Color(0xFFFFD978) : const Color(0xFFFFF8E9),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: isJack ? Colors.white : LorisApp.gold, width: isJack ? 3 : 1.2),
+                    boxShadow: isJack ? const [BoxShadow(color: LorisApp.gold, blurRadius: 16)] : null,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(_cardName(card), style: TextStyle(color: isJack ? const Color(0xFF4B1821) : Colors.black87, fontWeight: FontWeight.w900, fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text(_playerNames[player], maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: isJack ? const Color(0xFF4B1821) : Colors.black87, fontSize: 10, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            _dealerRevealVisibleCount == 0 ? 'Preparing the first draw...' : 'Cards revealed: $_dealerRevealVisibleCount',
+            style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.bold, fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2161,113 +2194,6 @@ await DealerRevealDialog.show(
   // BIDDING TABLE
   // ----------------------------------------------------------
 
-  Widget _buildBiddingTable(
-    BiddingRoundController? bidding,
-  ) {
-    if (bidding == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: LorisApp.tableGreen,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: LorisApp.gold,
-          width: 2,
-        ),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'BIDDING TABLE',
-            style: TextStyle(
-              color: LorisApp.gold,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(widget.playerCount, (index) {
-              final records = bidding.history
-                  .where((record) => record.playerIndex == index)
-                  .toList();
-
-              final bidText = records.isEmpty
-                  ? '—'
-                  : records.last.amount == null
-                      ? 'PASS'
-                      : '${records.last.amount}';
-
-              final isHuman = index == 0;
-
-              final isHighest =
-                  bidding.highestBidder == index;
-
-              return Expanded(
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 19,
-                      backgroundColor: isHighest
-                          ? LorisApp.gold
-                          : isHuman
-                              ? Colors.white
-                              : LorisApp.navy,
-                      foregroundColor: isHighest || isHuman
-                          ? LorisApp.navy
-                          : Colors.white,
-                      child: LorisPortraitAvatar(
-                        variant: index,
-                        size: 38,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      bidText,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
-
-          const SizedBox(height: 14),
-
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
-            decoration: BoxDecoration(
-              color: LorisApp.navy.withValues(alpha: .7),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'HIGHEST BID: ${bidding.highestBid ?? "-"}'
-              '${bidding.highestBidder == null ? "" : "  •  ${_playerNames[bidding.highestBidder!]}"}',
-              style: const TextStyle(
-                color: LorisApp.gold,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ----------------------------------------------------------
   // PLAYING TABLE
   // ----------------------------------------------------------
@@ -2296,8 +2222,7 @@ await DealerRevealDialog.show(
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
-        final avatarSize = widget.playerCount == 6 ? 34.0 : 38.0;
-        final seatWidth = widget.playerCount == 6 ? 68.0 : 76.0;
+        final seatWidth = widget.playerCount == 6 ? 78.0 : 88.0;
         final centerWidth = (constraints.maxWidth * .46).clamp(126.0, 166.0);
         final centerHeight = (tableHeight * .32).clamp(94.0, 126.0);
 
@@ -2338,7 +2263,7 @@ await DealerRevealDialog.show(
                 Positioned.fill(
                   child: LorisTableSurface(
                     playerCount: widget.playerCount,
-                    hands: _hands,
+                    hands: _isDealingCards ? null : _hands,
                     playedCards: plays.map((play) => play.card).toList(),
                     playedBy: plays.map((play) => play.playerIndex).toList(),
                     flyingCard: _flyingCard,
@@ -2396,25 +2321,12 @@ await DealerRevealDialog.show(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(colors: [Color(0xFFFFF4C5), Color(0xFFB4772E), Color(0xFFFFE5A0)]),
-                              boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 5, offset: Offset(0, 2))],
-                            ),
-                            child: LorisPortraitAvatar(
-                              variant: index,
-                              size: avatarSize,
-                              highlighted: currentPlayer == index || _collectingTrickWinner == index,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
+                          // Player busts are rendered as 3D meshes in LorisTableSurface.
                           Text(
                             _playerNames[index],
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900),
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
                           ),
                           Text(
                             'TEAM ${index.isEven ? "A" : "B"}',
