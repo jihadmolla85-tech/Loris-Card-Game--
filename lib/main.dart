@@ -82,7 +82,6 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
   bool _loading = false;
   bool _musicEnabled = true;
   bool _soundEnabled = true;
-  bool _sortHandBySuit = false;
 
   @override
   void initState() {
@@ -495,6 +494,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   final LorisAudioService _audio = LorisAudioService();
   final Random _random = Random();
   bool _soundEnabled = true;
+  bool _sortHandBySuit = false;
 
   static const List<String> _namePool = [
     // Names requested by the player.
