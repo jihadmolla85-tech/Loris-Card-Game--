@@ -36,9 +36,9 @@ void main() {
 class LorisApp extends StatelessWidget {
   const LorisApp({super.key});
 
-  static const Color navy = Color(0xFF07152E);
-  static const Color blue = Color(0xFF102B55);
-  static const Color gold = Color(0xFFD6B15E);
+  static const Color navy = Color(0xFF5B351F);
+  static const Color blue = Color(0xFF8A552E);
+  static const Color gold = Color(0xFFFFD36A);
   static const Color tableGreen = Color(0xFF075239);
 
   @override
@@ -48,13 +48,14 @@ class LorisApp extends StatelessWidget {
       title: 'LORIS – The Ultimate Card Game',
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: navy,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFFFF4DC),
         colorScheme: ColorScheme.fromSeed(
           seedColor: gold,
-          brightness: Brightness.dark,
-          primary: gold,
-          surface: blue,
+          brightness: Brightness.light,
+          primary: const Color(0xFF9B622E),
+          onPrimary: Colors.white,
+          surface: const Color(0xFFFFE8B2),
         ),
       ),
       home: const LorisHomeScreen(),
@@ -120,7 +121,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: LorisApp.blue,
+          backgroundColor: const Color(0xFFFFF1D4),
           title: const Text('SELECT PLAYERS'),
           content: const Text('Choose your game mode.'),
           actions: [
@@ -322,9 +323,9 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              LorisApp.blue,
-              LorisApp.navy,
-              Color(0xFF030A16),
+              Color(0xFFFFF7E8),
+              Color(0xFFFFE6B0),
+              Color(0xFFE9BD70),
             ],
           ),
         ),
@@ -335,16 +336,26 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.workspace_premium,
-                    size: 82,
-                    color: LorisApp.gold,
+                  Container(
+                    width: 112,
+                    height: 112,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFE8A6), Color(0xFFB9772E)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: Color(0xFFFFF5D8), width: 3),
+                      boxShadow: const [BoxShadow(color: Color(0x66834B1C), blurRadius: 22, offset: Offset(0, 9))],
+                    ),
+                    child: const Icon(Icons.owl, size: 68, color: Color(0xFF6B351D)),
                   ),
                   const SizedBox(height: 18),
                   const Text(
                     'LORIS',
                     style: TextStyle(
-                      color: LorisApp.gold,
+                      color: Color(0xFF70401F),
                       fontSize: 48,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 8,
@@ -394,7 +405,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   const Text(
                     'STRATEGY • TEAMWORK • VICTORY',
                     style: TextStyle(
-                      color: Colors.white38,
+                      color: Color(0xFF805B35),
                       letterSpacing: 2,
                     ),
                   ),
@@ -423,7 +434,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
               label: Text(label),
               style: ElevatedButton.styleFrom(
                 backgroundColor: LorisApp.gold,
-                foregroundColor: LorisApp.navy,
+                foregroundColor: const Color(0xFF5B351F),
               ),
             )
           : OutlinedButton.icon(
