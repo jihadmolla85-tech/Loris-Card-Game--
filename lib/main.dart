@@ -514,6 +514,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   ];
   late final List<String> _playerNames;
   late final List<String> _playerAvatars;
+  late final List<int> _portraitVariants;
 
   late final DealController _dealController;
   late final GameMatchController _matchController;
@@ -564,6 +565,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     final shuffledNames = List<String>.from(_namePool)..shuffle(_random);
     final shuffledAvatars = List<String>.from(_avatarPool)..shuffle(_random);
+    final shuffledPortraits = List<int>.generate(12, (index) => index)..shuffle(_random);
+    _portraitVariants = shuffledPortraits.take(widget.playerCount).toList();
     _playerNames = [
       'YOU',
       ...shuffledNames.take(widget.playerCount - 1),
@@ -832,7 +835,7 @@ await _revealDealerDrawOnTable(
         child: Row(children: [
           SizedBox(width: 112, child: Row(children: [
             LorisPortraitAvatar(
-              variant: player,
+              variant: _portraitVariants[player],
               size: 30,
               highlighted: isDealer,
               expression: isDealer ? 0 : 1,
@@ -2609,7 +2612,7 @@ await _revealDealerDrawOnTable(
               children: List.generate(widget.playerCount, (index) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(_playerAvatars[index], style: const TextStyle(fontSize: 20)),
+                  LorisPortraitAvatar(variant: _portraitVariants[index], size: 20),
                   const SizedBox(width: 3),
                   Text('${_playerNames[index]} ${_dealCounts.length > index ? _dealCounts[index] : 0}/8',
                     style: const TextStyle(color: Colors.white70, fontSize: 10)),
@@ -2733,7 +2736,7 @@ await _revealDealerDrawOnTable(
                           ? LorisApp.navy
                           : Colors.white,
                       child: LorisPortraitAvatar(
-                        variant: index,
+                        variant: _portraitVariants[index],
                         size: 38,
                       ),
                     ),
@@ -2820,8 +2823,8 @@ await _revealDealerDrawOnTable(
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
-        final avatarSize = widget.playerCount == 6 ? 34.0 : 38.0;
-        final seatWidth = widget.playerCount == 6 ? 68.0 : 76.0;
+        final avatarSize = widget.playerCount == 6 ? 30.0 : 36.0;
+        final seatWidth = widget.playerCount == 6 ? 62.0 : 72.0;
         final centerWidth = (constraints.maxWidth * .46).clamp(126.0, 166.0);
         final centerHeight = (tableHeight * .32).clamp(94.0, 126.0);
 
