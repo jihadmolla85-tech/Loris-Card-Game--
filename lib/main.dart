@@ -550,6 +550,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   int _cardImpactKey = 0;
   String? _playEffect;
   String? _winCelebration;
+  bool _winCelebrationIsLoss = false;
   List<loris.Card>? _dealerDrawCards;
   int _dealerDrawVisible = 0;
   int? _dealerDrawWinner;
@@ -1476,6 +1477,8 @@ await _revealDealerDrawOnTable(
       await Future.delayed(const Duration(milliseconds: 520));
       if (!mounted) return;
 
+      final scoreBeforeTeamA = _matchController.matchScoreEngine.teamAScore;
+      final scoreBeforeTeamB = _matchController.matchScoreEngine.teamBScore;
       final winner = _matchController.completeTrick();
       _trickNumber = round.completedTricks;
 
@@ -1485,6 +1488,7 @@ await _revealDealerDrawOnTable(
         _revealedTrickPlays = [];
         _collectingTrickWinner = null;
         _winCelebration = 'TRICK WON • ${_playerNames[winner]}';
+        _winCelebrationIsLoss = false;
       });
 
       // AI automatically makes a valid 16 call when eligible.
@@ -1508,16 +1512,56 @@ await _revealDealerDrawOnTable(
       }
 
       if (_finished) {
-        if (_matchController.isMatchOver) {
-          if (_soundEnabled) unawaited(_audio.play('match_win'));
-          await HapticFeedback.vibrate();
-          if (mounted) setState(() => _winCelebration = 'MATCH CHAMPION!');
-        } else {
-          if (_soundEnabled) unawaited(_audio.play('round_win'));
-          await HapticFeedback.heavyImpact();
-          if (mounted) setState(() => _winCelebration = 'ROUND WON!');
-        }
         final score = _matchController.matchScoreEngine;
+        final teamAPointsEarned =
+            score.teamAScore - scoreBeforeTeamA;
+        final teamBPointsEarned =
+            score.teamBScore - scoreBeforeTeamB;
+        final humanTeamWonRound = teamAPointsEarned > 0;
+
+        if (_matchController.isMatchOver) {
+          final matchWinner = _matchController.matchWinner;
+          final humanTeamWonMatch = matchWinner == MatchWinner.teamA;
+          final matchDraw = matchWinner == MatchWinner.draw;
+          if (_soundEnabled && humanTeamWonMatch) {
+            unawaited(_audio.play('match_win'));
+          } else if (!humanTeamWonMatch && !matchDraw) {
+            unawaited(SystemSound.play(SystemSoundType.alert));
+          }
+          if (humanTeamWonMatch) {
+            await HapticFeedback.vibrate();
+          } else {
+            await HapticFeedback.heavyImpact();
+          }
+          if (mounted) {
+            setState(() {
+              _winCelebration = matchDraw
+                  ? 'MATCH DRAW!'
+                  : humanTeamWonMatch
+                      ? 'MATCH VICTORY!'
+                      : 'MATCH DEFEAT';
+              _winCelebrationIsLoss = !humanTeamWonMatch && !matchDraw;
+            });
+          }
+        } else {
+          if (_soundEnabled && humanTeamWonRound) {
+            unawaited(_audio.play('round_win'));
+          } else if (!humanTeamWonRound) {
+            unawaited(SystemSound.play(SystemSoundType.alert));
+          }
+          if (humanTeamWonRound) {
+            await HapticFeedback.heavyImpact();
+          } else {
+            await HapticFeedback.mediumImpact();
+          }
+          if (mounted) {
+            setState(() {
+              _winCelebration =
+                  humanTeamWonRound ? 'ROUND WON!' : 'ROUND LOST!';
+              _winCelebrationIsLoss = !humanTeamWonRound;
+            });
+          }
+        }
 
         setState(() {
           _status =
@@ -3142,14 +3186,38 @@ await _revealDealerDrawOnTable(
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 9),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [Color(0xFFFFE9A3), Color(0xFFB77A2D)]),
+                              gradient: LinearGradient(
+                                colors: _winCelebrationIsLoss
+                                    ? const [Color(0xFF7D1725), Color(0xFF350B16)]
+                                    : const [Color(0xFFFFE9A3), Color(0xFFB77A2D)],
+                              ),
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: Colors.white, width: 1),
-                              boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 18, spreadRadius: 2)],
+                              border: Border.all(
+                                color: _winCelebrationIsLoss
+                                    ? const Color(0xFFFFA0A8)
+                                    : Colors.white,
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _winCelebrationIsLoss
+                                      ? const Color(0xFFB51F38).withValues(alpha: .55)
+                                      : Colors.black87,
+                                  blurRadius: 18,
+                                  spreadRadius: 2,
+                                ),
+                              ],
                             ),
                             child: Text(
                               _winCelebration!,
-                              style: const TextStyle(color: Color(0xFF27190B), fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                              style: TextStyle(
+                                color: _winCelebrationIsLoss
+                                    ? Colors.white
+                                    : const Color(0xFF27190B),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
                             ),
                           ),
                         ),
