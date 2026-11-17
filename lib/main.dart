@@ -1031,6 +1031,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         setState(() {
           _hands = newHands;
           _trumpSuit = null;
+          _trumpCard = null;
           _started = false;
 
           _status = 'Redeal required. Same dealer remains.';
