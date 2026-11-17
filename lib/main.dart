@@ -25,6 +25,7 @@ import 'game/engine/bidding_round_controller.dart';
 import 'game/engine/trump_selection_engine.dart';
 import 'game/engine/trick_engine.dart';
 import 'game/ai/ai_card_play_strategy.dart';
+import 'game/ai/ai_trump_selection_strategy.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -242,10 +243,13 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 ),
                 _RuleSection(
                   title: 'CALL 16',
-                  body: 'After winning the number of tricks equal to your bid, '
-                      'a player may call 16 after winning the next trick. Their '
-                      'team must then win every remaining trick. Losing even '
-                      'one remaining trick gives that team -16.',
+                  body: 'CALL 16 is offered immediately when your team reaches '
+                      'exactly its bid, but only if it has won every trick from '
+                      'the start of the round. If opponents win even one trick, '
+                      'the option is gone for the rest of the round. The last-trick '
+                      'winner may CALL 16 or PASS once. After calling, the team '
+                      'must win every remaining trick; losing one ends the round '
+                      'at -16 for that team and +16 for the opponents.',
                 ),
               ],
             ),
@@ -1211,59 +1215,23 @@ await _revealDealerDrawOnTable(
     );
   }
 
+  final AiTrumpSelectionStrategy _aiTrumpSelectionStrategy =
+      const AiTrumpSelectionStrategy();
+
   Future<void> _chooseAiTrump(int bidder) async {
     final hands = _hands;
-
     if (hands == null) return;
 
-    loris.Suit? bestSuit;
-    var bestCount = -1;
-    var cardOwner = bidder;
-
-    // The bidder may only declare a suit that is also present in their
-    // own hand, even when the revealed card belongs to a teammate.
-    final bidderSuits = hands[bidder]
-        .where((card) => !card.isLoris && card.suit != null)
-        .map((card) => card.suit!)
-        .toSet();
-
-    for (var player = 0; player < hands.length; player++) {
-      if (player % 2 != bidder % 2) continue;
-
-      final counts = <loris.Suit, int>{
-        for (final suit in bidderSuits) suit: 0,
-      };
-
-      for (final card in hands[player]) {
-        if (!card.isLoris && card.suit != null &&
-            bidderSuits.contains(card.suit)) {
-          counts[card.suit!] = counts[card.suit!]! + 1;
-        }
-      }
-
-      for (final entry in counts.entries) {
-        if (entry.value > bestCount) {
-          bestCount = entry.value;
-          bestSuit = entry.key;
-          cardOwner = player;
-        }
-      }
+    try {
+      // Unlike a human bidder, the AI does not inspect a teammate's hidden
+      // hand to optimise trump. It selects from its own hand only.
+      final selectedCard = _aiTrumpSelectionStrategy.chooseCard(
+        bidderHand: hands[bidder],
+      );
+      await _applyTrump(bidder, bidder, selectedCard);
+    } catch (e) {
+      setState(() => _error = 'AI trump selection failed: $e');
     }
-
-    if (bestSuit == null || bestCount <= 0) {
-      setState(() => _error = 'AI could not select trump.');
-      return;
-    }
-
-    final selectedCard = hands[cardOwner].firstWhere(
-      (card) => !card.isLoris && card.suit == bestSuit,
-    );
-
-    await _applyTrump(
-      bidder,
-      cardOwner,
-      selectedCard,
-    );
   }
 
   Future<void> _applyTrump(
