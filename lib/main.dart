@@ -2030,16 +2030,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore)),
               Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
               Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore)),
-              Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
-              Column(
-                children: [
-                  const Text('TRUMP', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
-                  Text(
-                    _trumpSuit == null ? '—' : _suitSymbol(_trumpSuit),
-                    style: TextStyle(color: _trumpSuit != null && _isRedSuit(_trumpSuit) ? const Color(0xFFFF737D) : LorisApp.gold, fontSize: 19, fontWeight: FontWeight.w900),
-                  ),
-                ],
-              ),
+
             ],
           ),
           if (activeRound != null) ...[
