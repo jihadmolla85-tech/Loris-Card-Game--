@@ -1484,11 +1484,16 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         ],
       ),
       body: SafeArea(
-        child: hands == null
-            ? (_dealerDrawnCards != null
-                ? _buildDealerSelectionPanel()
-                : _buildStartPanel())
-            : _buildGamePanel(hands),
+        child: hands != null
+            ? _buildGamePanel(hands)
+            : _dealerDrawnCards != null
+                ? _buildGamePanel(
+                    List<List<loris.Card>>.generate(
+                      widget.playerCount,
+                      (_) => <loris.Card>[],
+                    ),
+                  )
+                : _buildStartPanel(),
       ),
     );
   }
@@ -1648,6 +1653,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     const <TrickPlay>[],
                     biddingPlayer,
                     hands.map((hand) => hand.length).toList(),
+                    dealerDrawCards: _dealerDrawnCards,
+                    dealerDrawVisibleCount: _dealerRevealVisibleCount,
+                    dealerDrawStartPlayer: _dealerFirstPlayerIndex,
+                    dealerDrawActive: _dealerDrawActive,
                   ),
                 ),
                 if (!_isDealingCards && _awaitingTrumpSelection)
@@ -2008,7 +2017,84 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
+  Widget _teamTrickProgress(
+    String label,
+    int won,
+    int target,
+    Color accent,
+  ) {
+    final progress = target <= 0 ? 1.0 : (won / target).clamp(0.0, 1.0);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A1720),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: accent.withValues(alpha: .65)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .5,
+                ),
+              ),
+              Text(
+                '$won/$target',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(5),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 4,
+              backgroundColor: Colors.white12,
+              color: accent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCompactMatchHeader() {
+    final activeRound = _started ? _matchController.currentRound : null;
+    final teamATricks = activeRound == null
+        ? 0
+        : activeRound.biddingTeam == 0
+            ? activeRound.biddingTeamTricks
+            : activeRound.completedTricks - activeRound.biddingTeamTricks;
+    final teamBTricks = activeRound == null
+        ? 0
+        : activeRound.biddingTeam == 1
+            ? activeRound.biddingTeamTricks
+            : activeRound.completedTricks - activeRound.biddingTeamTricks;
+    final teamATarget = activeRound == null
+        ? 0
+        : activeRound.biddingTeam == 0
+            ? activeRound.bidAmount
+            : 8 - activeRound.bidAmount;
+    final teamBTarget = activeRound == null
+        ? 0
+        : activeRound.biddingTeam == 1
+            ? activeRound.bidAmount
+            : 8 - activeRound.bidAmount;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
@@ -2041,6 +2127,30 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ),
             ],
           ),
+          if (activeRound != null) ...[
+            const SizedBox(height: 7),
+            Row(
+              children: [
+                Expanded(
+                  child: _teamTrickProgress(
+                    'TEAM A TRICKS',
+                    teamATricks,
+                    teamATarget,
+                    const Color(0xFFFFD36A),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _teamTrickProgress(
+                    'TEAM B TRICKS',
+                    teamBTricks,
+                    teamBTarget,
+                    const Color(0xFFB8D9FF),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 4),
           Row(
             children: [
