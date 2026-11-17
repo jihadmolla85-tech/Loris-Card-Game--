@@ -62,7 +62,7 @@ class LorisAudioService {
       final envelope = math.pow(math.sin(math.pi * t / 0.24), 1.25) * math.exp(-t * 1.8);
       final sample = ((airy * 0.19) + landing) * envelope * 0.62;
       previous = sample;
-      final pcm = (previous * 32767).round().clamp(-32768, 32767);
+      final pcm = (previous * 32767).round().clamp(-32768, 32767).toInt();
       bytes.setInt16(44 + i * 2, pcm, Endian.little);
     }
     return bytes.buffer.asUint8List();
