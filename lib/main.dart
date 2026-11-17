@@ -531,6 +531,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   int _dealerRevealVisibleCount = 0;
   int _dealerFirstPlayerIndex = 0;
   bool _isDealingCards = false;
+  bool _dealerDrawActive = false;
   int _dealtCardCount = 0;
   bool _awaitingTrumpSelection = false;
   int? _pendingTrumpBidder;
@@ -710,8 +711,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       setState(() {
         _dealerDrawnCards = dealerSelection.drawnCards;
         _dealerRevealVisibleCount = 0;
-        _dealerIndex = dealerSelection.dealerIndex;
-        _status = 'Random dealer draw • first Jack becomes dealer';
+        _dealerDrawActive = true;
+        _dealerIndex = _dealerFirstPlayerIndex;
+        _status = '${_playerNames[_dealerFirstPlayerIndex]} starts the random dealer draw';
       });
       for (var i = 0; i < dealerSelection.drawnCards.length; i++) {
         await Future.delayed(const Duration(milliseconds: 560));
@@ -723,6 +725,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           break;
         }
       }
+      if (!mounted) return;
+      setState(() {
+        _dealerDrawActive = false;
+        _dealerIndex = dealerSelection.dealerIndex;
+        _status = 'JACK FOUND • ${_playerNames[dealerSelection.dealerIndex]} is the dealer';
+      });
       await Future.delayed(const Duration(milliseconds: 650));
       if (!mounted) return;
       final dealtHands = _dealController.deal(
@@ -732,6 +740,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       );
       setState(() {
         _dealerDrawnCards = null;
+        _dealerDrawActive = false;
         _hands = dealtHands;
         _isDealingCards = true;
         _dealtCardCount = 0;
@@ -1797,7 +1806,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             'YOUR BID  •  HIGHEST: ${bidding.highestBid ?? "-"}',
             style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 3),
+          Text(
+            bidding.history.isEmpty
+                ? 'Bidding begins to the dealer’s right'
+                : bidding.history.map((record) =>
+                    '${_playerNames[record.playerIndex]}: ${record.amount ?? "PASS"}').join('   •   '),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 7,
@@ -2292,15 +2312,25 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       Text(
-                        currentPlayer == null
-                            ? 'ROUND COMPLETE'
-                            : 'NOW PLAYING • ${_playerNames[currentPlayer]}',
+                        _dealerDrawActive
+                            ? 'DEALER DRAW'
+                            : _isDealingCards
+                                ? 'DEALING CARDS'
+                                : !_started
+                                    ? _awaitingTrumpSelection
+                                        ? 'TRUMP SELECTION'
+                                        : currentPlayer == null
+                                            ? 'BIDDING'
+                                            : 'BIDDING • ${_playerNames[currentPlayer]}'
+                                    : currentPlayer == null
+                                        ? 'ROUND COMPLETE'
+                                        : 'NOW PLAYING • ${_playerNames[currentPlayer]}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .7),
                       ),
                       if (plays.isEmpty)
-                        Text(_started ? 'PLAY A CARD' : (_isDealingCards ? 'DEALING...' : _awaitingTrumpSelection ? 'CHOOSE TRUMP' : bidding != null ? 'BID OR PASS' : 'READY'), style: const TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold))
+                        Text(_dealerDrawActive ? 'JACK TO BECOME DEALER' : _started ? 'PLAY A CARD' : (_isDealingCards ? 'CARDS IN MOTION' : _awaitingTrumpSelection ? 'CHOOSE TRUMP' : bidding != null ? 'BID OR PASS' : 'READY'), style: const TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold))
                       else
                         const SizedBox(height: 1),
                       Text(
