@@ -15,7 +15,7 @@ class TrickEngine {
   final List<List<Card>> hands;
   final int playerCount;
   final int dealerIndex;
-  final Suit trumpSuit;
+  final Suit? trumpSuit;
 
   final List<TrickPlay> plays = [];
 
@@ -94,8 +94,8 @@ class TrickEngine {
 
     final firstCard = plays.first.card;
 
-    // LORIS প্রথমে খেললে Spades স্যুট ধরা হবে।
-    return firstCard.isLoris ? Suit.spades : firstCard.suit;
+    // A leading Joker has no suit to follow.
+    return firstCard.isLoris ? null : firstCard.suit;
   }
 
   /// Returns every card the player is allowed to play on this turn.
@@ -127,7 +127,7 @@ class TrickEngine {
 
     if (ledSuitCards.isNotEmpty) {
       // When trump was led, follow suit and overtrump if possible.
-      if (currentLedSuit == trumpSuit) {
+      if (trumpSuit != null && currentLedSuit == trumpSuit) {
         final highestTrump = _highestTrumpRankAlreadyPlayed();
         if (highestTrump != null && !plays.any((play) => play.card.isLoris)) {
           final higher = ledSuitCards
@@ -140,6 +140,10 @@ class TrickEngine {
       }
       return List.unmodifiable([...ledSuitCards, ...lorisCards]);
     }
+
+    // In Joker mode there is no trump suit; follow suit when possible,
+    // otherwise any card may be played.
+    if (trumpSuit == null) return List.unmodifiable(hand);
 
     // The player is void in the led suit. Trump is compulsory when held.
     final trumps = hand
@@ -168,6 +172,7 @@ class TrickEngine {
   }
 
   int? _highestTrumpRankAlreadyPlayed() {
+    if (trumpSuit == null) return null;
     final ranks = plays
         .where((play) => !play.card.isLoris && play.card.suit == trumpSuit)
         .map((play) => play.card.rank ?? 0)
@@ -198,18 +203,20 @@ class TrickEngine {
       return lorisPlay.playerIndex;
     }
 
-    final currentLedSuit = ledSuit;
+    if (trumpSuit == null) {
+      // Joker mode: the Joker itself is unbeatable; otherwise compare
+      // every card played, regardless of suit.
+      return _highestRankPlay(plays).playerIndex;
+    }
 
+    final currentLedSuit = ledSuit;
     final trumpPlays =
         plays.where((p) => p.card.suit == trumpSuit).toList();
-
     if (trumpPlays.isNotEmpty) {
       return _highestRankPlay(trumpPlays).playerIndex;
     }
-
     final ledSuitPlays =
         plays.where((p) => p.card.suit == currentLedSuit).toList();
-
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }
 
