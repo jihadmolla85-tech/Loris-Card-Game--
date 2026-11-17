@@ -887,8 +887,19 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (hands == null) return;
     final choices = <MapEntry<int, loris.Card>>[];
     for (final card in hands[bidder]) {
-      if (card.isLoris || card.suit != null) choices.add(MapEntry(bidder, card));
+      if (!card.isLoris && card.suit != null) {
+        choices.add(MapEntry(bidder, card));
+      }
     }
+
+    // Always show the Joker in the trump-selection interface. If the
+    // bidder does not hold it, render it disabled rather than selectable.
+    final heldJoker = hands[bidder].where((card) => card.isLoris).firstOrNull;
+    final lowestRank = widget.playerCount == 4 ? 7 : 3;
+    choices.add(MapEntry(
+      bidder,
+      heldJoker ?? loris.Card.loris(replacesRank: lowestRank),
+    ));
     for (var player = 0; player < hands.length; player++) {
       if (player == bidder || player % 2 != bidder % 2) continue;
       for (final card in hands[player]) {
@@ -1782,7 +1793,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                     bottom: 1,
                                     child: Builder(
                                       builder: (context) {
-                                        final card = hands[0][index];
+                                        final card = _sortedHand(hands[0])[index];
                                         final playable = !_finished &&
                                             !_busy &&
                                             currentPlayer == 0 &&
@@ -1908,16 +1919,37 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             runSpacing: 5,
             children: _pendingTrumpChoices.map((choice) {
               final isOwn = choice.key == bidder;
+              final jokerUnavailable = choice.value.isLoris &&
+                  !(_hands?[bidder].any((card) => card.isLoris) ?? false);
+              final disabled = _busy || jokerUnavailable;
               return OutlinedButton(
-                onPressed: _busy ? null : () => _applyTrump(bidder, choice.key, choice.value),
+                onPressed: disabled
+                    ? null
+                    : () => _applyTrump(bidder, choice.key, choice.value),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: isOwn ? LorisApp.gold : Colors.white54),
+                  foregroundColor: jokerUnavailable ? Colors.white38 : Colors.white,
+                  disabledForegroundColor: Colors.white30,
+                  side: BorderSide(
+                    color: jokerUnavailable
+                        ? Colors.white24
+                        : isOwn ? LorisApp.gold : Colors.white54,
+                  ),
                   padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
                 ),
-                child: Text(
-                  isOwn ? _cardName(choice.value) : 'TEAMMATE ${choice.key + 1} • REVEAL',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildCard(choice.value, compact: true),
+                    const SizedBox(width: 5),
+                    Text(
+                      choice.value.isLoris
+                          ? (jokerUnavailable ? 'JOKER • NOT IN HAND' : 'JOKER')
+                          : isOwn
+                              ? _cardName(choice.value)
+                              : 'TEAMMATE ${choice.key + 1} • REVEAL',
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10),
+                    ),
+                  ],
                 ),
               );
             }).toList(),
@@ -1927,10 +1959,29 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
+  List<loris.Card> _sortedHand(List<loris.Card> cards) {
+    const suitOrder = {
+      loris.Suit.clubs: 0,
+      loris.Suit.diamonds: 1,
+      loris.Suit.hearts: 2,
+      loris.Suit.spades: 3,
+    };
+    final sorted = List<loris.Card>.from(cards);
+    sorted.sort((a, b) {
+      if (a.isLoris != b.isLoris) return a.isLoris ? 1 : -1;
+      if (a.isLoris) return 0;
+      final suitCompare = suitOrder[a.suit]!.compareTo(suitOrder[b.suit]!);
+      if (suitCompare != 0) return suitCompare;
+      return b.rank!.compareTo(a.rank!);
+    });
+    return sorted;
+  }
+
   Widget _buildHandStrip(List<loris.Card> cards) {
     if (_isDealingCards) {
       return const SizedBox.shrink();
     }
+    final sortedCards = _sortedHand(cards);
     return Column(
       children: [
         const Align(
@@ -1944,9 +1995,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         Expanded(
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            itemCount: cards.length,
+            itemCount: sortedCards.length,
             separatorBuilder: (_, _) => const SizedBox(width: 3),
-            itemBuilder: (context, index) => _buildCard(cards[index]),
+            itemBuilder: (context, index) => _buildCard(sortedCards[index]),
           ),
         ),
       ],
