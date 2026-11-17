@@ -882,7 +882,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (hands == null) return;
     final choices = <MapEntry<int, loris.Card>>[];
     for (final card in hands[bidder]) {
-      if (!card.isLoris && card.suit != null) choices.add(MapEntry(bidder, card));
+      if (card.isLoris || card.suit != null) choices.add(MapEntry(bidder, card));
     }
     for (var player = 0; player < hands.length; player++) {
       if (player == bidder || player % 2 != bidder % 2) continue;
@@ -897,7 +897,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _pendingTrumpBidder = bidder;
       _pendingTrumpChoices = choices;
       _awaitingTrumpSelection = true;
-      _status = 'Select a trump card from your hand or reveal an eligible teammate card.';
+      _status = 'Choose a suit card or the LORIS Joker.';
     });
   }
 
@@ -905,6 +905,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final hands = _hands;
 
     if (hands == null) return;
+
+    final joker = hands[bidder].where((card) => card.isLoris).firstOrNull;
+    if (joker != null) {
+      await _applyTrump(bidder, bidder, joker);
+      return;
+    }
 
     loris.Suit? bestSuit;
     var bestCount = -1;
@@ -1038,7 +1044,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       final selectedBid = bidding.highestBid;
       final selectedBidder = bidding.highestBidder;
 
-      if (selectedTrump == null ||
+      if ((selectedTrump == null && _trumpCard?.isLoris != true) ||
           selectedBid == null ||
           selectedBidder == null) {
         setState(() {
@@ -1058,8 +1064,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _finished = false;
         _trickNumber = 0;
 
-        _status =
-            'Round started. ${_suitName(selectedTrump)} is trump.';
+        _status = selectedTrump == null
+            ? 'Round started. LORIS JOKER mode — highest card wins.'
+            : 'Round started. ${_suitName(selectedTrump)} is trump.';
       });
 
       await _runAiTurns();
@@ -2453,7 +2460,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             border: Border.all(color: LorisApp.gold, width: 1),
                           ),
                           child: const Text(
-                            'TRUMP',
+                            'JOKER',
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1),
                           ),
                         ),
