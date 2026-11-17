@@ -87,9 +87,38 @@ void main() {
     );
   });
 
-  test('LORIS cannot select trump', () {
+  test('bidder can select Joker mode when holding LORIS', () {
     hands[0].add(loris);
 
+    final result = TrumpSelectionEngine.select(
+      hands: hands,
+      bidderIndex: 0,
+      highestBidderIndex: 0,
+      cardOwnerIndex: 0,
+      selectedCard: loris,
+    );
+
+    expect(result.trumpSuit, isNull);
+    expect(result.selectedCard.isLoris, true);
+    expect(result.bidderHasTrumpSuit, true);
+  });
+
+  test('teammate holding LORIS cannot let bidder select Joker mode', () {
+    hands[2].add(loris);
+
+    expect(
+      () => TrumpSelectionEngine.select(
+        hands: hands,
+        bidderIndex: 0,
+        highestBidderIndex: 0,
+        cardOwnerIndex: 2,
+        selectedCard: loris,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('bidder without LORIS cannot select Joker mode', () {
     expect(
       () => TrumpSelectionEngine.select(
         hands: hands,
