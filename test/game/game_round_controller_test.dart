@@ -99,13 +99,14 @@ void main() {
     });
 
     test('Applies 16 Call success points only once', () {
-      for (var i = 0; i < 4; i++) {
+      // Bid is 4: win a fifth trick before the extra-trick call is allowed.
+      for (var i = 0; i < 5; i++) {
         playOneTrick();
       }
 
       controller.call16(callerPlayerIndex: 0);
 
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 3; i++) {
         playOneTrick();
       }
 
