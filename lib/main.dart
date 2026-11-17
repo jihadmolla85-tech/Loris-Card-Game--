@@ -2352,7 +2352,15 @@ await DealerRevealDialog.show(
                 // The table mesh is rendered by Three.js in real perspective 3D.
                 // Flutter keeps the cards, avatars and controls interactive above it.
                 Positioned.fill(
-                  child: LorisTableSurface(playerCount: widget.playerCount, hands: _hands, playedCards: plays.map((play) => play.card).toList()),
+                  child: LorisTableSurface(
+                    playerCount: widget.playerCount,
+                    hands: _hands,
+                    playedCards: plays.map((play) => play.card).toList(),
+                    playedBy: plays.map((play) => play.playerIndex).toList(),
+                    flyingCard: _flyingCard,
+                    flyingFromPlayer: _flyingFromPlayer,
+                    flightStarted: _flightStarted,
+                  ),
                 ),
                 Positioned.fill(
                   child: Padding(
@@ -2506,44 +2514,6 @@ await DealerRevealDialog.show(
                     ],
                   ),
                 ),
-                for (var i = 0; i < plays.length; i++)
-                  AnimatedAlign(
-                    key: ValueKey('trick-${plays[i].playerIndex}-${plays[i].card.hashCode}'),
-                    alignment: _collectingTrickWinner == null
-                        ? Alignment(
-                            -.38 + (i % 3) * .38,
-                            -.25 + (i ~/ 3) * .50,
-                          )
-                        : trickCollectionTargets[_collectingTrickWinner!],
-                    duration: Duration(milliseconds: _collectingTrickWinner == null ? 260 : 850),
-                    curve: _collectingTrickWinner == null ? Curves.easeOutBack : Curves.easeInCubic,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: .78, end: _collectingTrickWinner == null ? 1 : .42),
-                      duration: Duration(milliseconds: _collectingTrickWinner == null ? 260 : 850),
-                      curve: Curves.easeInOut,
-                      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
-                      child: _buildCard(plays[i].card, compact: true),
-                    ),
-                  ),
-                if (_flyingCard != null && _flyingFromPlayer != null)
-                  AnimatedAlign(
-                    alignment: _flightStarted
-                        ? Alignment.center
-                        : seatAlignments[_flyingFromPlayer!],
-                    duration: Duration(milliseconds: _flightStarted ? 470 : 1),
-                    curve: Curves.easeInOutCubic,
-                    child: Transform.rotate(
-                      angle: _flightStarted ? 0 : -.22,
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: .72, end: _flightStarted ? 1.0 : .72),
-                        duration: const Duration(milliseconds: 470),
-                        curve: Curves.easeOutBack,
-                        builder: (context, scale, child) =>
-                            Transform.scale(scale: scale, child: child),
-                        child: _buildCard(_flyingCard!, compact: true),
-                      ),
-                    ),
-                  ),
                 if (_playEffect != null)
                   Positioned(
                     top: tableHeight * .34,
