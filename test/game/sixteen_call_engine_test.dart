@@ -134,6 +134,7 @@ void main() {
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
 
       expect(
         engine.status,
