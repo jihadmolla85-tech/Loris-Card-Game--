@@ -535,6 +535,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _finished = false;
   bool _busy = false;
   bool _isShuffling = false;
+  bool _showSixteenCallEffect = false;
   late final AnimationController _shuffleController;
 
   String _status = 'Press START MATCH to begin.';
@@ -637,6 +638,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Future<void> _playShuffleSound() async {
     await _audio.play('shuffle');
     await HapticFeedback.lightImpact();
+  }
+
+  Future<void> _triggerSixteenCallEffect() async {
+    if (!mounted) return;
+    setState(() => _showSixteenCallEffect = true);
+    await _audio.play('loris');
+    await HapticFeedback.heavyImpact();
+    await Future.delayed(const Duration(milliseconds: 220));
+    await _audio.play('trump');
+    await HapticFeedback.vibrate();
+    await Future.delayed(const Duration(milliseconds: 1450));
+    if (mounted) setState(() => _showSixteenCallEffect = false);
   }
 
   // ----------------------------------------------------------
@@ -1413,6 +1426,7 @@ await DealerRevealDialog.show(
             _status =
                 'AI called 16! Their team must win every remaining trick.';
           });
+          await _triggerSixteenCallEffect();
         } catch (e) {
           setState(() => _error = 'AI 16 call error: $e');
         }
@@ -1490,6 +1504,7 @@ await DealerRevealDialog.show(
             '16 CALL! Your team must win every remaining trick.';
       });
 
+      await _triggerSixteenCallEffect();
       await _runAiTurns();
     } catch (e) {
       setState(() => _error = e.toString());
@@ -2326,7 +2341,7 @@ await DealerRevealDialog.show(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF0B6048), Color(0xFF064331), Color(0xFF022A22)],
+                colors: [Color(0xFF9A2938), Color(0xFF741A2A), Color(0xFF4A0D1B)],
               ),
               border: Border.all(color: const Color(0xFFFFE6A0), width: 1.5),
             ),
@@ -2337,7 +2352,7 @@ await DealerRevealDialog.show(
                 // The table mesh is rendered by Three.js in real perspective 3D.
                 // Flutter keeps the cards, avatars and controls interactive above it.
                 Positioned.fill(
-                  child: Loris3DTable(),
+                  child: LorisTableSurface(),
                 ),
                 Positioned.fill(
                   child: Padding(
@@ -2440,7 +2455,7 @@ await DealerRevealDialog.show(
                                         height: 10,
                                         decoration: BoxDecoration(
                                           borderRadius: BorderRadius.circular(1.5),
-                                          gradient: const LinearGradient(colors: [Color(0xFF315F9A), Color(0xFF102747)]),
+                                          gradient: const LinearGradient(colors: [Color(0xFFB63A45), Color(0xFF5A1020)]),
                                           border: Border.all(color: const Color(0xFFFFD978), width: .5),
                                         ),
                                       ),
@@ -2464,7 +2479,7 @@ await DealerRevealDialog.show(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xAA0B7253), Color(0xCC022D25)],
+                      colors: [Color(0xCC9A2938), Color(0xDD3A0915)],
                     ),
                     border: Border.all(color: const Color(0x77F5D78C), width: 1),
                     boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 4))],
@@ -2575,6 +2590,59 @@ await DealerRevealDialog.show(
                             child: Text(
                               _winCelebration!,
                               style: const TextStyle(color: Color(0xFF27190B), fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_showSixteenCallEffect)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: const BoxDecoration(
+                          gradient: RadialGradient(
+                            radius: 0.95,
+                            colors: [Color(0xB8FFD778), Color(0x88A51E32), Color(0xAA260611)],
+                            stops: [0, 0.48, 1],
+                          ),
+                        ),
+                        child: Center(
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0.55, end: 1),
+                            duration: const Duration(milliseconds: 720),
+                            curve: Curves.elasticOut,
+                            builder: (context, scale, child) =>
+                                Transform.scale(scale: scale, child: child),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFFFE9A8), Color(0xFFE3A83E), Color(0xFF9B2432)],
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: const Color(0xFFFFF4CF), width: 2.5),
+                                boxShadow: const [
+                                  BoxShadow(color: Color(0xDDFFD36A), blurRadius: 34, spreadRadius: 8),
+                                  BoxShadow(color: Colors.black87, blurRadius: 22, offset: Offset(0, 9)),
+                                ],
+                              ),
+                              child: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.bolt, color: Color(0xFF641323), size: 38),
+                                  SizedBox(height: 3),
+                                  Text('SIXTEEN CALL', style: TextStyle(
+                                    color: Color(0xFF4B0C18), fontSize: 24,
+                                    fontWeight: FontWeight.w900, letterSpacing: 2.4)),
+                                  SizedBox(height: 5),
+                                  Text('EVERY REMAINING TRICK', style: TextStyle(
+                                    color: Color(0xFF5A1720), fontSize: 9,
+                                    fontWeight: FontWeight.w900, letterSpacing: 1.7)),
+                                ],
+                              ),
                             ),
                           ),
                         ),
