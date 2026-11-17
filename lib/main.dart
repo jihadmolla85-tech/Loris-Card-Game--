@@ -602,6 +602,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Future<void> _animateCardToTable(int playerIndex, loris.Card card) async {
     if (!mounted) return;
     setState(() {
+      if (_revealedTrickPlays.isNotEmpty) {
+        _revealedTrickPlays = [];
+        _collectingTrickWinner = null;
+      }
       _flyingCard = card;
       _flyingFromPlayer = playerIndex;
       _flightStarted = true;
@@ -1264,7 +1268,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       setState(() {
         _status = 'Trick $_trickNumber won by ${_playerNames[winner]}.';
         _finished = round.isRoundEnded;
-        _revealedTrickPlays = [];
+        // Keep this completed trick on the table until the next trick starts.
         _collectingTrickWinner = null;
         _winCelebration = 'TRICK WON • ${_playerNames[winner]}';
       });
@@ -2233,7 +2237,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
-        final seatWidth = widget.playerCount == 6 ? 78.0 : 88.0;
+        final seatWidth = widget.playerCount == 6 ? 88.0 : 96.0;
 
         return SizedBox(
           width: double.infinity,
@@ -2273,7 +2277,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       final play = plays[playIndex];
                       final angles = widget.playerCount == 4 ? const [pi / 2, pi, -pi / 2, 0.0] : const [pi / 2, 2.59, 3.69, -pi / 2, -0.55, 0.55];
                       final angle = angles[play.playerIndex];
-                      const cardWidth = 48.0, cardHeight = 68.0;
+                      const cardWidth = 60.0, cardHeight = 86.0;
                       final radiusX = constraints.maxWidth * (widget.playerCount == 6 ? .205 : .22);
                       final radiusY = tableHeight * .17;
                       final cardX = constraints.maxWidth / 2 + cos(angle) * radiusX - cardWidth / 2;
@@ -2284,7 +2288,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         child: IgnorePointer(child: Column(mainAxisSize: MainAxisSize.min, children: [
                           Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), decoration: BoxDecoration(color: const Color(0xEE17243B), borderRadius: BorderRadius.circular(5), border: Border.all(color: const Color(0xFFFFD978), width: .7)), child: Text(_playerNames[play.playerIndex], style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900))),
                           const SizedBox(height: 2),
-                          Transform.rotate(angle: angle + pi / 2, child: _buildCard(play.card, compact: true)),
+                          Transform.rotate(angle: angle + pi / 2, child: _buildCard(play.card, compact: true, tableCard: true)),
                         ])),
                       );
                     }),
@@ -2362,7 +2366,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _AnimePortrait(seed: index, size: 34),
+                          _AnimePortrait(seed: index, size: 42),
                           const SizedBox(height: 3),
                           Text(
                             _playerNames[index],
@@ -2597,11 +2601,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     loris.Card card, {
     bool enabled = false,
     bool compact = false,
+    bool tableCard = false,
   }) {
     final isRed = _isRedSuit(card.suit);
     final ink = card.isLoris ? const Color(0xFF17243B) : isRed ? const Color(0xFFB51F32) : const Color(0xFF17202B);
-    final width = compact ? 48.0 : 62.0;
-    final height = compact ? 68.0 : 92.0;
+    final width = tableCard ? 60.0 : compact ? 48.0 : 62.0;
+    final height = tableCard ? 86.0 : compact ? 68.0 : 92.0;
 
     Widget corner({required bool upsideDown}) {
       return Transform.rotate(
@@ -2610,9 +2615,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(card.isLoris ? 'J' : card.displayName,
-              style: TextStyle(color: ink, fontSize: compact ? 11 : 15, height: 1, fontWeight: FontWeight.w900)),
+              style: TextStyle(color: ink, fontSize: tableCard ? 14 : compact ? 11 : 15, height: 1, fontWeight: FontWeight.w900)),
             Text(card.isLoris ? '★' : _suitSymbol(card.suit),
-              style: TextStyle(color: ink, fontSize: compact ? 10 : 13, height: 1.05, fontWeight: FontWeight.bold)),
+              style: TextStyle(color: ink, fontSize: tableCard ? 13 : compact ? 10 : 13, height: 1.05, fontWeight: FontWeight.bold)),
           ],
         ),
       );
@@ -2646,12 +2651,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.theater_comedy, color: ink, size: compact ? 19 : 25),
+                      Icon(Icons.theater_comedy, color: ink, size: tableCard ? 25 : compact ? 19 : 25),
                       if (!compact) Text('JOKER', style: TextStyle(color: ink, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
                     ],
                   )
                 : Text(_suitSymbol(card.suit),
-                    style: TextStyle(color: ink, fontSize: compact ? 22 : 31, fontWeight: FontWeight.w900, shadows: const [Shadow(color: Color(0x22000000), blurRadius: 1, offset: Offset(1, 1))])),
+                    style: TextStyle(color: ink, fontSize: tableCard ? 29 : compact ? 22 : 31, fontWeight: FontWeight.w900, shadows: const [Shadow(color: Color(0x22000000), blurRadius: 1, offset: Offset(1, 1))])),
           ),
         ],
       ),
