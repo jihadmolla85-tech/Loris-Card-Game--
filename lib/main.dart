@@ -141,7 +141,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GameScreen(playerCount: playerCount),
+        builder: (_) => GameScreen(playerCount: playerCount, soundEnabled: _soundEnabled),
       ),
     );
   }
@@ -169,6 +169,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
           builder: (_) => GameScreen(
             playerCount: snapshot.playerCount!,
             savedSnapshot: snapshot,
+            soundEnabled: _soundEnabled,
           ),
         ),
       );
@@ -291,7 +292,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                     },
                   ),
                   const Text(
-                    'Audio playback will be connected when the audio assets are added.',
+                    'Soft card-swish and game sounds follow this setting.',
                     style: TextStyle(
                       color: Colors.white54,
                       fontSize: 11,
@@ -486,10 +487,12 @@ class GameScreen extends StatefulWidget {
     super.key,
     required this.playerCount,
     this.savedSnapshot,
+    this.soundEnabled = true,
   });
 
   final int playerCount;
   final GameStateSnapshot? savedSnapshot;
+  final bool soundEnabled;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -614,28 +617,32 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _playSound(String effect) async {
+    if (widget.soundEnabled) await _audio.play(effect);
+  }
+
   Future<void> _playCardFeedback(loris.Card card) async {
     if (card.isLoris) {
-      await _audio.play('loris');
+      await _playSound('loris');
       await HapticFeedback.heavyImpact();
     } else {
-      await _audio.play('card_place');
+      await _playSound('card_place');
       await HapticFeedback.lightImpact();
     }
   }
 
   Future<void> _playShuffleSound() async {
-    await _audio.play('shuffle');
+    await _playSound('shuffle');
     await HapticFeedback.lightImpact();
   }
 
   Future<void> _triggerSixteenCallEffect() async {
     if (!mounted) return;
     setState(() => _showSixteenCallEffect = true);
-    await _audio.play('loris');
+    await _playSound('loris');
     await HapticFeedback.heavyImpact();
     await Future.delayed(const Duration(milliseconds: 220));
-    await _audio.play('trump');
+    await _playSound('trump');
     await HapticFeedback.vibrate();
     await Future.delayed(const Duration(milliseconds: 1450));
     if (mounted) setState(() => _showSixteenCallEffect = false);
@@ -1201,7 +1208,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _collectingTrickWinner = null;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
-      await _audio.play('trick_win');
+      await _playSound('trick_win');
       await HapticFeedback.heavyImpact();
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
@@ -1247,11 +1254,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
       if (_finished) {
         if (_matchController.isMatchOver) {
-          await _audio.play('match_win');
+          await _playSound('match_win');
           await HapticFeedback.vibrate();
           if (mounted) setState(() => _winCelebration = 'MATCH CHAMPION!');
         } else {
-          await _audio.play('round_win');
+          await _playSound('round_win');
           await HapticFeedback.heavyImpact();
           if (mounted) setState(() => _winCelebration = 'ROUND WON!');
         }
