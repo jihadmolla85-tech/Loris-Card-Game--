@@ -36,8 +36,8 @@ class _Loris3DTableState extends State<Loris3DTable> {
     _three.scene = three.Scene();
     _three.scene.background = three.Color(0x120D12);
 
-    final camera = three.PerspectiveCamera(38, width / height, 0.1, 120);
-    camera.position.setValues(0, 11.5, 13.8);
+    final camera = three.PerspectiveCamera(52, width / height, 0.1, 120);
+    camera.position.setValues(0, 14, 22.5);
     camera.lookAt(_three.scene.position);
     _three.camera = camera;
 
@@ -71,7 +71,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
       }),
     );
     pedestal.position.y = 0.43;
-    pedestal.scale.setValues(1.5, 1, 0.92);
+    pedestal.scale.setValues(1.38, 1, 0.88);
     _three.scene.add(pedestal);
 
     final goldUnderRim = three.Mesh(
@@ -82,7 +82,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
       }),
     );
     goldUnderRim.position.y = 0.88;
-    goldUnderRim.scale.setValues(1.48, 1, 0.9);
+    goldUnderRim.scale.setValues(1.38, 1, 0.88);
     _three.scene.add(goldUnderRim);
 
     final tabletop = three.Mesh(
@@ -105,7 +105,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
     );
     outerGoldRing.rotation.x = math.pi / 2;
     outerGoldRing.position.y = 1.17;
-    outerGoldRing.scale.setValues(1.48, 0.9, 1);
+    outerGoldRing.scale.setValues(1.38, 0.88, 1);
     _three.scene.add(outerGoldRing);
 
     final innerGoldRing = three.Mesh(
