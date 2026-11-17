@@ -1921,7 +1921,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: cards.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 3),
+            separatorBuilder: (_, _) => const SizedBox(width: 3),
             itemBuilder: (context, index) => _buildCard(cards[index]),
           ),
         ),
@@ -1952,7 +1952,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: visible.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 5),
+              separatorBuilder: (_, _) => const SizedBox(width: 5),
               itemBuilder: (context, index) {
                 final card = visible[index];
                 final player = (_dealerFirstPlayerIndex + index) % widget.playerCount;
@@ -2335,7 +2335,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .7),
                       ),
                       if (plays.isEmpty)
-                        Text(_dealerDrawActive ? 'JACK TO BECOME DEALER' : _started ? 'PLAY A CARD' : (_isDealingCards ? 'CARDS IN MOTION' : _awaitingTrumpSelection ? 'CHOOSE TRUMP' : bidding != null ? 'BID OR PASS' : 'READY'), style: const TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold))
+                        Text(_dealerDrawActive ? 'JACK TO BECOME DEALER' : _started ? 'PLAY A CARD' : (_isDealingCards ? 'CARDS IN MOTION' : _awaitingTrumpSelection ? 'CHOOSE TRUMP' : 'BID OR PASS'), style: const TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold))
                       else
                         const SizedBox(height: 1),
                       Text(
