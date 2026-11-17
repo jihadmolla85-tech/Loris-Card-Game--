@@ -2052,7 +2052,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   color: Colors.white,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
-                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ],
