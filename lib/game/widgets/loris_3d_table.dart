@@ -351,7 +351,6 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     final gold = _pbr(0xD7AE59, metallic: 0.96, roughness: 0.2);
     for (var i = 0; i < count; i++) {
       final card = Node(name: 'played_card_$i');
-      final player = i < widget.playedBy.length ? widget.playedBy[i] : i;
       final offset = i - (count - 1) / 2;
       card.position = vm.Vector3(offset * 0.32, 0.69 + i * 0.002, offset * 0.12);
       card.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), offset * 0.12);
