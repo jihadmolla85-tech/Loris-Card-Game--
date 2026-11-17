@@ -1,7 +1,6 @@
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
-import 'game/widgets/loris_3d_table.dart';
 import 'game/engine/game_settings_service.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -551,6 +550,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   int _trickNumber = 0;
   List<TrickPlay> _revealedTrickPlays = [];
+  List<TrickPlay> _lastTrickPlays = [];
+  int? _lastTrickWinner;
   int? _collectingTrickWinner;
   loris.Card? _flyingCard;
   int? _flyingFromPlayer;
@@ -1240,6 +1241,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       final winnerPreview = round.trickEngine.winnerIndex;
       setState(() {
         _revealedTrickPlays = completedPlays;
+        _lastTrickPlays = completedPlays;
+        _lastTrickWinner = winnerPreview;
         _collectingTrickWinner = null;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
@@ -2188,6 +2191,20 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // PLAYING TABLE
   // ----------------------------------------------------------
 
+  void _showLastTrick() {
+    if (_lastTrickPlays.isEmpty) return;
+    showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      backgroundColor: const Color(0xFF35101A),
+      title: Text('LAST TRICK • ' + (_lastTrickWinner == null ? '' : _playerNames[_lastTrickWinner!]) + ' WON', style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 14, fontWeight: FontWeight.w900)),
+      content: Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 10, children: [
+        for (final play in _lastTrickPlays) Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(_playerNames[play.playerIndex], style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4), _buildCard(play.card, compact: true),
+        ]),
+      ]),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('CLOSE', style: TextStyle(color: Color(0xFFFFD978))))],
+    ));
+  }
   Widget _buildTableSurface(
     List<TrickPlay> plays,
     int? currentPlayer,
@@ -2236,62 +2253,41 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   ),
                 ),
               ),
-                // The display is the play surface; Flutter overlays keep controls interactive.
-                Positioned.fill(
-                  child: LorisTableSurface(
-                    playerCount: widget.playerCount,
-                    dealerDrawCards: dealerDrawCards,
-                    dealerDrawVisibleCount: dealerDrawVisibleCount,
-                    dealerDrawStartPlayer: dealerDrawStartPlayer,
-                    dealerDrawActive: dealerDrawActive,
-                    hands: _hands,
-                    dealing: _isDealingCards,
-                    dealerIndex: _dealerIndex ?? 0,
-                    playedCards: plays.map((play) => play.card).toList(),
-                    playedBy: plays.map((play) => play.playerIndex).toList(),
-                    flyingCard: _flyingCard,
-                    flyingFromPlayer: _flyingFromPlayer,
-                    flightStarted: _flightStarted,
-                  ),
-                ),
-                // Face-up trick cards stay readable above the stable 3D scene.
-                if (plays.isNotEmpty)
+                // Flat screen play surface; no 3D avatar renderer.
+                if (dealerDrawCards != null && dealerDrawVisibleCount > 0)
                   Positioned(
-                    top: tableHeight * .39,
-                    left: 4,
-                    right: 4,
+                    top: tableHeight * .38, left: 0, right: 0,
                     child: IgnorePointer(
-                      child: Center(
-                        child: Wrap(
-                          alignment: WrapAlignment.center,
-                          spacing: 5,
-                          runSpacing: 4,
-                          children: [
-                            for (final play in plays)
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xDD17243B),
-                                      borderRadius: BorderRadius.circular(5),
-                                      border: Border.all(color: const Color(0x99FFD978), width: .6),
-                                    ),
-                                    child: Text(
-                                      _playerNames[play.playerIndex],
-                                      style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w800),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  _buildCard(play.card, compact: true),
-                                ],
-                              ),
-                          ],
-                        ),
-                      ),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Text('DEALER DRAW', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 5),
+                        _buildCard(dealerDrawCards[dealerDrawVisibleCount - 1], compact: true),
+                      ]),
                     ),
                   ),
+                if (_isDealingCards)
+                  Positioned(top: tableHeight * .40, left: 0, right: 0, child: const IgnorePointer(child: Center(child: Text('DEALING CARDS…', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 11, fontWeight: FontWeight.w900))))),
+                if (plays.isNotEmpty)
+                  for (var playIndex = 0; playIndex < plays.length; playIndex++)
+                    Builder(builder: (context) {
+                      final play = plays[playIndex];
+                      final angles = widget.playerCount == 4 ? const [pi / 2, pi, -pi / 2, 0.0] : const [pi / 2, 2.59, 3.69, -pi / 2, -0.55, 0.55];
+                      final angle = angles[play.playerIndex];
+                      const cardWidth = 48.0, cardHeight = 68.0;
+                      final radiusX = constraints.maxWidth * (widget.playerCount == 6 ? .205 : .22);
+                      final radiusY = tableHeight * .17;
+                      final cardX = constraints.maxWidth / 2 + cos(angle) * radiusX - cardWidth / 2;
+                      final cardY = tableHeight * .51 + sin(angle) * radiusY - cardHeight / 2;
+                      return Positioned(
+                        left: cardX.clamp(0.0, constraints.maxWidth - cardWidth),
+                        top: cardY.clamp(0.0, tableHeight - cardHeight),
+                        child: IgnorePointer(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), decoration: BoxDecoration(color: const Color(0xEE17243B), borderRadius: BorderRadius.circular(5), border: Border.all(color: const Color(0xFFFFD978), width: .7)), child: Text(_playerNames[play.playerIndex], style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900))),
+                          const SizedBox(height: 2),
+                          Transform.rotate(angle: angle + pi / 2, child: _buildCard(play.card, compact: true)),
+                        ])),
+                      );
+                    }),
                 if (_flightStarted && _flyingCard != null && _flyingFromPlayer != null)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -2366,12 +2362,13 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Player busts are rendered as 3D meshes in LorisTableSurface.
+                          _AnimePortrait(seed: index, size: 34),
+                          const SizedBox(height: 3),
                           Text(
                             _playerNames[index],
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                           ),
                           Text(
                             'TEAM ${index.isEven ? "A" : "B"}',
@@ -2450,6 +2447,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     ),
                   ),
                 ),
+                if (_lastTrickPlays.isNotEmpty)
+                  Positioned(top: 34, right: 8, child: GestureDetector(
+                    onTap: _showLastTrick,
+                    child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5), decoration: BoxDecoration(color: const Color(0xEE17243B), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFFFD978), width: 1)), child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.history, size: 13, color: Color(0xFFFFE39A)), SizedBox(width: 4), Text('LAST TRICK', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900))])),
+                  )),
                 if (_playEffect != null)
                   Positioned(
                     top: tableHeight * .34,
@@ -2656,4 +2658,41 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
+}
+class _AnimePortrait extends StatelessWidget {
+  const _AnimePortrait({required this.seed, this.size = 36});
+  final int seed;
+  final double size;
+  @override Widget build(BuildContext context) => Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFFD978), width: 1.5), boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(0, 2))]), child: ClipOval(child: CustomPaint(painter: _AnimePortraitPainter(seed))));
+}
+
+class _AnimePortraitPainter extends CustomPainter {
+  const _AnimePortraitPainter(this.seed);
+  final int seed;
+  @override void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    const backgrounds = [0xFF6B91B5, 0xFFB97983, 0xFF6D9B83, 0xFF8B78B1, 0xFFB18A56, 0xFF568B98];
+    const hairs = [0xFF211A2B, 0xFF5A3026, 0xFF172C3E, 0xFF8A4C2C, 0xFF30243B, 0xFF60452C];
+    const eyes = [0xFF4B91B9, 0xFF6D9D61, 0xFF8D5C91, 0xFF9B684A, 0xFF3C7591, 0xFF9B7850];
+    final bg = Color(backgrounds[seed % backgrounds.length]), hc = Color(hairs[seed % hairs.length]);
+    final hair = Paint()..color = hc, skin = Paint()..color = const Color(0xFFFFD4B8),
+      iris = Paint()..color = Color(eyes[seed % eyes.length]), white = Paint()..color = const Color(0xFFFFF8EF),
+      dark = Paint()..color = const Color(0xFF29202A), blush = Paint()..color = const Color(0x55E87986);
+    canvas.drawRect(Offset.zero & size, Paint()..color = bg);
+    canvas.drawOval(Rect.fromLTWH(w*.17,h*.08,w*.66,h*.80), hair);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(w*.25,h*.25,w*.50,h*.54), Radius.circular(w*.22)), skin);
+    final fringe = Path()..moveTo(w*.18,h*.40)..quadraticBezierTo(w*.16,h*.08,w*.50,h*.12)..quadraticBezierTo(w*.82,h*.08,w*.83,h*.42)..lineTo(w*.70,h*.34)..lineTo(w*.61,h*.48)..lineTo(w*.50,h*.34)..lineTo(w*.37,h*.48)..lineTo(w*.29,h*.34)..close();
+    canvas.drawPath(fringe, hair);
+    for (final x in [w*.38,w*.62]) {
+      canvas.drawOval(Rect.fromCenter(center: Offset(x,h*.53),width:w*.15,height:h*.17), white);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x,h*.54),width:w*.105,height:h*.14), iris);
+      canvas.drawOval(Rect.fromCenter(center: Offset(x,h*.55),width:w*.052,height:h*.10), dark);
+      canvas.drawCircle(Offset(x-w*.018,h*.51),w*.025,white);
+      canvas.drawLine(Offset(x-w*.09,h*.43),Offset(x+w*.07,h*.42),Paint()..color=hc..strokeWidth=w*.035..strokeCap=StrokeCap.round);
+    }
+    canvas.drawOval(Rect.fromLTWH(w*.25,h*.62,w*.14,h*.06),blush);
+    canvas.drawOval(Rect.fromLTWH(w*.61,h*.62,w*.14,h*.06),blush);
+    canvas.drawLine(Offset(w*.46,h*.69),Offset(w*.54,h*.69),Paint()..color=const Color(0xFFB45F67)..strokeWidth=w*.025..strokeCap=StrokeCap.round);
+  }
+  @override bool shouldRepaint(covariant _AnimePortraitPainter oldDelegate) => oldDelegate.seed != seed;
 }
