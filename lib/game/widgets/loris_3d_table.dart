@@ -8,11 +8,15 @@ import '../models/loris_card.dart' as loris;
 /// Native 3D LORIS table scene. All visible table props in this layer are
 /// actual meshes rendered with perspective, PBR materials and real lighting.
 class LorisTableSurface extends StatefulWidget {
-  const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const []});
+  const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const [], this.playedBy = const [], this.flyingCard, this.flyingFromPlayer, this.flightStarted = false});
 
   final int playerCount;
   final List<List<loris.Card>>? hands;
   final List<loris.Card> playedCards;
+  final List<int> playedBy;
+  final loris.Card? flyingCard;
+  final int? flyingFromPlayer;
+  final bool flightStarted;
 
   @override
   State<LorisTableSurface> createState() => _LorisTableSurfaceState();
@@ -22,6 +26,8 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   late Scene _scene;
   String? _lastHandsSignature;
   bool _ready = false;
+  Node? _flyingNode;
+  Duration? _flightStartElapsed;
   Object? _loadError;
 
   @override
@@ -37,7 +43,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
         ? 'undealt'
         : hands.map((hand) => hand.map((card) => card.toString()).join(',')).join('|');
     final playedSignature = widget.playedCards.map((card) => card.toString()).join(',');
-    return '$handSignature#played:$playedSignature';
+    return '$handSignature#played:$playedSignature#by:${widget.playedBy.join(',')}#flight:${widget.flyingCard}:${widget.flyingFromPlayer}:${widget.flightStarted}';
   }
 
   @override
@@ -108,6 +114,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
       _addPlayers();
       _addThreeDimensionalCards();
       _addPlayedCards();
+      _addFlyingCard();
 
       if (mounted) setState(() => _ready = true);
     } catch (error) {
@@ -344,6 +351,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     final gold = _pbr(0xD7AE59, metallic: 0.96, roughness: 0.2);
     for (var i = 0; i < count; i++) {
       final card = Node(name: 'played_card_$i');
+      final player = i < widget.playedBy.length ? widget.playedBy[i] : i;
       final offset = i - (count - 1) / 2;
       card.position = vm.Vector3(offset * 0.32, 0.69 + i * 0.002, offset * 0.12);
       card.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), offset * 0.12);
@@ -353,6 +361,61 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
       _addCardFace(card, cards[i], gold);
       _scene.add(card);
     }
+  }
+
+  void _addFlyingCard() {
+    final value = widget.flyingCard;
+    final seat = widget.flyingFromPlayer;
+    if (value == null || seat == null || !widget.flightStarted) return;
+
+    final count = widget.playerCount == 4 ? 4 : 6;
+    final angle = math.pi / 2 + (math.pi * 2 * seat / count);
+    final start = vm.Vector3(math.cos(angle) * 1.48, 0.76, math.sin(angle) * 1.04);
+    final playedCount = widget.playedCards.length;
+    final offset = playedCount - (playedCount - 1) / 2;
+    final target = vm.Vector3(offset * 0.32, 0.70, offset * 0.12);
+
+    final card = Node(name: '3d_flying_card');
+    card.position = start;
+    card.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), angle + math.pi);
+    final back = _pbr(0x8B1E30, metallic: 0.25, roughness: 0.35);
+    final face = _pbr(0xFFF7E8, roughness: 0.45);
+    final gold = _pbr(0xD7AE59, metallic: 0.96, roughness: 0.2);
+    card.add(_child(CuboidGeometry(vm.Vector3(0.39, 0.025, 0.54)), back, vm.Vector3.zero()));
+    card.add(_child(CuboidGeometry(vm.Vector3(0.372, 0.004, 0.522)), gold, vm.Vector3(0, 0.014, 0)));
+    card.add(_child(CuboidGeometry(vm.Vector3(0.36, 0.004, 0.51)), face, vm.Vector3(0, 0.017, 0)));
+    _addCardFace(card, value, gold);
+    _scene.add(card);
+
+    _flyingNode = card;
+    _flightStartElapsed = null;
+    _flightStartPosition = start;
+    _flightTargetPosition = target;
+    _flightStartAngle = angle + math.pi;
+  }
+
+  vm.Vector3? _flightStartPosition;
+  vm.Vector3? _flightTargetPosition;
+  double _flightStartAngle = 0;
+
+  void _tickCardFlight(Duration elapsed, double deltaSeconds) {
+    final node = _flyingNode;
+    final start = _flightStartPosition;
+    final target = _flightTargetPosition;
+    if (node == null || start == null || target == null) return;
+
+    _flightStartElapsed ??= elapsed;
+    final seconds = (elapsed - _flightStartElapsed!).inMicroseconds / 1000000;
+    final raw = (seconds / 0.48).clamp(0.0, 1.0);
+    final eased = 1 - math.pow(1 - raw, 3).toDouble();
+    final arc = math.sin(raw * math.pi) * 0.42;
+    node.position = vm.Vector3(
+      start.x + (target.x - start.x) * eased,
+      start.y + (target.y - start.y) * eased + arc,
+      start.z + (target.z - start.z) * eased,
+    );
+    final rotation = _flightStartAngle * (1 - eased);
+    node.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), rotation);
   }
 
   Node _child(
@@ -411,6 +474,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
         fovNear: 0.05,
         fovFar: 100,
       ),
+      onTick: _tickCardFlight,
     );
   }
 }
