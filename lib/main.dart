@@ -363,7 +363,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   const Text(
                     'THE ULTIMATE CARD GAME',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Color(0xFF5B351F),
                       letterSpacing: 3,
                       fontSize: 12,
                     ),
@@ -440,8 +440,8 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
               icon: Icon(icon),
               label: Text(label),
               style: OutlinedButton.styleFrom(
-                foregroundColor: LorisApp.gold,
-                side: const BorderSide(color: LorisApp.gold),
+                foregroundColor: const Color(0xFF5B351F),
+                side: const BorderSide(color: Color(0xFF8A552E), width: 1.4),
               ),
             ),
     );
