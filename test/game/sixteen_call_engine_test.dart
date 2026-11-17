@@ -148,8 +148,7 @@ void main() {
     test('Losing one trick ends round immediately', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(0);
-      engine.call16(callerPlayerIndex: 0);
+      engine.call16(callerPlayerIndex: 2);
 
       engine.recordTrickWinner(1);
 
@@ -165,8 +164,7 @@ void main() {
     test('Cannot play after failed 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(0);
-      engine.call16(callerPlayerIndex: 0);
+      engine.call16(callerPlayerIndex: 2);
       engine.recordTrickWinner(1);
 
       expect(
@@ -200,11 +198,10 @@ void main() {
     test('Rejects a second 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(0);
-      engine.call16(callerPlayerIndex: 0);
+      engine.call16(callerPlayerIndex: 2);
 
       expect(
-        () => engine.call16(callerPlayerIndex: 0),
+        () => engine.call16(callerPlayerIndex: 2),
         throwsStateError,
       );
     });
