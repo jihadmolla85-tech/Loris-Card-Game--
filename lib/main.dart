@@ -1888,7 +1888,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       ),
       child: Column(
         children: [
-          const Text('SELECT TRUMP CARD', style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12)),
+          const Text('SELECT TRUMP CARD OR JOKER', style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12)),
           const SizedBox(height: 5),
           Wrap(
             alignment: WrapAlignment.center,
@@ -2445,7 +2445,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
-                if (_trumpSuit != null && _trumpCard != null)
+                if (_trumpCard != null)
                   Positioned(
                     right: 10,
                     bottom: 8,
