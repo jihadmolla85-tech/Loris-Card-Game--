@@ -2218,323 +2218,217 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         final tableHeight = constraints.maxHeight;
         final seatWidth = widget.playerCount == 6 ? 78.0 : 88.0;
 
-        return Container(
+        return SizedBox(
           width: double.infinity,
           height: tableHeight,
-          margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 1),
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(150),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFE9A3), Color(0xFF9A642A), Color(0xFFFFD36A), Color(0xFF57351D)],
-            ),
-            boxShadow: const [
-              BoxShadow(color: Colors.black87, blurRadius: 18, offset: Offset(0, 9)),
-              BoxShadow(color: Color(0x995B3518), blurRadius: 0, spreadRadius: 1),
-            ],
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(145),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF9A2938), Color(0xFF741A2A), Color(0xFF4A0D1B)],
-              ),
-              border: Border.all(color: const Color(0xFFFFE6A0), width: 1.5),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                // The table mesh is rendered by Three.js in real perspective 3D.
-                // Flutter keeps the cards, avatars and controls interactive above it.
-                Positioned.fill(
-                  child: LorisTableSurface(
-                    playerCount: widget.playerCount,
-                    dealerDrawCards: dealerDrawCards,
-                    dealerDrawVisibleCount: dealerDrawVisibleCount,
-                    dealerDrawStartPlayer: dealerDrawStartPlayer,
-                    dealerDrawActive: dealerDrawActive,
-                    hands: _hands,
-                    dealing: _isDealingCards,
-                    dealerIndex: _dealerIndex ?? 0,
-                    playedCards: plays.map((play) => play.card).toList(),
-                    playedBy: plays.map((play) => play.playerIndex).toList(),
-                    flyingCard: _flyingCard,
-                    flyingFromPlayer: _flyingFromPlayer,
-                    flightStarted: _flightStarted,
-                  ),
-                ),
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(130),
-                        border: Border.all(color: const Color(0x55E8D09A), width: 1),
-                        gradient: const RadialGradient(
-                          center: Alignment(0, -.25),
-                          radius: 1.15,
-                          colors: [Color(0x0016795A), Color(0x00032D25)],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                for (var index = 0; index < widget.playerCount; index++)
-                  Align(
-                    alignment: seatAlignments[index],
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOutCubic,
-                      width: seatWidth,
-                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(13),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: _collectingTrickWinner == index
-                              ? const [Color(0xFFFFE7A0), Color(0xFFB77A2D), Color(0xFF63351C)]
-                              : currentPlayer == index
-                                  ? const [Color(0xFF314F70), Color(0xFF152A45)]
-                                  : const [Color(0xFF263B55), Color(0xFF0A1729)],
-                        ),
-                        border: Border.all(
-                          color: _collectingTrickWinner == index || currentPlayer == index
-                              ? const Color(0xFFFFE6A0)
-                              : const Color(0xFF9B855C),
-                          width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.6 : .8,
-                        ),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: 8, offset: const Offset(0, 4)),
-                          if (_collectingTrickWinner == index)
-                            const BoxShadow(color: Color(0x99FFD76B), blurRadius: 18, spreadRadius: 2),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Player busts are rendered as 3D meshes in LorisTableSurface.
-                          Text(
-                            _playerNames[index],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
-                          ),
-                          Text(
-                            'TEAM ${index.isEven ? "A" : "B"}',
-                            style: const TextStyle(color: Color(0xFFFFD978), fontSize: 9, fontWeight: FontWeight.bold),
-                          ),
-                          if (_dealerIndex == index)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 2),
-                              child: Text('DEALER', style: TextStyle(color: LorisApp.gold, fontSize: 9, fontWeight: FontWeight.w900)),
-                            ),
-                          if (currentPlayer == index)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 2),
-                              child: Icon(Icons.circle, size: 6, color: Color(0xFFFFE7A0)),
-                            ),
-                          if (index != 0)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (var back = 0; back < (handCounts[index] > 0 ? 3 : 0); back++)
-                                    Transform.translate(
-                                      offset: Offset(back * -3.0, 0),
-                                      child: Container(
-                                        width: 7,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(1.5),
-                                          gradient: const LinearGradient(colors: [Color(0xFFB63A45), Color(0xFF5A1020)]),
-                                          border: Border.all(color: const Color(0xFFFFD978), width: .5),
-                                        ),
-                                      ),
-                                    ),
-                                  const SizedBox(width: 3),
-                                  Text('${handCounts[index]}', style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          if (_collectingTrickWinner == index)
-                            const Text('TRICK WON', style: TextStyle(color: Color(0xFFFFE7A0), fontSize: 9, fontWeight: FontWeight.w900)),
-                        ],
-                      ),
-                    ),
-                  ),
-                Positioned(
-                  top: 7,
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: const Color(0xCC260914),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0x66F5D78C), width: .7),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        child: Text(
-                          _dealerDrawActive
-                              ? 'DEALER DRAW'
-                              : _isDealingCards
-                                  ? 'DEALING  $_dealtCardCount/${widget.playerCount * 8}'
-                                  : !_started
-                                      ? _awaitingTrumpSelection
-                                          ? 'CHOOSE TRUMP'
-                                          : currentPlayer == null
-                                              ? 'BIDDING'
-                                              : 'BID • ${_playerNames[currentPlayer]}'
-                                      : currentPlayer == null
-                                          ? 'ROUND COMPLETE'
-                                          : 'TURN • ${_playerNames[currentPlayer]}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .35),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (_playEffect != null)
-                  Positioned(
-                    top: tableHeight * .34,
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: _playEffect == 'LORIS!'
-                              ? const Color(0xFF6C3BC1).withValues(alpha: .94)
-                              : const Color(0xFFD6B15E).withValues(alpha: .96),
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, spreadRadius: 2)],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                          child: Text(
-                            _playEffect!,
-                            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 2),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (_winCelebration != null)
-                  Positioned(
-                    top: tableHeight * .27,
-                    left: 0,
-                    right: 0,
-                    child: IgnorePointer(
-                      child: Center(
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween(begin: .65, end: 1),
-                          duration: const Duration(milliseconds: 420),
-                          curve: Curves.elasticOut,
-                          builder: (context, scale, child) =>
-                              Transform.scale(scale: scale, child: child),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 9),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [Color(0xFFFFE9A3), Color(0xFFB77A2D)]),
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: Colors.white, width: 1),
-                              boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 18, spreadRadius: 2)],
-                            ),
-                            child: Text(
-                              _winCelebration!,
-                              style: const TextStyle(color: Color(0xFF27190B), fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (_showSixteenCallEffect)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: const BoxDecoration(
-                          gradient: RadialGradient(
-                            radius: 0.95,
-                            colors: [Color(0xB8FFD778), Color(0x88A51E32), Color(0xAA260611)],
-                            stops: [0, 0.48, 1],
-                          ),
-                        ),
-                        child: Center(
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0.55, end: 1),
-                            duration: const Duration(milliseconds: 720),
-                            curve: Curves.elasticOut,
-                            builder: (context, scale, child) =>
-                                Transform.scale(scale: scale, child: child),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 18),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [Color(0xFFFFE9A8), Color(0xFFE3A83E), Color(0xFF9B2432)],
-                                ),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: const Color(0xFFFFF4CF), width: 2.5),
-                                boxShadow: const [
-                                  BoxShadow(color: Color(0xDDFFD36A), blurRadius: 34, spreadRadius: 8),
-                                  BoxShadow(color: Colors.black87, blurRadius: 22, offset: Offset(0, 9)),
-                                ],
-                              ),
-                              child: const Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.bolt, color: Color(0xFF641323), size: 38),
-                                  SizedBox(height: 3),
-                                  Text('SIXTEEN CALL', style: TextStyle(
-                                    color: Color(0xFF4B0C18), fontSize: 24,
-                                    fontWeight: FontWeight.w900, letterSpacing: 2.4)),
-                                  SizedBox(height: 5),
-                                  Text('EVERY REMAINING TRICK', style: TextStyle(
-                                    color: Color(0xFF5A1720), fontSize: 9,
-                                    fontWeight: FontWeight.w900, letterSpacing: 1.7)),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                if (_trumpCard != null)
-                  Positioned(
-                    right: 10,
-                    bottom: 8,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xDD17243B),
-                            borderRadius: BorderRadius.circular(7),
-                            border: Border.all(color: LorisApp.gold, width: 1),
-                          ),
-                          child: const Text(
-                            'JOKER',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        _buildCard(_trumpCard!, compact: true),
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              // The display itself is the play surface: no oval tabletop,
+              // raised rim, pedestal or separate table prop.
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment(0, -.22),
+                      radius: 1.18,
+                      colors: [
+                        Color(0xFF8E2638),
+                        Color(0xFF641626),
+                        Color(0xFF310B17),
                       ],
                     ),
                   ),
-              ],
-            ),
+                ),
+              ),
+              Positioned.fill(
+                child: LorisTableSurface(
+                  playerCount: widget.playerCount,
+                  dealerDrawCards: dealerDrawCards,
+                  dealerDrawVisibleCount: dealerDrawVisibleCount,
+                  dealerDrawStartPlayer: dealerDrawStartPlayer,
+                  dealerDrawActive: dealerDrawActive,
+                  hands: _hands,
+                  dealing: _isDealingCards,
+                  dealerIndex: _dealerIndex ?? 0,
+                  playedCards: plays.map((play) => play.card).toList(),
+                  playedBy: plays.map((play) => play.playerIndex).toList(),
+                  flyingCard: _flyingCard,
+                  flyingFromPlayer: _flyingFromPlayer,
+                  flightStarted: _flightStarted,
+                ),
+              ),
+              for (var index = 0; index < widget.playerCount; index++)
+                Align(
+                  alignment: seatAlignments[index],
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                    width: seatWidth,
+                    padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(13),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: _collectingTrickWinner == index
+                            ? const [Color(0xFFFFE7A0), Color(0xFFB77A2D), Color(0xFF63351C)]
+                            : currentPlayer == index
+                                ? const [Color(0xFF314F70), Color(0xFF152A45)]
+                                : const [Color(0xFF263B55), Color(0xFF0A1729)],
+                      ),
+                      border: Border.all(
+                        color: _collectingTrickWinner == index || currentPlayer == index
+                            ? const Color(0xFFFFE6A0)
+                            : const Color(0xFF9B855C),
+                        width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.6 : .8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: 8, offset: const Offset(0, 4)),
+                        if (_collectingTrickWinner == index)
+                          const BoxShadow(color: Color(0x99FFD76B), blurRadius: 18, spreadRadius: 2),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _playerNames[index],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900),
+                        ),
+                        Text(
+                          'TEAM ${index.isEven ? "A" : "B"}',
+                          style: const TextStyle(color: Color(0xFFFFD978), fontSize: 9, fontWeight: FontWeight.bold),
+                        ),
+                        if (_dealerIndex == index)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 2),
+                            child: Text('DEALER', style: TextStyle(color: LorisApp.gold, fontSize: 9, fontWeight: FontWeight.w900)),
+                          ),
+                        if (currentPlayer == index)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 2),
+                            child: Icon(Icons.circle, size: 6, color: Color(0xFFFFE7A0)),
+                          ),
+                        if (index != 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (var back = 0; back < (handCounts[index] > 0 ? 3 : 0); back++)
+                                  Transform.translate(
+                                    offset: Offset(back * -3.0, 0),
+                                    child: Container(
+                                      width: 7,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(1.5),
+                                        gradient: const LinearGradient(colors: [Color(0xFFB63A45), Color(0xFF5A1020)]),
+                                        border: Border.all(color: const Color(0xFFFFD978), width: .5),
+                                      ),
+                                    ),
+                                  ),
+                                const SizedBox(width: 3),
+                                Text('${handCounts[index]}', style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        if (_collectingTrickWinner == index)
+                          const Text('TRICK WON', style: TextStyle(color: Color(0xFFFFE7A0), fontSize: 9, fontWeight: FontWeight.w900)),
+                      ],
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: 7,
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xCC260914),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0x66F5D78C), width: .7),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      child: Text(
+                        _dealerDrawActive
+                            ? 'DEALER DRAW'
+                            : _isDealingCards
+                                ? 'DEALING  $_dealtCardCount/${widget.playerCount * 8}'
+                                : !_started
+                                    ? _awaitingTrumpSelection
+                                        ? 'CHOOSE TRUMP'
+                                        : currentPlayer == null
+                                            ? 'BIDDING'
+                                            : 'BID • ${_playerNames[currentPlayer]}'
+                                    : currentPlayer == null
+                                        ? 'ROUND COMPLETE'
+                                        : 'TURN • ${_playerNames[currentPlayer]}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .35),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (_playEffect != null)
+                Positioned(
+                  top: tableHeight * .34,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: _playEffect == 'LORIS!'
+                            ? const Color(0xFF6C3BC1).withValues(alpha: .94)
+                            : const Color(0xFFD6B15E).withValues(alpha: .96),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, spreadRadius: 2)],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                        child: Text(
+                          _playEffect!,
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_winCelebration != null)
+                Positioned(
+                  top: tableHeight * .27,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Center(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: .65, end: 1),
+                        duration: const Duration(milliseconds: 420),
+                        curve: Curves.elasticOut,
+                        builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: const Color(0xE8260914),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: LorisApp.gold, width: 1.4),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                            child: Text(
+                              _winCelebration!,
+                              style: const TextStyle(color: LorisApp.gold, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 1.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },

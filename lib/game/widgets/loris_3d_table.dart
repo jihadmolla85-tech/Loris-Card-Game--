@@ -5,8 +5,8 @@ import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 import '../models/loris_card.dart' as loris;
 
-/// Native 3D LORIS table scene. All visible table props in this layer are
-/// actual meshes rendered with perspective, PBR materials and real lighting.
+/// Full-screen 3D LORIS play surface with compact player portraits and cards.
+/// The phone display itself is the table; no separate table prop is rendered.
 class LorisTableSurface extends StatefulWidget {
   const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const [], this.playedBy = const [], this.flyingCard, this.flyingFromPlayer, this.flightStarted = false, this.dealing = false, this.dealerIndex = 0, this.dealerDrawCards, this.dealerDrawVisibleCount = 0, this.dealerDrawStartPlayer = 0, this.dealerDrawActive = false});
 
@@ -103,43 +103,12 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
         shadowSoftness: 0.12,
       );
 
-      // Dark studio floor and the heavy, lacquered table body.
+      // Infinite burgundy play plane: the phone display is the table.
+      // No raised tabletop, rim, legs, pedestal or surrounding studio floor.
       _addMesh(
-        CuboidGeometry(vm.Vector3(200, 0.12, 200)),
-        _pbr(0x160D16, roughness: 0.92),
-        vm.Vector3(0, -0.72, 0),
-      );
-      _addMesh(
-        CuboidGeometry(vm.Vector3(4.55, 0.30, 2.92)),
-        _pbr(0x4B1821, metallic: 0.42, roughness: 0.28),
-        vm.Vector3(0, 0.38, 0),
-      );
-      _addMesh(
-        CuboidGeometry(vm.Vector3(4.42, 0.035, 2.80)),
-        _pbr(0x741B2B, roughness: 0.82),
+        CuboidGeometry(vm.Vector3(200, 0.06, 200)),
+        _pbr(0x681727, roughness: 0.84),
         vm.Vector3(0, 0.55, 0),
-      );
-      _addMesh(
-        CuboidGeometry(vm.Vector3(4.48, 0.045, 2.86)),
-        _pbr(0xD5A64A, metallic: 0.94, roughness: 0.2),
-        vm.Vector3(0, 0.51, 0),
-      );
-      _addMesh(
-        CuboidGeometry(vm.Vector3(4.36, 0.04, 2.74)),
-        _pbr(0x761C2C, roughness: 0.88),
-        vm.Vector3(0, 0.575, 0),
-      );
-
-      // Pedestal and foot: separate 3D meshes, not a painted border.
-      _addMesh(
-        CuboidGeometry(vm.Vector3(0.52, 0.88, 0.52)),
-        _pbr(0x6C2630, metallic: 0.55, roughness: 0.3),
-        vm.Vector3(0, -0.12, 0),
-      );
-      _addMesh(
-        CuboidGeometry(vm.Vector3(1.25, 0.12, 0.92)),
-        _pbr(0xB98736, metallic: 0.9, roughness: 0.22),
-        vm.Vector3(0, -0.61, 0),
       );
 
       _addPlayers();
@@ -772,9 +741,9 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     return SceneView(
       _scene,
       camera: PerspectiveCamera(
-        position: vm.Vector3(0, 5.7, 8.1),
-        target: vm.Vector3(0, 0.38, 0),
-        fovRadiansY: 0.72,
+        position: vm.Vector3(0, 4.9, 8.9),
+        target: vm.Vector3(0, 0.62, 0),
+        fovRadiansY: 0.84,
         fovNear: 0.05,
         fovFar: 100,
       ),
