@@ -600,7 +600,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _flightStarted = true;
       _playEffect = card.isLoris ? 'LORIS!' : null;
     });
-    await Future.delayed(const Duration(milliseconds: 680));
+    await Future.delayed(const Duration(milliseconds: 800));
     if (!mounted) return;
     setState(() {
       _flyingCard = null;
@@ -2013,7 +2013,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
               Column(
                 children: [
-                  const Text('TRUMP', style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold)),
+                  const Text('TRUMP', style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.bold)),
                   Text(
                     _trumpSuit == null ? '—' : _suitSymbol(_trumpSuit),
                     style: TextStyle(color: _trumpSuit != null && _isRedSuit(_trumpSuit) ? const Color(0xFFFF737D) : LorisApp.gold, fontSize: 19, fontWeight: FontWeight.w900),
@@ -2032,13 +2032,13 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   _status,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.w600),
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                 ),
               ),
               if (_dealerIndex != null)
                 Text(
-                  'DEALER  ${_playerNames[_dealerIndex!]}',
-                  style: const TextStyle(color: LorisApp.gold, fontSize: 8, fontWeight: FontWeight.w900),
+                  '${_dealerDrawActive ? "STARTER" : "DEALER"}  ${_playerNames[_dealerIndex!]}',
+                  style: const TextStyle(color: LorisApp.gold, fontSize: 10, fontWeight: FontWeight.w900),
                 ),
             ],
           ),
@@ -2252,6 +2252,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             'TEAM ${index.isEven ? "A" : "B"}',
                             style: const TextStyle(color: Color(0xFFFFD978), fontSize: 9, fontWeight: FontWeight.bold),
                           ),
+                          if (_dealerIndex == index)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Text('DEALER', style: TextStyle(color: LorisApp.gold, fontSize: 9, fontWeight: FontWeight.w900)),
+                            ),
                           if (currentPlayer == index)
                             Container(
                               margin: const EdgeInsets.only(top: 2),
