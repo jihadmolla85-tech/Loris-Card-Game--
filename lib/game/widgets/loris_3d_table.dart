@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:three_js/three_js.dart' as three;
 
 /// A real-time Three.js scene used as the LORIS table surface.
@@ -34,7 +34,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
     final height = math.max(1.0, _three.height);
 
     _three.scene = three.Scene();
-    _three.scene.background = three.Color(0x120D12);
+    _three.scene.background = three.Color(0xFFE7C78D);
 
     final camera = three.PerspectiveCamera(52, width / height, 0.1, 120);
     camera.position.setValues(0, 14, 22.5);
@@ -54,7 +54,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
     final floor = three.Mesh(
       three.PlaneGeometry(90, 90),
       three.MeshPhongMaterial.fromMap({
-        'color': 0x170F16,
+        'color': 0xFFD7B77A,
         'shininess': 18,
       }),
     );
@@ -66,7 +66,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
     final pedestal = three.Mesh(
       three.CylinderGeometry(2.5, 3.2, 0.82, 64),
       three.MeshPhongMaterial.fromMap({
-        'color': 0x32151D,
+        'color': 0xFF6B351F,
         'shininess': 65,
       }),
     );
@@ -88,7 +88,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
     final tabletop = three.Mesh(
       three.CylinderGeometry(5.72, 5.72, 0.22, 96),
       three.MeshPhongMaterial.fromMap({
-        'color': 0x07513B,
+        'color': 0xFF0B6849,
         'shininess': 92,
       }),
     );
@@ -137,7 +137,7 @@ class _Loris3DTableState extends State<Loris3DTable> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          const ColoredBox(color: Color(0xFF120D12)),
+          const ColoredBox(color: Color(0xFFE7C78D)),
           _three.build(),
           if (!_ready)
             const Center(
