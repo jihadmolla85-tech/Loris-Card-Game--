@@ -178,18 +178,8 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
       final dark = _pbr(0x211820, roughness: 0.7);
       final mouth = _pbr(0x873C43, roughness: 0.6);
 
-      // Individual 3D chair: padded seat, curved-looking back and gold details.
-      final chairNode = Node(name: 'player_chair_${i + 1}');
-      chairNode.add(_child(CuboidGeometry(vm.Vector3(0.76, 0.12, 0.66)), chair, vm.Vector3(0, 0.02, 0.34)));
-      chairNode.add(_child(CuboidGeometry(vm.Vector3(0.76, 0.62, 0.12)), chair, vm.Vector3(0, 0.36, 0.64)));
-      chairNode.add(_child(CuboidGeometry(vm.Vector3(0.82, 0.035, 0.035)), trim, vm.Vector3(0, 0.65, 0.57)));
-      for (final side in [-1.0, 1.0]) {
-        chairNode.add(_child(CuboidGeometry(vm.Vector3(0.07, 0.42, 0.58)), chair, vm.Vector3(side * 0.39, 0.22, 0.25)));
-        chairNode.add(_child(CuboidGeometry(vm.Vector3(0.07, 0.56, 0.07)), trim, vm.Vector3(side * 0.39, 0.33, 0.61)));
-      }
-      avatar.add(chairNode);
-
-      // Full seated silhouette: torso, shoulders, lapels, bent arms and hands.
+      // Compact waist-up portrait only: no chair or lower-body geometry.
+      // Small half-portrait silhouette: head, shoulders, upper torso and hands.
       avatar.add(_child(CapsuleGeometry(radius: 0.30, height: 0.58), outfit, vm.Vector3(0, 0.39, 0.02)));
       avatar.add(_child(SphereGeometry(radius: 0.245, segments: 24, rings: 14), outfit, vm.Vector3(0, 0.59, 0.015)));
       avatar.add(_child(CapsuleGeometry(radius: 0.078, height: 0.26), skin, vm.Vector3(0, 0.79, -0.005)));
