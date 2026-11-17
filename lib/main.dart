@@ -1952,38 +1952,49 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             style: TextStyle(color: Colors.white, fontSize: 12),
           ),
           Expanded(
-            child: _buildTableSurface(const <TrickPlay>[], null, List<int>.filled(widget.playerCount, 0)),
+            child: _buildTableSurface(
+              const <TrickPlay>[],
+              null,
+              List<int>.filled(widget.playerCount, 0),
+              dealerDrawCards: cards,
+              dealerDrawVisibleCount: _dealerRevealVisibleCount,
+              dealerDrawStartPlayer: _dealerFirstPlayerIndex,
+              dealerDrawActive: _dealerDrawActive,
+            ),
           ),
           SizedBox(
-            height: 112,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: visible.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 5),
-              itemBuilder: (context, index) {
-                final card = visible[index];
-                final player = (_dealerFirstPlayerIndex + index) % widget.playerCount;
-                final isJack = !card.isLoris && card.rank == 11;
-                return Container(
-                  width: 72,
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: isJack ? const Color(0xFFFFD978) : const Color(0xFFFFF8E9),
-                    borderRadius: BorderRadius.circular(9),
-                    border: Border.all(color: isJack ? Colors.white : LorisApp.gold, width: isJack ? 3 : 1.2),
-                    boxShadow: isJack ? const [BoxShadow(color: LorisApp.gold, blurRadius: 16)] : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_cardName(card), style: TextStyle(color: isJack ? const Color(0xFF4B1821) : Colors.black87, fontWeight: FontWeight.w900, fontSize: 16)),
-                      const SizedBox(height: 4),
-                      Text(_playerNames[player], maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: isJack ? const Color(0xFF4B1821) : Colors.black87, fontSize: 10, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                );
-              },
+            height: 74,
+            child: Center(
+              child: visible.isEmpty
+                  ? const Text(
+                      'The dealer is drawing the first card...',
+                      style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                    )
+                  : Builder(
+                      builder: (context) {
+                        final index = visible.length - 1;
+                        final card = visible.last;
+                        final player = (_dealerFirstPlayerIndex + index) % widget.playerCount;
+                        final isJack = !card.isLoris && card.rank == 11;
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${_playerNames[player]} drew ${_cardName(card)}',
+                              style: TextStyle(
+                                color: isJack ? LorisApp.gold : Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              isJack ? 'JACK FOUND — DEALER SELECTED' : 'Next draw moves clockwise',
+                              style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w700),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
             ),
           ),
           const SizedBox(height: 5),
@@ -2126,8 +2137,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Widget _buildTableSurface(
     List<TrickPlay> plays,
     int? currentPlayer,
-    List<int> handCounts,
-  ) {
+    List<int> handCounts, {
+    List<loris.Card>? dealerDrawCards,
+    int dealerDrawVisibleCount = 0,
+    int dealerDrawStartPlayer = 0,
+    bool dealerDrawActive = false,
+  }) {
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
             Alignment(0, .82),
@@ -2188,6 +2203,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 Positioned.fill(
                   child: LorisTableSurface(
                     playerCount: widget.playerCount,
+                    dealerDrawCards: dealerDrawCards,
+                    dealerDrawVisibleCount: dealerDrawVisibleCount,
+                    dealerDrawStartPlayer: dealerDrawStartPlayer,
+                    dealerDrawActive: dealerDrawActive,
                     hands: _hands,
                     dealing: _isDealingCards,
                     dealerIndex: _dealerIndex ?? 0,
