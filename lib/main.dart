@@ -349,7 +349,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                       border: Border.all(color: Color(0xFFFFF5D8), width: 3),
                       boxShadow: const [BoxShadow(color: Color(0x66834B1C), blurRadius: 22, offset: Offset(0, 9))],
                     ),
-                    child: const Icon(Icons.owl, size: 68, color: Color(0xFF6B351D)),
+                    child: const Icon(Icons.auto_awesome, size: 68, color: Color(0xFF6B351D)),
                   ),
                   const SizedBox(height: 18),
                   const Text(
