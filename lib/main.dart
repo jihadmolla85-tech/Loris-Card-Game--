@@ -1633,12 +1633,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: LinearProgressIndicator(
-                          value: _dealtCardCount / (widget.playerCount * 8),
-                          minHeight: 2,
-                          backgroundColor: Colors.white24,
-                          color: LorisApp.gold,
-                        ),
-                      ],
+                      value: _dealtCardCount / (widget.playerCount * 8),
+                      minHeight: 2,
+                      backgroundColor: Colors.white24,
+                      color: LorisApp.gold,
                     ),
                   ),
                 Expanded(
