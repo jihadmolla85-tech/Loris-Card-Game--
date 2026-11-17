@@ -2202,8 +2202,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
         final seatWidth = widget.playerCount == 6 ? 78.0 : 88.0;
-        final centerWidth = (constraints.maxWidth * .46).clamp(126.0, 166.0);
-        final centerHeight = (tableHeight * .32).clamp(94.0, 126.0);
 
         return Container(
           width: double.infinity,
@@ -2323,17 +2321,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               child: Text('DEALER', style: TextStyle(color: LorisApp.gold, fontSize: 9, fontWeight: FontWeight.w900)),
                             ),
                           if (currentPlayer == index)
-                            Container(
-                              margin: const EdgeInsets.only(top: 2),
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFE7A0),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                index == 0 ? 'YOUR TURN' : 'PLAYING',
-                                style: const TextStyle(color: Color(0xFF2B1B0C), fontSize: 8, fontWeight: FontWeight.w900),
-                              ),
+                            const Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Icon(Icons.circle, size: 6, color: Color(0xFFFFE7A0)),
                             ),
                           if (index != 0)
                             Padding(
@@ -2365,49 +2355,37 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
-                Container(
-                  width: centerWidth,
-                  height: centerHeight,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(60),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xCC9A2938), Color(0xDD3A0915)],
+                Positioned(
+                  top: 7,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xCC260914),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0x66F5D78C), width: .7),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        child: Text(
+                          _dealerDrawActive
+                              ? 'DEALER DRAW'
+                              : _isDealingCards
+                                  ? 'DEALING  $_dealtCardCount/${widget.playerCount * 8}'
+                                  : !_started
+                                      ? _awaitingTrumpSelection
+                                          ? 'CHOOSE TRUMP'
+                                          : currentPlayer == null
+                                              ? 'BIDDING'
+                                              : 'BID • ${_playerNames[currentPlayer]}',
+                                      : currentPlayer == null
+                                          ? 'ROUND COMPLETE'
+                                          : 'TURN • ${_playerNames[currentPlayer]}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .35),
+                        ),
+                      ),
                     ),
-                    border: Border.all(color: const Color(0x77F5D78C), width: 1),
-                    boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 12, offset: Offset(0, 4))],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Text(
-                        _dealerDrawActive
-                            ? 'DEALER DRAW'
-                            : _isDealingCards
-                                ? 'DEALING CARDS'
-                                : !_started
-                                    ? _awaitingTrumpSelection
-                                        ? 'TRUMP SELECTION'
-                                        : currentPlayer == null
-                                            ? 'BIDDING'
-                                            : 'BIDDING • ${_playerNames[currentPlayer]}'
-                                    : currentPlayer == null
-                                        ? 'ROUND COMPLETE'
-                                        : 'NOW PLAYING • ${_playerNames[currentPlayer]}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .7),
-                      ),
-                      if (plays.isEmpty)
-                        Text(_dealerDrawActive ? 'JACK TO BECOME DEALER' : _started ? 'PLAY A CARD' : (_isDealingCards ? 'CARDS IN MOTION' : _awaitingTrumpSelection ? 'CHOOSE TRUMP' : 'BID OR PASS'), style: const TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold))
-                      else
-                        const SizedBox(height: 1),
-                      Text(
-                        '${plays.length} / ${widget.playerCount} CARDS',
-                        style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold),
-                      ),
-                    ],
                   ),
                 ),
                 if (_playEffect != null)
