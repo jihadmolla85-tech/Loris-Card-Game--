@@ -3,7 +3,6 @@ import 'dart:math';
 import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
-import 'game/widgets/dealer_reveal_dialog.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
 import 'game/widgets/loris_3d_table.dart';
 import 'game/engine/game_settings_service.dart';
@@ -550,6 +549,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _flightStarted = false;
   String? _playEffect;
   String? _winCelebration;
+  List<loris.Card>? _dealerDrawCards;
+  int _dealerDrawVisible = 0;
+  int? _dealerDrawWinner;
+  int _dealerDrawFirstPlayer = 0;
   
   @override
   void initState() {
@@ -721,14 +724,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         playerCount: widget.playerCount,
         random: _random,
       );
-await DealerRevealDialog.show(
-        context,
-        drawnCards: dealerSelection.drawnCards,
-        playerCount: widget.playerCount,
-        dealerIndex: dealerSelection.dealerIndex,
-        firstPlayerIndex: dealerSelection.firstPlayerIndex,
-        playerNames: _playerNames,
-        playerAvatars: _playerAvatars,
+await _revealDealerDrawOnTable(
+        dealerSelection.drawnCards,
+        dealerSelection.firstPlayerIndex,
+        dealerSelection.dealerIndex,
       );
       _shuffleController.stop();
       if (mounted) setState(() => _isShuffling = false);
@@ -768,6 +767,113 @@ await DealerRevealDialog.show(
         });
       }
     }
+  }
+
+  Future<void> _revealDealerDrawOnTable(
+    List<loris.Card> drawnCards,
+    int firstPlayerIndex,
+    int dealerIndex,
+  ) async {
+    setState(() {
+      _dealerDrawCards = List<loris.Card>.unmodifiable(drawnCards);
+      _dealerDrawVisible = 0;
+      _dealerDrawWinner = dealerIndex;
+      _dealerDrawFirstPlayer = firstPlayerIndex;
+      _status = 'JACK DRAW • DEALER SELECTION';
+    });
+
+    for (var i = 0; i < drawnCards.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 520));
+      if (!mounted) return;
+      setState(() => _dealerDrawVisible = i + 1);
+      await SystemSound.play(SystemSoundType.click);
+      final card = drawnCards[i];
+      if (!card.isLoris && card.rank == 11) {
+        await HapticFeedback.heavyImpact();
+        break;
+      }
+    }
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+    setState(() {
+      _dealerDrawCards = null;
+      _dealerDrawVisible = 0;
+      _status = 'Dealer selected. Preparing the deal.';
+    });
+  }
+
+  Widget _buildDealerDrawTable() {
+    final cards = _dealerDrawCards!;
+    final rows = <Widget>[];
+    for (var player = 0; player < widget.playerCount; player++) {
+      final playerCards = <loris.Card>[];
+      for (var i = 0; i < _dealerDrawVisible; i++) {
+        if ((_dealerDrawFirstPlayer + i) % widget.playerCount == player) {
+          playerCards.add(cards[i]);
+        }
+      }
+      final isDealer = _dealerDrawVisible > 0 &&
+          player == _dealerDrawWinner &&
+          cards.take(_dealerDrawVisible).any((card) =>
+              !card.isLoris && card.rank == 11 &&
+              cards.indexOf(card) == (_dealerDrawVisible - 1));
+      rows.add(Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDealer ? const Color(0xFF59451B) : const Color(0xDD17141C),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isDealer ? LorisApp.gold : Colors.white24, width: isDealer ? 2 : 1),
+        ),
+        child: Row(children: [
+          SizedBox(width: 112, child: Row(children: [
+            Text(_playerAvatars[player], style: const TextStyle(fontSize: 25)),
+            const SizedBox(width: 5),
+            Expanded(child: Text(_playerNames[player], maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: isDealer ? LorisApp.gold : Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
+          ])),
+          Expanded(child: SizedBox(height: 53, child: Row(children: playerCards.map((card) {
+            final red = card.suit == loris.Suit.hearts || card.suit == loris.Suit.diamonds;
+            final symbol = card.isLoris ? '★' : switch (card.suit!) {
+              loris.Suit.clubs => '♣', loris.Suit.diamonds => '♦',
+              loris.Suit.hearts => '♥', loris.Suit.spades => '♠',
+            };
+            return Container(width: 37, height: 51, margin: const EdgeInsets.only(right: 4),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: !card.isLoris && card.rank == 11 ? LorisApp.gold : Colors.black26, width: 1.5),
+                boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))]),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(card.isLoris ? '★' : card.displayName, style: TextStyle(color: red ? Colors.red.shade700 : Colors.black87, fontWeight: FontWeight.w900, fontSize: 13)),
+                Text(symbol, style: TextStyle(color: red ? Colors.red.shade700 : Colors.black87, fontSize: 14)),
+              ]));
+          }).toList()))),
+          if (isDealer) const Icon(Icons.workspace_premium, color: LorisApp.gold, size: 22),
+        ]),
+      ));
+    }
+    return Container(
+      decoration: const BoxDecoration(gradient: RadialGradient(colors: [Color(0xFF501923), Color(0xFF08090D)])),
+      child: SafeArea(child: Column(children: [
+        const Padding(padding: EdgeInsets.fromLTRB(12, 18, 12, 8), child: Text('LORIS • JACK DRAW',
+          style: TextStyle(color: LorisApp.gold, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2))),
+        const Text('CARDS ARE REVEALED BESIDE EACH PLAYER AT THE TABLE',
+          textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 9, letterSpacing: 1)),
+        Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(padding: const EdgeInsets.all(10), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Expanded(child: Center(child: Loris3DTable(playerCount: widget.playerCount))),
+            ...rows,
+            const SizedBox(height: 8),
+            Text('$_dealerDrawVisible / ${cards.length} CARDS REVEALED',
+              style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 1)),
+            if (_dealerDrawVisible > 0 && _dealerDrawWinner != null &&
+                !cards[_dealerDrawVisible - 1].isLoris && cards[_dealerDrawVisible - 1].rank == 11)
+              Padding(padding: const EdgeInsets.only(top: 8), child: Text(
+                '${_playerNames[_dealerDrawWinner!].toUpperCase()} IS THE DEALER!',
+                style: const TextStyle(color: LorisApp.gold, fontSize: 16, fontWeight: FontWeight.w900))),
+          ]))))),
+      ])),
+    );
   }
 
   // ----------------------------------------------------------
@@ -1655,7 +1761,7 @@ await DealerRevealDialog.show(
       ),
       body: SafeArea(
         child: hands == null
-            ? _buildStartPanel()
+            ? (_dealerDrawCards != null ? _buildDealerDrawTable() : _buildStartPanel())
             : _buildGamePanel(hands),
       ),
     );
