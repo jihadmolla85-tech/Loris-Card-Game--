@@ -1095,6 +1095,13 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       final lorisPlay = trick.where((play) => play.card.isLoris);
       if (lorisPlay.isNotEmpty) return lorisPlay.first.playerIndex;
 
+      if (engine.trumpSuit == null) {
+        final allCards = List<TrickPlay>.from(trick)
+          ..sort((a, b) =>
+              (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
+        return allCards.first.playerIndex;
+      }
+
       final firstCard = trick.first.card;
       final ledSuit = firstCard.isLoris
           ? loris.Suit.spades
