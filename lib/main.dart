@@ -3007,8 +3007,28 @@ await _revealDealerDrawOnTable(
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: .78, end: _collectingTrickWinner == null ? 1 : .42),
                       duration: Duration(milliseconds: _collectingTrickWinner == null ? 220 : 520),
-                      curve: Curves.easeInOut,
-                      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+                      curve: Curves.easeInOutCubic,
+                      builder: (context, scale, child) {
+                        final collecting = _collectingTrickWinner != null;
+                        final progress = collecting
+                            ? ((1 - scale) / .58).clamp(0.0, 1.0).toDouble()
+                            : 0.0;
+                        final direction = i.isEven ? 1.0 : -1.0;
+                        final transform = Matrix4.identity()
+                          ..setEntry(3, 2, .0012)
+                          ..rotateX(progress * .24)
+                          ..rotateY(progress * direction * .42)
+                          ..rotateZ(progress * direction * .22)
+                          ..scaleByDouble(scale, scale, 1, 1);
+                        return Opacity(
+                          opacity: (1 - progress * .12).clamp(.0, 1.0),
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: transform,
+                            child: child,
+                          ),
+                        );
+                      },
                       child: _buildCard(plays[i].card, compact: true),
                     ),
                   ),
