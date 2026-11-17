@@ -156,7 +156,6 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     const skinTones = [0xE5B58F, 0xB97854, 0xD69A72, 0x8D563F, 0xF0C7A2, 0xA96B4B];
     const outfits = [0x263F63, 0x7C2636, 0x285C4B, 0x514071, 0x9A672D, 0x354A58];
     const hairColors = [0x211820, 0x3A241D, 0x171C2A, 0x5B3325, 0x252525, 0x462A20];
-    const chairColors = [0x754326, 0x563020, 0x80532B, 0x402A27, 0x805C32, 0x49352D];
 
     for (var i = 0; i < count; i++) {
       final angle = math.pi / 2 + (math.pi * 2 * i / count);
@@ -169,8 +168,6 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
       final skin = _pbr(skinTones[i % skinTones.length], roughness: 0.78);
       final outfit = _pbr(outfits[i % outfits.length], roughness: 0.58);
       final hair = _pbr(hairColors[i % hairColors.length], roughness: 0.88);
-      final chair = _pbr(chairColors[i % chairColors.length], roughness: 0.42);
-      final trim = _pbr(0xD5A64A, metallic: 0.72, roughness: 0.3);
       final shirt = _pbr(0xF5EBDD, roughness: 0.7);
       final tie = _pbr([0x9B263A, 0xB88732, 0x274B63, 0x315B49, 0x693C68, 0x9B4C2D][i], roughness: 0.48);
       final eyeWhite = _pbr(0xFFF9EE, roughness: 0.24);
