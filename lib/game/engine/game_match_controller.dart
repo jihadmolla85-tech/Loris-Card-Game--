@@ -209,7 +209,7 @@ class GameMatchController {
   }
 
   void startRoundWithCurrentDeal({
-    required Suit trumpSuit,
+    required Suit? trumpSuit,
     required int biddingTeam,
     required int bidAmount,
   }) {
