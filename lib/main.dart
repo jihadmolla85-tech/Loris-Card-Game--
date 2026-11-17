@@ -511,14 +511,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     'Nila', 'Faria', 'Sumaiya', 'Tisha', 'Anika', 'Maliha',
   ];
   // Human character portraits only; no animal or object avatars.
-  static const List<String> _avatarPool = [
-    '👨🏻', '👩🏻', '👨🏼', '👩🏼', '👨🏽', '👩🏽',
-    '👨🏾', '👩🏾', '👨🏿', '👩🏿', '🧑🏻‍🦱', '🧑🏼‍🦰',
-    '👨🏻‍🦱', '👩🏻‍🦰', '👨🏽‍🦲', '👩🏽‍🦱',
-    '👨🏾‍🦰', '👩🏾‍🦳', '🧑🏽‍🦱', '🧑🏾‍🦰',
-  ];
   late final List<String> _playerNames;
-  late final List<String> _playerAvatars;
 
   late final DealController _dealController;
   late final GameMatchController _matchController;
@@ -564,14 +557,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _shuffleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
 
     final shuffledNames = List<String>.from(_namePool)..shuffle(_random);
-    final shuffledAvatars = List<String>.from(_avatarPool)..shuffle(_random);
     _playerNames = [
       'YOU',
       ...shuffledNames.take(widget.playerCount - 1),
-    ];
-    _playerAvatars = [
-      '🎮',
-      ...shuffledAvatars.take(widget.playerCount - 1),
     ];
 
     _dealController = DealController(
@@ -2099,99 +2087,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // SCORE BOARD
   // ----------------------------------------------------------
 
-  Widget _buildScoreBoard() {
-    final score = _matchController.matchScoreEngine;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        vertical: 14,
-        horizontal: 18,
-      ),
-      decoration: BoxDecoration(
-        color: LorisApp.blue,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: LorisApp.gold.withValues(alpha: .7),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _scoreItem('TEAM A', score.teamAScore),
-          Container(
-            width: 1,
-            height: 40,
-            color: LorisApp.gold,
-          ),
-          _scoreItem('TEAM B', score.teamBScore),
-        ],
-      ),
-    );
-  }
-
-  Widget _scoreItem(String label, int value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: LorisApp.gold,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$value',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
   // ----------------------------------------------------------
   // INFO STRIPS
-  // ----------------------------------------------------------
-
-  Widget _infoStrip(String label, String value) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 9,
-      ),
-      decoration: BoxDecoration(
-        color: LorisApp.blue.withValues(alpha: .75),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: LorisApp.gold,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ----------------------------------------------------------
-  // BIDDING TABLE
   // ----------------------------------------------------------
 
   // ----------------------------------------------------------
