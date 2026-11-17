@@ -94,8 +94,8 @@ class TrickEngine {
 
     final firstCard = plays.first.card;
 
-    // A leading Joker has no suit to follow.
-    return firstCard.isLoris ? null : firstCard.suit;
+    // In a suit-trump round, a leading LORIS follows the legacy Spades lead.
+    return firstCard.isLoris ? Suit.spades : firstCard.suit;
   }
 
   /// Returns every card the player is allowed to play on this turn.
