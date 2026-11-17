@@ -1461,7 +1461,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   String _cardName(loris.Card card) {
-    if (card.isLoris) return 'LORIS';
+    if (card.isLoris) return 'JOKER';
 
     return '${card.displayName}${_suitSymbol(card.suit)}';
   }
@@ -2505,9 +2505,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(card.isLoris ? '★' : card.displayName,
+            Text(card.isLoris ? 'J' : card.displayName,
               style: TextStyle(color: ink, fontSize: compact ? 11 : 15, height: 1, fontWeight: FontWeight.w900)),
-            Text(card.isLoris ? '♛' : _suitSymbol(card.suit),
+            Text(card.isLoris ? '★' : _suitSymbol(card.suit),
               style: TextStyle(color: ink, fontSize: compact ? 10 : 13, height: 1.05, fontWeight: FontWeight.bold)),
           ],
         ),
@@ -2542,8 +2542,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.auto_awesome, color: ink, size: compact ? 19 : 25),
-                      if (!compact) Text('LORIS', style: TextStyle(color: ink, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      Icon(Icons.theater_comedy, color: ink, size: compact ? 19 : 25),
+                      if (!compact) Text('JOKER', style: TextStyle(color: ink, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
                     ],
                   )
                 : Text(_suitSymbol(card.suit),
