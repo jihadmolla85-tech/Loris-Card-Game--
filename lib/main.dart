@@ -831,8 +831,13 @@ await _revealDealerDrawOnTable(
         ),
         child: Row(children: [
           SizedBox(width: 112, child: Row(children: [
-            Text(_playerAvatars[player], style: const TextStyle(fontSize: 25)),
-            const SizedBox(width: 5),
+            LorisPortraitAvatar(
+              variant: player,
+              size: 30,
+              highlighted: isDealer,
+              expression: isDealer ? 0 : 1,
+            ),
+            const SizedBox(width: 6),
             Expanded(child: Text(_playerNames[player], maxLines: 1, overflow: TextOverflow.ellipsis,
               style: TextStyle(color: isDealer ? LorisApp.gold : Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
           ])),
