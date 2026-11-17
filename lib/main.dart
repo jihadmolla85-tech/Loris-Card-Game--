@@ -2195,7 +2195,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (_lastTrickPlays.isEmpty) return;
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
       backgroundColor: const Color(0xFF35101A),
-      title: Text('LAST TRICK • ' + (_lastTrickWinner == null ? '' : _playerNames[_lastTrickWinner!]) + ' WON', style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 14, fontWeight: FontWeight.w900)),
+      title: Text('LAST TRICK • ${_lastTrickWinner == null ? "UNKNOWN" : _playerNames[_lastTrickWinner!]} WON', style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 14, fontWeight: FontWeight.w900)),
       content: Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 10, children: [
         for (final play in _lastTrickPlays) Column(mainAxisSize: MainAxisSize.min, children: [
           Text(_playerNames[play.playerIndex], style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
