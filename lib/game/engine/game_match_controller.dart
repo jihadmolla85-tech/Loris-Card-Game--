@@ -128,7 +128,7 @@ class GameMatchController {
   List<List<Card>> startRoundWithDeal({
     required List<Card> deck,
     required int playerCount,
-    required Suit trumpSuit,
+    required Suit? trumpSuit,
     required int biddingTeam,
     required int bidAmount,
   }) {
