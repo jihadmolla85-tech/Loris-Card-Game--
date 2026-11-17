@@ -1,7 +1,7 @@
 import '../models/loris_card.dart';
 
 class TrumpSelectionResult {
-  final Suit trumpSuit;
+  final Suit? trumpSuit;
   final int cardOwnerIndex;
   final Card selectedCard;
   final bool revealedToEveryone;
@@ -51,8 +51,20 @@ class TrumpSelectionEngine {
       throw ArgumentError('Selected card is not in the owner hand.');
     }
 
-    if (selectedCard.isLoris || selectedCard.suit == null) {
-      throw ArgumentError('LORIS cannot be used to select trump.');
+    if (selectedCard.isLoris) {
+      if (cardOwnerIndex != bidderIndex) {
+        throw ArgumentError('The bidder must hold the LORIS Joker to select Joker mode.');
+      }
+      return TrumpSelectionResult(
+        trumpSuit: null,
+        cardOwnerIndex: cardOwnerIndex,
+        selectedCard: selectedCard,
+        revealedToEveryone: false,
+        bidderHasTrumpSuit: true,
+      );
+    }
+    if (selectedCard.suit == null) {
+      throw ArgumentError('Selected card has no suit.');
     }
 
     final trumpSuit = selectedCard.suit!;
