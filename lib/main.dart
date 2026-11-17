@@ -603,7 +603,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _flightStarted = true;
       _playEffect = card.isLoris ? 'LORIS!' : null;
     });
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 560));
+    if (!mounted) return;
+    await _playCardFeedback(card);
+    await Future.delayed(const Duration(milliseconds: 240));
     if (!mounted) return;
     setState(() {
       _flyingCard = null;
@@ -1148,7 +1151,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     try {
       await _animateCardToTable(0, card);
-      await _playCardFeedback(card);
       _matchController.playCard(0, card);
 
       await _afterCardPlayed();
@@ -1181,7 +1183,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         final card = _chooseAiCard(playerIndex);
 
         await _animateCardToTable(playerIndex, card);
-        await _playCardFeedback(card);
         _matchController.playCard(playerIndex, card);
 
         await _afterCardPlayed();
