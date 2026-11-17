@@ -43,6 +43,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   final List<vm.Vector3> _dealStarts = [];
   final List<vm.Vector3> _dealTargets = [];
   final List<Node> _avatarHeadNodes = [];
+  final List<List<Node>> _avatarEyeNodes = [];
   Object? _loadError;
 
   @override
@@ -83,6 +84,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     _dealStarts.clear();
     _dealTargets.clear();
     _avatarHeadNodes.clear();
+    _avatarEyeNodes.clear();
     _dealStartElapsed = null;
     _dealerDrawNode = null;
     _dealerDrawStartElapsed = null;
@@ -214,46 +216,98 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
       head.add(_child(SphereGeometry(radius: 0.245, segments: 32, rings: 22), skin, vm.Vector3.zero()));
       head.add(_child(SphereGeometry(radius: 0.25, segments: 32, rings: 18), hair, vm.Vector3(0, 0.17, 0.035)));
       head.add(_child(SphereGeometry(radius: 0.095, segments: 20, rings: 12), hair, vm.Vector3(0, 0.205, -0.13)));
-      // Side locks and layered fringe make each silhouette distinct.
+
+      // Six clearly different expressions: calm, friendly, surprised,
+      // determined, confident and cheerful.
+      final expression = i % 6;
+      final eyeNodes = <Node>[];
+      const browAngles = [0.08, -0.20, 0.02, 0.28, -0.12, -0.24];
+      const browHeights = [0.105, 0.112, 0.12, 0.085, 0.11, 0.115];
       for (final side in [-1.0, 1.0]) {
-        head.add(_child(SphereGeometry(radius: 0.075, segments: 18, rings: 12), hair, vm.Vector3(side * 0.19, 0.055, -0.015)));
-        final brow = _child(CapsuleGeometry(radius: 0.018, height: 0.095), hair, vm.Vector3(side * 0.078, 0.105, -0.218));
-        brow.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), side * (i == 4 ? -0.18 : 0.12));
+        final brow = _child(
+          CapsuleGeometry(radius: 0.021, height: 0.105),
+          hair,
+          vm.Vector3(side * 0.078, browHeights[expression], -0.218),
+        );
+        brow.rotation = vm.Quaternion.axisAngle(
+          vm.Vector3(0, 0, 1),
+          side * browAngles[expression],
+        );
         head.add(brow);
-        head.add(_child(SphereGeometry(radius: 0.052, segments: 18, rings: 12), eyeWhite, vm.Vector3(side * 0.078, 0.025, -0.219)));
-        head.add(_child(SphereGeometry(radius: 0.028, segments: 16, rings: 10), iris, vm.Vector3(side * 0.078, 0.025, -0.246)));
-        head.add(_child(SphereGeometry(radius: 0.014, segments: 12, rings: 8), dark, vm.Vector3(side * 0.078, 0.025, -0.264)));
-        head.add(_child(SphereGeometry(radius: 0.012, segments: 10, rings: 8), eyeWhite, vm.Vector3(side * 0.068, 0.038, -0.275)));
+
+        final eye = _child(
+          SphereGeometry(radius: expression == 2 ? 0.057 : 0.052, segments: 20, rings: 14),
+          eyeWhite,
+          vm.Vector3(side * 0.078, 0.025, -0.219),
+        );
+        final irisNode = _child(
+          SphereGeometry(radius: 0.028, segments: 16, rings: 10),
+          iris,
+          vm.Vector3(side * 0.078, 0.025, -0.246),
+        );
+        final pupilNode = _child(
+          SphereGeometry(radius: 0.014, segments: 12, rings: 8),
+          dark,
+          vm.Vector3(side * 0.078, 0.025, -0.264),
+        );
+        final glintNode = _child(
+          SphereGeometry(radius: 0.012, segments: 10, rings: 8),
+          eyeWhite,
+          vm.Vector3(side * 0.068, 0.038, -0.275),
+        );
+        head.add(eye);
+        head.add(irisNode);
+        head.add(pupilNode);
+        head.add(glintNode);
+        eyeNodes.addAll([eye, irisNode, pupilNode, glintNode]);
       }
       head.add(_child(SphereGeometry(radius: 0.044, segments: 16, rings: 10), skin, vm.Vector3(0, -0.045, -0.247)));
       head.add(_child(SphereGeometry(radius: 0.022, segments: 12, rings: 8), skin, vm.Vector3(-0.018, -0.062, -0.275)));
       head.add(_child(SphereGeometry(radius: 0.022, segments: 12, rings: 8), skin, vm.Vector3(0.018, -0.062, -0.275)));
 
-      // Different mouth geometry gives the six seats distinct expressions.
-      final expression = i % 6;
+      final mouthHeight = expression == 2 || expression == 5 ? 0.052 : 0.105;
       final mouthNode = _child(
-        CapsuleGeometry(radius: 0.017, height: expression == 2 || expression == 5 ? 0.055 : 0.10),
+        CapsuleGeometry(radius: expression == 2 || expression == 5 ? 0.022 : 0.016, height: mouthHeight),
         mouth,
-        vm.Vector3(0, -0.125, -0.231),
+        vm.Vector3(0, expression == 3 ? -0.137 : -0.125, -0.231),
       );
       mouthNode.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), math.pi / 2);
+      if (expression == 3) {
+        // A slightly downturned mouth for the determined player.
+        mouthNode.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), math.pi / 2 + 0.16);
+      }
       head.add(mouthNode);
       if (expression == 2 || expression == 5) {
-        head.add(_child(SphereGeometry(radius: 0.025, segments: 14, rings: 10), mouth, vm.Vector3(0, -0.125, -0.245)));
+        head.add(_child(
+          SphereGeometry(radius: expression == 2 ? 0.028 : 0.034, segments: 16, rings: 10),
+          mouth,
+          vm.Vector3(0, -0.125, -0.245),
+        ));
       }
-      if (expression == 0 || expression == 3) {
+      if (expression == 1 || expression == 5) {
+        // Raised smile corners and warm cheek highlights.
         for (final side in [-1.0, 1.0]) {
-          head.add(_child(SphereGeometry(radius: 0.018, segments: 12, rings: 8), _pbr(0xD67D70, roughness: 0.8), vm.Vector3(side * 0.15, -0.075, -0.205)));
+          head.add(_child(
+            SphereGeometry(radius: 0.018, segments: 12, rings: 8),
+            mouth,
+            vm.Vector3(side * 0.075, -0.108, -0.229),
+          ));
+          head.add(_child(
+            SphereGeometry(radius: 0.022, segments: 12, rings: 8),
+            _pbr(0xD67D70, roughness: 0.8),
+            vm.Vector3(side * 0.15, -0.075, -0.205),
+          ));
         }
       }
       if (expression == 4) {
-        // Subtle moustache on one avatar for a more varied cast.
+        // A neat moustache differentiates the confident avatar.
         for (final side in [-1.0, 1.0]) {
           head.add(_child(SphereGeometry(radius: 0.035, segments: 14, rings: 10), hair, vm.Vector3(side * 0.045, -0.095, -0.245)));
         }
       }
       avatar.add(head);
       _avatarHeadNodes.add(head);
+      _avatarEyeNodes.add(eyeNodes);
       _scene.add(avatar);
     }
   }
@@ -602,6 +656,13 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
         vm.Vector3(0, 1, 0),
         yaw,
       ) * vm.Quaternion.axisAngle(vm.Vector3(1, 0, 0), nod);
+
+      // Brief synchronized eyelid squash creates a natural blink every few seconds.
+      final blinkPhase = (idleTime + i * 0.83) % 4.8;
+      final eyeOpen = blinkPhase > 4.54 ? 0.10 : 1.0;
+      for (final eyePart in _avatarEyeNodes[i]) {
+        eyePart.scale = vm.Vector3(1, eyeOpen, 1);
+      }
     }
 
     final dealerNode = _dealerDrawNode;
