@@ -384,6 +384,17 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     card.add(_child(CuboidGeometry(vm.Vector3(0.372, 0.004, 0.522)), gold, vm.Vector3(0, 0.014, 0)));
     card.add(_child(CuboidGeometry(vm.Vector3(0.36, 0.004, 0.51)), face, vm.Vector3(0, 0.017, 0)));
     _addCardFace(card, value, gold);
+    if (value.isLoris) {
+      // Gold sparks orbit the special card during its longer 3D flight.
+      for (var spark = 0; spark < 12; spark++) {
+        final angle = math.pi * 2 * spark / 12;
+        card.add(_child(
+          SphereGeometry(radius: 0.025, segments: 12, rings: 8),
+          gold,
+          vm.Vector3(math.cos(angle) * 0.245, 0.032, math.sin(angle) * 0.34),
+        ));
+      }
+    }
     _scene.add(card);
 
     _flyingNode = card;
@@ -405,15 +416,16 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
 
     _flightStartElapsed ??= elapsed;
     final seconds = (elapsed - _flightStartElapsed!).inMicroseconds / 1000000;
-    final raw = (seconds / 0.45).clamp(0.0, 1.0);
+    final raw = (seconds / 0.62).clamp(0.0, 1.0);
     final eased = 1 - math.pow(1 - raw, 3).toDouble();
-    final arc = math.sin(raw * math.pi) * 0.42;
+    final arc = math.sin(raw * math.pi) * (widget.flyingCard?.isLoris == true ? 0.68 : 0.42);
     node.position = vm.Vector3(
       start.x + (target.x - start.x) * eased,
       start.y + (target.y - start.y) * eased + arc,
       start.z + (target.z - start.z) * eased,
     );
-    final rotation = _flightStartAngle * (1 - eased);
+    final rotation = _flightStartAngle * (1 - eased) +
+        (widget.flyingCard?.isLoris == true ? raw * math.pi * 2 : 0);
     node.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), rotation);
   }
 
