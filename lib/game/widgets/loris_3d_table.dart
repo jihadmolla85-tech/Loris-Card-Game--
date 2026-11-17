@@ -67,6 +67,12 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   }
 
   Future<void> _initializeScene() async {
+    _dealNodes.clear();
+    _dealStarts.clear();
+    _dealTargets.clear();
+    _dealStartElapsed = null;
+    _flyingNode = null;
+    _flightStartElapsed = null;
     try {
       await Scene.initializeStaticResources();
       _scene.directionalLight = DirectionalLight(
@@ -213,7 +219,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     final count = widget.playerCount == 4 ? 4 : 6;
     final hands = widget.hands;
     if (widget.dealing && hands != null) {
-      _addDealingCards(hands);
+      _addDealingCards();
       return;
     }
     for (var seat = 0; seat < count; seat++) {
@@ -254,7 +260,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     }
   }
 
-  void _addDealingCards(List<List<loris.Card>> hands) {
+  void _addDealingCards() {
     final count = widget.playerCount;
     final dealerAngle = math.pi / 2 + math.pi * 2 * widget.dealerIndex / count;
     final start = vm.Vector3(
