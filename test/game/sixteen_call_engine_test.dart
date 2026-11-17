@@ -75,6 +75,34 @@ void main() {
       expect(engine.canCall, isTrue);
     });
 
+    test('PASS permanently closes the 16-call window without ending the round', () {
+      engine = createEngine();
+      winFirstFour(engine);
+
+      engine.pass16(passerPlayerIndex: 2);
+
+      expect(engine.status, SixteenCallStatus.passed);
+      expect(engine.canCall, isFalse);
+      expect(engine.isRoundEnded, isFalse);
+
+      engine.recordTrickWinner(0);
+
+      expect(engine.status, SixteenCallStatus.passed);
+      expect(engine.canCall, isFalse);
+      expect(engine.isRoundEnded, isFalse);
+    });
+
+    test('Only the qualifying trick winner may pass 16', () {
+      engine = createEngine();
+      winFirstFour(engine);
+
+      expect(
+        () => engine.pass16(passerPlayerIndex: 0),
+        throwsStateError,
+      );
+      expect(engine.canCall, isTrue);
+    });
+
     test('Disables 16 Call if opponents have won any trick', () {
       engine = createEngine();
       engine.recordTrickWinner(0);

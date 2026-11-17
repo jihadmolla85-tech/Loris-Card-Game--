@@ -528,7 +528,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   bool _started = false;
   bool _finished = false;
-  bool _passed16 = false;
   bool _busy = false;
   bool _isShuffling = false;
   bool _isDealing = false;
@@ -1619,8 +1618,7 @@ await _revealDealerDrawOnTable(
     final engine =
         _matchController.currentRound.sixteenCallEngine;
 
-    return !_passed16 &&
-        engine != null &&
+    return engine != null &&
         engine.canCall &&
         engine.lastTrickWinnerIndex == 0;
   }
@@ -1628,10 +1626,15 @@ await _revealDealerDrawOnTable(
   void _pass16() {
     if (!_humanCanCall16 || _busy) return;
 
-    setState(() {
-      _passed16 = true;
-      _status = 'You passed the 16 Call. Continue playing normally.';
-    });
+    try {
+      _matchController.pass16(passerPlayerIndex: 0);
+      setState(() {
+        _status = 'You passed the 16 Call. Continue playing normally.';
+      });
+      unawaited(_autoSaveGame());
+    } catch (e) {
+      setState(() => _error = e.toString());
+    }
   }
 
   Future<void> _call16() async {
@@ -1719,7 +1722,6 @@ await _revealDealerDrawOnTable(
 
         _started = false;
         _finished = false;
-        _passed16 = false;
         _isDealing = true;
 
         _trumpSuit = null;

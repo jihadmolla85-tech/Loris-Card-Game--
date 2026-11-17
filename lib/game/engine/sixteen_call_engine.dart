@@ -1,6 +1,7 @@
 enum SixteenCallStatus {
   notCalled,
   inProgress,
+  passed,
   succeeded,
   failed,
 }
@@ -91,6 +92,29 @@ class SixteenCallEngine {
 
     callerIndex = callerPlayerIndex;
     status = SixteenCallStatus.inProgress;
+  }
+
+  /// Closes the one-time 16-call opportunity without ending the round.
+  ///
+  /// Only the player who won the trick that completed the bid may pass.
+  void pass16({required int passerPlayerIndex}) {
+    if (!canCall) {
+      throw StateError('16 Call is not available to pass.');
+    }
+
+    if (passerPlayerIndex < 0 || passerPlayerIndex >= playerCount) {
+      throw ArgumentError('Invalid passer index.');
+    }
+
+    if (passerPlayerIndex != lastTrickWinnerIndex) {
+      throw StateError('Only the previous trick winner can pass 16.');
+    }
+
+    if (passerPlayerIndex % 2 != biddingTeam) {
+      throw StateError('Only a member of the bidding team can pass 16.');
+    }
+
+    status = SixteenCallStatus.passed;
   }
 
   SixteenCallStatus recordTrickWinner(int winnerIndex) {

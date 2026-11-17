@@ -172,6 +172,21 @@ class GameRoundController {
     );
   }
 
+  void pass16({
+    required int passerPlayerIndex,
+  }) {
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
+    }
+
+    final engine = sixteenCallEngine;
+    if (engine == null) {
+      throw StateError('16 Call is not allowed on an 8 bid.');
+    }
+
+    engine.pass16(passerPlayerIndex: passerPlayerIndex);
+  }
+
   void _applyRoundScore() {
     if (isRoundScored) return;
 

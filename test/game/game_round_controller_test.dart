@@ -1,6 +1,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loris_card_game/game/engine/game_round_controller.dart';
+import 'package:loris_card_game/game/engine/sixteen_call_engine.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
@@ -108,6 +109,28 @@ void main() {
       expect(controller.isRoundEnded, isTrue);
       expect(matchScore.teamAScore, 16);
       expect(matchScore.teamBScore, -16);
+    });
+
+    test('Passing 16 closes the option and keeps normal play active', () {
+      for (var i = 0; i < 4; i++) {
+        playOneTrick();
+      }
+
+      expect(controller.sixteenCallEngine!.canCall, isTrue);
+
+      controller.pass16(passerPlayerIndex: 0);
+
+      expect(
+        controller.sixteenCallEngine!.status,
+        SixteenCallStatus.passed,
+      );
+      expect(controller.sixteenCallEngine!.canCall, isFalse);
+      expect(controller.isRoundEnded, isFalse);
+
+      playOneTrick();
+
+      expect(controller.sixteenCallEngine!.canCall, isFalse);
+      expect(controller.isRoundEnded, isFalse);
     });
 
     test('Detects match winner after round scoring', () {
