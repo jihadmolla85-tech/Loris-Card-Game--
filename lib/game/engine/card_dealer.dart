@@ -27,16 +27,14 @@ class CardDealer {
 
     var deckIndex = 0;
 
-    // Two rounds of dealing, four cards per player each time.
-    for (var round = 0; round < 2; round++) {
-      for (var card = 0; card < 4; card++) {
-        for (var offset = 0; offset < playerCount; offset++) {
-          final playerIndex =
-              (firstPlayerIndex + offset) % playerCount;
+    // Eight clockwise rounds: one card to each player per turn.
+    for (var round = 0; round < 8; round++) {
+      for (var offset = 0; offset < playerCount; offset++) {
+        final playerIndex =
+            (firstPlayerIndex + offset) % playerCount;
 
-          hands[playerIndex].add(deck[deckIndex]);
-          deckIndex++;
-        }
+        hands[playerIndex].add(deck[deckIndex]);
+        deckIndex++;
       }
     }
 
