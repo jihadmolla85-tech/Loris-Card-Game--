@@ -258,6 +258,24 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     }
   }
 
+  List<loris.Card> _sortedHandCards(List<loris.Card> cards) {
+    const suitOrder = {
+      loris.Suit.clubs: 0,
+      loris.Suit.diamonds: 1,
+      loris.Suit.hearts: 2,
+      loris.Suit.spades: 3,
+    };
+    final sorted = List<loris.Card>.from(cards);
+    sorted.sort((a, b) {
+      if (a.isLoris != b.isLoris) return a.isLoris ? 1 : -1;
+      if (a.isLoris) return 0;
+      final suitCompare = suitOrder[a.suit]!.compareTo(suitOrder[b.suit]!);
+      if (suitCompare != 0) return suitCompare;
+      return b.rank!.compareTo(a.rank!);
+    });
+    return sorted;
+  }
+
   void _addThreeDimensionalCards() {
     final cardFace = _pbr(0xFFF7E8, roughness: 0.48);
     final cardBack = _pbr(0x8B1E30, metallic: 0.28, roughness: 0.38);
@@ -293,7 +311,12 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
       final cz = math.sin(angle) * 1.04;
       final tangentX = -math.sin(angle);
       final tangentZ = math.cos(angle);
-      final hand = hands != null && seat < hands.length ? hands[seat] : const <loris.Card>[];
+      final unsortedHand = hands != null && seat < hands.length
+          ? hands[seat]
+          : const <loris.Card>[];
+      // Keep the 3D fan in the exact same suit/rank order as the player's
+      // interactive hand strip so the two views never contradict each other.
+      final hand = seat == 0 ? _sortedHandCards(unsortedHand) : unsortedHand;
       final visibleCount = hand.isEmpty ? 5 : hand.length;
 
       for (var c = 0; c < visibleCount; c++) {
