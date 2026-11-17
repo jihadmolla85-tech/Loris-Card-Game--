@@ -287,7 +287,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
           0.665 + round * 0.0015,
           cz + tangentZ * spread,
         );
-        final node = Node(name: 'dealing_card_$round_$seat');
+        final node = Node(name: 'dealing_card_${round}_$seat');
         node.position = start.clone();
         node.add(_child(CuboidGeometry(vm.Vector3(0.34, 0.025, 0.49)), cardBack, vm.Vector3.zero()));
         node.add(_child(CuboidGeometry(vm.Vector3(0.324, 0.003, 0.474)), gold, vm.Vector3(0, 0.014, 0)));
