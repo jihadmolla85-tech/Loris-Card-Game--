@@ -32,9 +32,13 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     _initializeScene();
   }
 
-  String _handsSignature(List<List<loris.Card>>? hands) =>
-      (hands == null ? 'undealt' : hands.map((hand) => hand.map((card) => card.toString()).join(',')).join('|')) +
-      '#played:' + widget.playedCards.map((card) => card.toString()).join(',');
+  String _handsSignature(List<List<loris.Card>>? hands) {
+    final handSignature = hands == null
+        ? 'undealt'
+        : hands.map((hand) => hand.map((card) => card.toString()).join(',')).join('|');
+    final playedSignature = widget.playedCards.map((card) => card.toString()).join(',');
+    return '$handSignature#played:$playedSignature';
+  }
 
   @override
   void didUpdateWidget(covariant LorisTableSurface oldWidget) {
@@ -117,7 +121,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     const outfits = [0x263F63, 0x7C2636, 0x285C4B, 0x514071, 0x9A672D, 0x354A58];
     const hairColors = [0x211820, 0x3A241D, 0x171C2A, 0x5B3325, 0x252525, 0x462A20];
     for (var i = 0; i < count; i++) {
-      final angle = -math.pi / 2 + (math.pi * 2 * i / count);
+      final angle = math.pi / 2 + (math.pi * 2 * i / count);
       final x = math.cos(angle) * 2.48;
       final z = math.sin(angle) * 1.78;
       final avatar = Node(name: '3d_player_${i + 1}');
@@ -196,7 +200,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     final count = widget.playerCount == 4 ? 4 : 6;
     final hands = widget.hands;
     for (var seat = 0; seat < count; seat++) {
-      final angle = -math.pi / 2 + (math.pi * 2 * seat / count);
+      final angle = math.pi / 2 + (math.pi * 2 * seat / count);
       final cx = math.cos(angle) * 1.48;
       final cz = math.sin(angle) * 1.04;
       final tangentX = -math.sin(angle);
