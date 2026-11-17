@@ -69,13 +69,25 @@ void main() {
       );
     });
 
+    test('Cannot call on the same trick that reaches the bid', () {
+      engine = createEngine();
+      winFirstFour(engine);
+      expect(engine.canCall, isFalse);
+      expect(
+        () => engine.call16(callerPlayerIndex: 2),
+        throwsStateError,
+      );
+    });
+
     test('Only previous trick winner can call', () {
       engine = createEngine();
       winFirstFour(engine);
 
+      expect(engine.canCall, isFalse);
+      engine.recordTrickWinner(0);
       expect(engine.canCall, isTrue);
       expect(
-        () => engine.call16(callerPlayerIndex: 0),
+        () => engine.call16(callerPlayerIndex: 2),
         throwsStateError,
       );
     });
@@ -86,8 +98,10 @@ void main() {
       engine.recordTrickWinner(1);
       engine.recordTrickWinner(3);
       engine.recordTrickWinner(1);
+      engine.recordTrickWinner(3);
       engine.recordTrickWinner(0);
 
+      expect(engine.canCall, isFalse);
       expect(
         () => engine.call16(callerPlayerIndex: 0),
         throwsStateError,
@@ -97,6 +111,7 @@ void main() {
     test('Previous trick winner can make 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
+      engine.recordTrickWinner(2);
 
       engine.call16(callerPlayerIndex: 2);
 
@@ -109,9 +124,9 @@ void main() {
     test('Winning all remaining tricks succeeds', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.call16(callerPlayerIndex: 2);
-
       engine.recordTrickWinner(0);
+      engine.call16(callerPlayerIndex: 0);
+
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
@@ -128,7 +143,8 @@ void main() {
     test('Losing one trick ends round immediately', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.call16(callerPlayerIndex: 2);
+      engine.recordTrickWinner(0);
+      engine.call16(callerPlayerIndex: 0);
 
       engine.recordTrickWinner(1);
 
@@ -144,7 +160,8 @@ void main() {
     test('Cannot play after failed 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.call16(callerPlayerIndex: 2);
+      engine.recordTrickWinner(0);
+      engine.call16(callerPlayerIndex: 0);
       engine.recordTrickWinner(1);
 
       expect(
@@ -178,10 +195,11 @@ void main() {
     test('Rejects a second 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.call16(callerPlayerIndex: 2);
+      engine.recordTrickWinner(0);
+      engine.call16(callerPlayerIndex: 0);
 
       expect(
-        () => engine.call16(callerPlayerIndex: 2),
+        () => engine.call16(callerPlayerIndex: 0),
         throwsStateError,
       );
     });
