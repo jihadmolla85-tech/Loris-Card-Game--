@@ -524,6 +524,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   BiddingRoundController? _biddingController;
 
   loris.Suit? _trumpSuit;
+  loris.Card? _trumpCard;
 
   bool _started = false;
   bool _finished = false;
@@ -803,6 +804,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _biddingController = controller;
         _started = false;
         _trumpSuit = null;
+        _trumpCard = null;
 
         _status = controller.isHumanTurn
             ? 'Your turn to bid.'
@@ -979,6 +981,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       );
 
       _trumpSuit = result.trumpSuit;
+      _trumpCard = selectedCard;
 
       await _validateAndContinue(
         everyonePassed: false,
@@ -2443,21 +2446,29 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
-                if (_trumpSuit != null)
+                if (_trumpSuit != null && _trumpCard != null)
                   Positioned(
                     right: 10,
                     bottom: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        gradient: const LinearGradient(colors: [Color(0xFFFFE8A0), Color(0xFFB77B32)]),
-                        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 5, offset: Offset(0, 2))],
-                      ),
-                      child: Text(
-                        'TRUMP  ${_suitSymbol(_trumpSuit)}',
-                        style: const TextStyle(color: Color(0xFF2B1B0C), fontWeight: FontWeight.w900, fontSize: 10),
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xDD17243B),
+                            borderRadius: BorderRadius.circular(7),
+                            border: Border.all(color: LorisApp.gold, width: 1),
+                          ),
+                          child: const Text(
+                            'TRUMP',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        _buildCard(_trumpCard!, compact: true),
+                      ],
                     ),
                   ),
               ],
