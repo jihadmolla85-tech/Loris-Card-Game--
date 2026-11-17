@@ -42,6 +42,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   final List<Node> _dealNodes = [];
   final List<vm.Vector3> _dealStarts = [];
   final List<vm.Vector3> _dealTargets = [];
+  final List<Node> _avatarHeadNodes = [];
   Object? _loadError;
 
   @override
@@ -81,6 +82,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     _dealNodes.clear();
     _dealStarts.clear();
     _dealTargets.clear();
+    _avatarHeadNodes.clear();
     _dealStartElapsed = null;
     _dealerDrawNode = null;
     _dealerDrawStartElapsed = null;
@@ -154,61 +156,115 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     const skinTones = [0xE5B58F, 0xB97854, 0xD69A72, 0x8D563F, 0xF0C7A2, 0xA96B4B];
     const outfits = [0x263F63, 0x7C2636, 0x285C4B, 0x514071, 0x9A672D, 0x354A58];
     const hairColors = [0x211820, 0x3A241D, 0x171C2A, 0x5B3325, 0x252525, 0x462A20];
+    const chairColors = [0x754326, 0x563020, 0x80532B, 0x402A27, 0x805C32, 0x49352D];
+
     for (var i = 0; i < count; i++) {
       final angle = math.pi / 2 + (math.pi * 2 * i / count);
-      final x = math.cos(angle) * 2.48;
-      final z = math.sin(angle) * 1.78;
-      final avatar = Node(name: '3d_player_${i + 1}');
-      avatar.position = vm.Vector3(x, -0.02, z);
+      final avatar = Node(name: '3d_seated_player_${i + 1}');
+      avatar.position = vm.Vector3(math.cos(angle) * 2.48, -0.02, math.sin(angle) * 1.78);
       avatar.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), angle + math.pi / 2);
+
       final skin = _pbr(skinTones[i % skinTones.length], roughness: 0.78);
-      final outfit = _pbr(outfits[i % outfits.length], roughness: 0.62);
-      final hair = _pbr(hairColors[i % hairColors.length], roughness: 0.9);
+      final outfit = _pbr(outfits[i % outfits.length], roughness: 0.58);
+      final hair = _pbr(hairColors[i % hairColors.length], roughness: 0.88);
+      final chair = _pbr(chairColors[i % chairColors.length], roughness: 0.42);
+      final trim = _pbr(0xD5A64A, metallic: 0.72, roughness: 0.3);
+      final shirt = _pbr(0xF5EBDD, roughness: 0.7);
+      final tie = _pbr([0x9B263A, 0xB88732, 0x274B63, 0x315B49, 0x693C68, 0x9B4C2D][i], roughness: 0.48);
       final eyeWhite = _pbr(0xFFF9EE, roughness: 0.24);
-      final iris = _pbr(0x4A2D22, roughness: 0.28);
+      final iris = _pbr([0x4A2D22, 0x273C55, 0x3B271C, 0x31513D, 0x49352A, 0x30231F][i], roughness: 0.28);
       final dark = _pbr(0x211820, roughness: 0.7);
       final mouth = _pbr(0x873C43, roughness: 0.6);
 
-      // Torso, shoulders, neck and arms create a seated human bust in 3D.
-      avatar.add(_child(CapsuleGeometry(radius: 0.27, height: 0.48), outfit, vm.Vector3(0, 0.42, 0)));
-      avatar.add(_child(SphereGeometry(radius: 0.22, segments: 20, rings: 12), outfit, vm.Vector3(0, 0.62, 0)));
-      avatar.add(_child(CapsuleGeometry(radius: 0.075, height: 0.28), skin, vm.Vector3(0, 0.78, 0)));
+      // Individual 3D chair: padded seat, curved-looking back and gold details.
+      final chairNode = Node(name: 'player_chair_${i + 1}');
+      chairNode.add(_child(CuboidGeometry(vm.Vector3(0.76, 0.12, 0.66)), chair, vm.Vector3(0, 0.02, 0.34)));
+      chairNode.add(_child(CuboidGeometry(vm.Vector3(0.76, 0.62, 0.12)), chair, vm.Vector3(0, 0.36, 0.64)));
+      chairNode.add(_child(CuboidGeometry(vm.Vector3(0.82, 0.035, 0.035)), trim, vm.Vector3(0, 0.65, 0.57)));
       for (final side in [-1.0, 1.0]) {
-        avatar.add(_child(CapsuleGeometry(radius: 0.075, height: 0.34), outfit, vm.Vector3(side * 0.27, 0.38, 0.015)));
-        avatar.add(_child(SphereGeometry(radius: 0.07, segments: 16, rings: 10), skin, vm.Vector3(side * 0.28, 0.24, -0.005)));
-        avatar.add(_child(SphereGeometry(radius: 0.073, segments: 16, rings: 10), skin, vm.Vector3(side * 0.235, 1.02, -0.005)));
+        chairNode.add(_child(CuboidGeometry(vm.Vector3(0.07, 0.42, 0.58)), chair, vm.Vector3(side * 0.39, 0.22, 0.25)));
+        chairNode.add(_child(CuboidGeometry(vm.Vector3(0.07, 0.56, 0.07)), trim, vm.Vector3(side * 0.39, 0.33, 0.61)));
+      }
+      avatar.add(chairNode);
+
+      // Full seated silhouette: torso, shoulders, lapels, bent arms and hands.
+      avatar.add(_child(CapsuleGeometry(radius: 0.30, height: 0.58), outfit, vm.Vector3(0, 0.39, 0.02)));
+      avatar.add(_child(SphereGeometry(radius: 0.245, segments: 24, rings: 14), outfit, vm.Vector3(0, 0.59, 0.015)));
+      avatar.add(_child(CapsuleGeometry(radius: 0.078, height: 0.26), skin, vm.Vector3(0, 0.79, -0.005)));
+      avatar.add(_child(CuboidGeometry(vm.Vector3(0.23, 0.19, 0.025)), shirt, vm.Vector3(0, 0.60, -0.205)));
+      avatar.add(_child(CuboidGeometry(vm.Vector3(0.07, 0.23, 0.035)), tie, vm.Vector3(0, 0.49, -0.23)));
+      avatar.add(_child(SphereGeometry(radius: 0.045, segments: 12, rings: 8), tie, vm.Vector3(0, 0.62, -0.245)));
+
+      for (final side in [-1.0, 1.0]) {
+        final lapel = _child(CuboidGeometry(vm.Vector3(0.105, 0.30, 0.035)), shirt, vm.Vector3(side * 0.105, 0.55, -0.218));
+        lapel.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), side * -0.28);
+        avatar.add(lapel);
+
+        // Upper arm, forearm angled toward the felt and a visible hand.
+        final upperArm = _child(CapsuleGeometry(radius: 0.092, height: 0.34), outfit, vm.Vector3(side * 0.30, 0.43, -0.015));
+        upperArm.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), side * -0.55);
+        avatar.add(upperArm);
+        final forearm = _child(CapsuleGeometry(radius: 0.067, height: 0.34), outfit, vm.Vector3(side * 0.32, 0.48, -0.22));
+        forearm.rotation = vm.Quaternion.axisAngle(vm.Vector3(1, 0, 0), math.pi / 2);
+        avatar.add(forearm);
+        avatar.add(_child(CuboidGeometry(vm.Vector3(0.14, 0.09, 0.12)), shirt, vm.Vector3(side * 0.32, 0.49, -0.36)));
+        avatar.add(_child(SphereGeometry(radius: 0.078, segments: 18, rings: 12), skin, vm.Vector3(side * 0.32, 0.50, -0.43)));
+        for (var finger = 0; finger < 3; finger++) {
+          avatar.add(_child(
+            CapsuleGeometry(radius: 0.018, height: 0.085),
+            skin,
+            vm.Vector3(side * 0.32 + (finger - 1) * 0.035, 0.49, -0.49),
+          ));
+        }
+        avatar.add(_child(SphereGeometry(radius: 0.072, segments: 16, rings: 10), skin, vm.Vector3(side * 0.235, 1.02, -0.005)));
       }
 
-      // Head, hair cap, ears, nose and two layered eyes.
-      avatar.add(_child(SphereGeometry(radius: 0.245, segments: 28, rings: 18), skin, vm.Vector3(0, 1.02, 0)));
-      avatar.add(_child(SphereGeometry(radius: 0.25, segments: 28, rings: 14), hair, vm.Vector3(0, 1.19, 0.035)));
-      avatar.add(_child(SphereGeometry(radius: 0.065, segments: 16, rings: 10), hair, vm.Vector3(0, 1.225, -0.12)));
+      // Head is a separate animated 3D rig pivot, not a flat portrait.
+      final head = Node(name: 'player_head_rig_${i + 1}');
+      head.position = vm.Vector3(0, 1.02, 0);
+      head.add(_child(SphereGeometry(radius: 0.245, segments: 32, rings: 22), skin, vm.Vector3.zero()));
+      head.add(_child(SphereGeometry(radius: 0.25, segments: 32, rings: 18), hair, vm.Vector3(0, 0.17, 0.035)));
+      head.add(_child(SphereGeometry(radius: 0.095, segments: 20, rings: 12), hair, vm.Vector3(0, 0.205, -0.13)));
+      // Side locks and layered fringe make each silhouette distinct.
       for (final side in [-1.0, 1.0]) {
-        avatar.add(_child(SphereGeometry(radius: 0.048, segments: 14, rings: 10), skin, vm.Vector3(side * 0.235, 1.0, 0)));
-        avatar.add(_child(SphereGeometry(radius: 0.052, segments: 16, rings: 10), eyeWhite, vm.Vector3(side * 0.078, 1.045, -0.219)));
-        avatar.add(_child(SphereGeometry(radius: 0.028, segments: 14, rings: 10), iris, vm.Vector3(side * 0.078, 1.045, -0.244)));
-        avatar.add(_child(SphereGeometry(radius: 0.014, segments: 10, rings: 8), dark, vm.Vector3(side * 0.078, 1.045, -0.258)));
-        avatar.add(_child(CapsuleGeometry(radius: 0.018, height: 0.105), hair, vm.Vector3(side * 0.078, 1.105, -0.22)));
+        head.add(_child(SphereGeometry(radius: 0.075, segments: 18, rings: 12), hair, vm.Vector3(side * 0.19, 0.055, -0.015)));
+        final brow = _child(CapsuleGeometry(radius: 0.018, height: 0.095), hair, vm.Vector3(side * 0.078, 0.105, -0.218));
+        brow.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), side * (i == 4 ? -0.18 : 0.12));
+        head.add(brow);
+        head.add(_child(SphereGeometry(radius: 0.052, segments: 18, rings: 12), eyeWhite, vm.Vector3(side * 0.078, 0.025, -0.219)));
+        head.add(_child(SphereGeometry(radius: 0.028, segments: 16, rings: 10), iris, vm.Vector3(side * 0.078, 0.025, -0.246)));
+        head.add(_child(SphereGeometry(radius: 0.014, segments: 12, rings: 8), dark, vm.Vector3(side * 0.078, 0.025, -0.264)));
+        head.add(_child(SphereGeometry(radius: 0.012, segments: 10, rings: 8), eyeWhite, vm.Vector3(side * 0.068, 0.038, -0.275)));
       }
-      avatar.add(_child(SphereGeometry(radius: 0.042, segments: 14, rings: 10), skin, vm.Vector3(0, 0.975, -0.247)));
+      head.add(_child(SphereGeometry(radius: 0.044, segments: 16, rings: 10), skin, vm.Vector3(0, -0.045, -0.247)));
+      head.add(_child(SphereGeometry(radius: 0.022, segments: 12, rings: 8), skin, vm.Vector3(-0.018, -0.062, -0.275)));
+      head.add(_child(SphereGeometry(radius: 0.022, segments: 12, rings: 8), skin, vm.Vector3(0.018, -0.062, -0.275)));
 
-      // Six subtle mouth shapes provide visibly different expressions.
+      // Different mouth geometry gives the six seats distinct expressions.
       final expression = i % 6;
       final mouthNode = _child(
-        CapsuleGeometry(radius: 0.018, height: expression == 2 ? 0.055 : 0.105),
+        CapsuleGeometry(radius: 0.017, height: expression == 2 || expression == 5 ? 0.055 : 0.10),
         mouth,
-        vm.Vector3(0, expression == 2 ? 0.895 : 0.905, -0.232),
+        vm.Vector3(0, -0.125, -0.231),
       );
       mouthNode.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), math.pi / 2);
-      avatar.add(mouthNode);
-      if (expression == 2) {
-        avatar.add(_child(SphereGeometry(radius: 0.025, segments: 12, rings: 8), mouth, vm.Vector3(0, 0.895, -0.24)));
+      head.add(mouthNode);
+      if (expression == 2 || expression == 5) {
+        head.add(_child(SphereGeometry(radius: 0.025, segments: 14, rings: 10), mouth, vm.Vector3(0, -0.125, -0.245)));
       }
-      if (expression == 0 || expression == 5) {
+      if (expression == 0 || expression == 3) {
         for (final side in [-1.0, 1.0]) {
-          avatar.add(_child(SphereGeometry(radius: 0.018, segments: 10, rings: 8), _pbr(0xD67D70, roughness: 0.8), vm.Vector3(side * 0.15, 0.93, -0.205)));
+          head.add(_child(SphereGeometry(radius: 0.018, segments: 12, rings: 8), _pbr(0xD67D70, roughness: 0.8), vm.Vector3(side * 0.15, -0.075, -0.205)));
         }
       }
+      if (expression == 4) {
+        // Subtle moustache on one avatar for a more varied cast.
+        for (final side in [-1.0, 1.0]) {
+          head.add(_child(SphereGeometry(radius: 0.035, segments: 14, rings: 10), hair, vm.Vector3(side * 0.045, -0.095, -0.245)));
+        }
+      }
+      avatar.add(head);
+      _avatarHeadNodes.add(head);
       _scene.add(avatar);
     }
   }
@@ -524,6 +580,18 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   double _flightStartAngle = 0;
 
   void _tickCardFlight(Duration elapsed, double deltaSeconds) {
+    // Gentle idle head motion keeps the 3D opponents alive between turns.
+    final idleTime = elapsed.inMicroseconds / 1000000;
+    for (var i = 0; i < _avatarHeadNodes.length; i++) {
+      final phase = idleTime * 0.72 + i * 1.17;
+      final yaw = math.sin(phase) * 0.035;
+      final nod = math.sin(phase * 0.63) * 0.018;
+      _avatarHeadNodes[i].rotation = vm.Quaternion.axisAngle(
+        vm.Vector3(0, 1, 0),
+        yaw,
+      ) * vm.Quaternion.axisAngle(vm.Vector3(1, 0, 0), nod);
+    }
+
     final dealerNode = _dealerDrawNode;
     final dealerStart = _dealerDrawStart;
     final dealerTarget = _dealerDrawTarget;
