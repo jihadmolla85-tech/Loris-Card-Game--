@@ -220,15 +220,17 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   body: 'Bidding starts with the player to the dealer’s right. '
                       'Players may pass. A bid must be higher than the current '
                       'highest bid. The winning bidder selects a trump suit they '
-                      'also hold. A teammate may reveal one eligible card for '
-                      'that selection; their other cards remain private.',
+                      'also hold, or chooses the LORIS Joker from their own '
+                      'hand for Joker mode. A teammate may reveal one eligible '
+                      'suit card for a normal trump selection.',
                 ),
                 _RuleSection(
                   title: 'PLAYING TRICKS',
                   body: 'Follow the suit led whenever possible. If you cannot '
                       'follow suit, you must play trump when you have one. If a '
-                      'higher trump is available, you must overtrump. LORIS may '
-                      'be played at any time and is the highest card.',
+                      'higher trump is available, you must overtrump. The LORIS card is '
+                      'the Joker and beats every card. In Joker mode there is '
+                      'no trump suit; the highest rank wins across all suits.',
                 ),
                 _RuleSection(
                   title: 'SCORING',
