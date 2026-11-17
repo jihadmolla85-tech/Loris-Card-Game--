@@ -2088,40 +2088,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildTurnBanner(int? currentPlayer) {
-    final isHuman = currentPlayer == 0;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 220),
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 5),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFFE7A0), Color(0xFFB77A2D)]),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          Icon(isHuman ? Icons.touch_app_rounded : Icons.hourglass_top_rounded,
-              color: const Color(0xFF2B1B0C), size: 17),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Text(
-              currentPlayer == null
-                  ? 'ROUND COMPLETE'
-                  : 'NOW PLAYING  •  ${_playerNames[currentPlayer]}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFF2B1B0C), fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: .8),
-            ),
-          ),
-          if (isHuman)
-            const Text('YOUR TURN', style: TextStyle(color: Color(0xFF2B1B0C), fontSize: 9, fontWeight: FontWeight.w900)),
-        ],
-      ),
-    );
-  }
-
   Widget _compactScore(String label, int value) {
     return Column(
       children: [
