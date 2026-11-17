@@ -82,6 +82,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
   bool _loading = false;
   bool _musicEnabled = true;
   bool _soundEnabled = true;
+  bool _sortHandBySuit = false;
 
   @override
   void initState() {
@@ -1976,7 +1977,16 @@ await _revealDealerDrawOnTable(
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final handCount = hands[0].length;
+        final displayedHand = List<loris.Card>.from(hands[0]);
+        if (_sortHandBySuit) {
+          displayedHand.sort((a, b) {
+            if (a.isLoris) return b.isLoris ? 0 : 1;
+            if (b.isLoris) return -1;
+            final suitOrder = a.suit!.index.compareTo(b.suit!.index);
+            return suitOrder != 0 ? suitOrder : a.rank!.compareTo(b.rank!);
+          });
+        }
+        final handCount = displayedHand.length;
         return Padding(
           padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
           child: Column(
@@ -1985,10 +1995,22 @@ await _revealDealerDrawOnTable(
               _buildCompactMatchHeader(),
               if (_error != null) _buildErrorBanner(),
               Expanded(
-                child: _buildTableSurface(
-                  _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,
-                  currentPlayer,
-                  hands.map((hand) => hand.length).toList(),
+                child: DragTarget<loris.Card>(
+                  onWillAcceptWithDetails: (details) => currentPlayer == 0 && !_busy && !_finished && legalHumanCards.contains(details.data),
+                  onAcceptWithDetails: (details) => _playHumanCard(details.data),
+                  builder: (context, candidates, rejected) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      border: candidates.isNotEmpty ? Border.all(color: LorisApp.gold.withValues(alpha: .9), width: 2) : null,
+                      boxShadow: candidates.isNotEmpty ? [BoxShadow(color: LorisApp.gold.withValues(alpha: .18), blurRadius: 18, spreadRadius: 2)] : const [],
+                    ),
+                    child: _buildTableSurface(
+                      _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,
+                      currentPlayer,
+                      hands.map((hand) => hand.length).toList(),
+                    ),
+                  ),
                 ),
               ),
               if (_humanCanCall16)
@@ -2055,7 +2077,15 @@ await _revealDealerDrawOnTable(
                           'YOUR HAND',
                           style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
                         ),
-                        const Spacer(),
+                        IconButton(
+                          tooltip: _sortHandBySuit ? 'Original card order' : 'Sort by suit and rank',
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                          padding: EdgeInsets.zero,
+                          onPressed: () => setState(() => _sortHandBySuit = !_sortHandBySuit),
+                          icon: Icon(_sortHandBySuit ? Icons.sort : Icons.swap_vert, color: LorisApp.gold, size: 18),
+                        ),
+                        const SizedBox(width: 5),
                         Text(
                           '$handCount CARDS',
                           style: const TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1.2, fontWeight: FontWeight.bold),
@@ -2086,23 +2116,29 @@ await _revealDealerDrawOnTable(
                                     bottom: 1,
                                     child: Builder(
                                       builder: (context) {
-                                        final card = hands[0][index];
+                                        final card = displayedHand[index];
                                         final playable = !_finished &&
                                             !_busy &&
                                             currentPlayer == 0 &&
                                             legalHumanCards.contains(card);
                                         final middle = (handCount - 1) / 2;
                                         final angle = (index - middle) * .025;
-                                        return GestureDetector(
-                                          onTap: playable ? () => _playHumanCard(card) : null,
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 180),
-                                            curve: Curves.easeOut,
-                                            transform: Matrix4.identity()
-                                              ..translateByDouble(0, playable ? -7 : 0, 0, 1)
-                                              ..rotateZ(angle),
-                                            transformAlignment: Alignment.bottomCenter,
-                                            child: _buildCard(card, enabled: playable),
+                                        return Draggable<loris.Card>(
+                                          data: card,
+                                          maxSimultaneousDrags: playable ? 1 : 0,
+                                          feedback: Material(color: Colors.transparent, child: _buildCard(card, enabled: true)),
+                                          childWhenDragging: Opacity(opacity: .28, child: _buildCard(card, enabled: false)),
+                                          child: GestureDetector(
+                                            onTap: playable ? () => _playHumanCard(card) : null,
+                                            child: AnimatedContainer(
+                                              duration: const Duration(milliseconds: 180),
+                                              curve: Curves.easeOut,
+                                              transform: Matrix4.identity()
+                                                ..translateByDouble(0, playable ? -7 : 0, 0, 1)
+                                                ..rotateZ(angle),
+                                              transformAlignment: Alignment.bottomCenter,
+                                              child: _buildCard(card, enabled: playable),
+                                            ),
                                           ),
                                         );
                                       },
