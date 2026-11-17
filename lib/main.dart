@@ -739,10 +739,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       });
       final totalCards = widget.playerCount * 8;
       for (var dealt = 1; dealt <= totalCards; dealt++) {
-        await Future.delayed(const Duration(milliseconds: 72));
+        await Future.delayed(const Duration(milliseconds: 90));
         if (!mounted) return;
         setState(() => _dealtCardCount = dealt);
       }
+      await Future.delayed(const Duration(milliseconds: 350));
       if (!mounted) return;
       setState(() {
         _isDealingCards = false;
@@ -2160,7 +2161,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 Positioned.fill(
                   child: LorisTableSurface(
                     playerCount: widget.playerCount,
-                    hands: _isDealingCards ? null : _hands,
+                    hands: _hands,
+                    dealing: _isDealingCards,
+                    dealerIndex: _dealerIndex ?? 0,
                     playedCards: plays.map((play) => play.card).toList(),
                     playedBy: plays.map((play) => play.playerIndex).toList(),
                     flyingCard: _flyingCard,
@@ -2227,7 +2230,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           ),
                           Text(
                             'TEAM ${index.isEven ? "A" : "B"}',
-                            style: const TextStyle(color: Color(0xFFFFD978), fontSize: 7, fontWeight: FontWeight.bold),
+                            style: const TextStyle(color: Color(0xFFFFD978), fontSize: 9, fontWeight: FontWeight.bold),
                           ),
                           if (currentPlayer == index)
                             Container(
@@ -2239,7 +2242,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               ),
                               child: Text(
                                 index == 0 ? 'YOUR TURN' : 'PLAYING',
-                                style: const TextStyle(color: Color(0xFF2B1B0C), fontSize: 6, fontWeight: FontWeight.w900),
+                                style: const TextStyle(color: Color(0xFF2B1B0C), fontSize: 8, fontWeight: FontWeight.w900),
                               ),
                             ),
                           if (index != 0)
@@ -2262,12 +2265,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                       ),
                                     ),
                                   const SizedBox(width: 3),
-                                  Text('${handCounts[index]}', style: const TextStyle(color: Colors.white70, fontSize: 7, fontWeight: FontWeight.bold)),
+                                  Text('${handCounts[index]}', style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                             ),
                           if (_collectingTrickWinner == index)
-                            const Text('TRICK WON', style: TextStyle(color: Color(0xFFFFE7A0), fontSize: 7, fontWeight: FontWeight.w900)),
+                            const Text('TRICK WON', style: TextStyle(color: Color(0xFFFFE7A0), fontSize: 9, fontWeight: FontWeight.w900)),
                         ],
                       ),
                     ),
@@ -2294,15 +2297,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             : 'NOW PLAYING • ${_playerNames[currentPlayer]}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: .7),
+                        style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: .7),
                       ),
                       if (plays.isEmpty)
-                        const Text('PLAY A CARD', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1.5, fontWeight: FontWeight.bold))
+                        Text(_started ? 'PLAY A CARD' : (_isDealingCards ? 'DEALING...' : _awaitingTrumpSelection ? 'CHOOSE TRUMP' : bidding != null ? 'BID OR PASS' : 'READY'), style: const TextStyle(color: Colors.white70, fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold))
                       else
                         const SizedBox(height: 1),
                       Text(
                         '${plays.length} / ${widget.playerCount} CARDS',
-                        style: const TextStyle(color: Colors.white54, fontSize: 7, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -2425,7 +2428,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       ),
                       child: Text(
                         'TRUMP  ${_suitSymbol(_trumpSuit)}',
-                        style: const TextStyle(color: Color(0xFF2B1B0C), fontWeight: FontWeight.w900, fontSize: 8),
+                        style: const TextStyle(color: Color(0xFF2B1B0C), fontWeight: FontWeight.w900, fontSize: 10),
                       ),
                     ),
                   ),
