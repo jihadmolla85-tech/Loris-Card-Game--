@@ -2293,22 +2293,6 @@ await DealerRevealDialog.show(
             Alignment(.87, .53),
           ];
 
-    final trickCollectionTargets = widget.playerCount == 4
-        ? const <Alignment>[
-            Alignment(0, .63),
-            Alignment(-.64, 0),
-            Alignment(0, -.63),
-            Alignment(.64, 0),
-          ]
-        : const <Alignment>[
-            Alignment(0, .63),
-            Alignment(-.62, .38),
-            Alignment(-.62, -.38),
-            Alignment(0, -.63),
-            Alignment(.62, -.38),
-            Alignment(.62, .38),
-          ];
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
