@@ -670,6 +670,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
       _dealerIndex = snapshot.dealerIndex;
       _trumpSuit = snapshot.trumpSuit;
+      _trumpCard = _trumpSuit == null
+          ? _hands!.expand((hand) => hand).where((card) => card.isLoris).firstOrNull
+          : null;
 
       _started = true;
       _finished = _matchController.currentRound.isRoundEnded;
