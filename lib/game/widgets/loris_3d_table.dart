@@ -371,7 +371,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     final angle = math.pi / 2 + (math.pi * 2 * seat / count);
     final start = vm.Vector3(math.cos(angle) * 1.48, 0.76, math.sin(angle) * 1.04);
     final playedCount = widget.playedCards.length;
-    final offset = playedCount - (playedCount - 1) / 2;
+    final offset = playedCount / 2;
     final target = vm.Vector3(offset * 0.32, 0.70, offset * 0.12);
 
     final card = Node(name: '3d_flying_card');
@@ -405,7 +405,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
 
     _flightStartElapsed ??= elapsed;
     final seconds = (elapsed - _flightStartElapsed!).inMicroseconds / 1000000;
-    final raw = (seconds / 0.48).clamp(0.0, 1.0);
+    final raw = (seconds / 0.45).clamp(0.0, 1.0);
     final eased = 1 - math.pow(1 - raw, 3).toDouble();
     final arc = math.sin(raw * math.pi) * 0.42;
     node.position = vm.Vector3(
