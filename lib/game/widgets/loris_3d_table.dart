@@ -161,6 +161,8 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     for (var i = 0; i < count; i++) {
       final angle = math.pi / 2 + (math.pi * 2 * i / count);
       final avatar = Node(name: '3d_seated_player_${i + 1}');
+      // Keep players compact so the cards and table remain the visual focus.
+      avatar.scale = vm.Vector3.all(0.56);
       avatar.position = vm.Vector3(math.cos(angle) * 2.48, -0.02, math.sin(angle) * 1.78);
       avatar.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), angle + math.pi / 2);
 
