@@ -19,7 +19,7 @@ void main() {
       ];
     }
 
-    test('Deals 8 cards to each of 4 players in two groups of 4', () {
+    test('Deals 8 cards to each of 4 players one at a time', () {
       final deck = createDeck(4);
 
       final hands = CardDealer.deal(
@@ -36,18 +36,13 @@ void main() {
         final offset = (player - 2 + 4) % 4;
 
         expect(
-          hands[player].take(4).toList(),
-          [for (var i = 0; i < 4; i++) deck[offset + i * 4]],
-        );
-
-        expect(
-          hands[player].skip(4).toList(),
-          [for (var i = 0; i < 4; i++) deck[16 + offset + i * 4]],
+          hands[player],
+          [for (var i = 0; i < 8; i++) deck[offset + i * 4]],
         );
       }
     });
 
-    test('Deals 8 cards to each of 6 players in two groups of 4', () {
+    test('Deals 8 cards to each of 6 players one at a time', () {
       final deck = createDeck(6);
 
       final hands = CardDealer.deal(
@@ -64,13 +59,8 @@ void main() {
         final offset = (player - 4 + 6) % 6;
 
         expect(
-          hands[player].take(4).toList(),
-          [for (var i = 0; i < 4; i++) deck[offset + i * 6]],
-        );
-
-        expect(
-          hands[player].skip(4).toList(),
-          [for (var i = 0; i < 4; i++) deck[24 + offset + i * 6]],
+          hands[player],
+          [for (var i = 0; i < 8; i++) deck[offset + i * 6]],
         );
       }
     });
