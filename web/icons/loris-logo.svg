@@ -1,12 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0b5"/><stop offset=".48" stop-color="#e4ad43"/><stop offset="1" stop-color="#98551f"/></linearGradient><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#8e2736"/><stop offset="1" stop-color="#4e1727"/></linearGradient></defs>
-<rect width="512" height="512" rx="104" fill="#fff1d4"/>
-<circle cx="256" cy="230" r="190" fill="url(#g)" stroke="#9b642c" stroke-width="10"/>
-<path d="M102 195 145 78l90 83M410 195 367 78l-90 83" fill="url(#r)" stroke="#6d321f" stroke-width="13" stroke-linejoin="round"/>
-<path d="M115 218c8-83 66-128 141-128s133 45 141 128c-2 93-57 150-141 150S117 311 115 218Z" fill="url(#r)" stroke="#6d321f" stroke-width="12"/>
-<path d="M148 222c25-43 68-49 108 0-40 49-83 43-108 0Zm108 0c40-49 83-43 108 0-25 43-68 49-108 0Z" fill="#fff0c5" stroke="#e4ad43" stroke-width="9"/>
-<circle cx="202" cy="221" r="17" fill="#4c2618"/><circle cx="310" cy="221" r="17" fill="#4c2618"/>
-<path d="m256 240-28 38h56Z" fill="#f6c95f" stroke="#6d321f" stroke-width="7" stroke-linejoin="round"/>
-<path d="M165 329 256 385l91-56" fill="none" stroke="#f2c65c" stroke-width="15" stroke-linecap="round"/>
-<text x="256" y="466" text-anchor="middle" font-family="Georgia,serif" font-size="56" font-weight="bold" letter-spacing="8" fill="#6b351f">LORIS</text>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8f2032"/><stop offset="1" stop-color="#3d0d1b"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0ad"/><stop offset=".5" stop-color="#e2ad48"/><stop offset="1" stop-color="#9c6427"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="238" r="198" fill="none" stroke="url(#gold)" stroke-width="10" opacity=".85"/>
+  <path d="M154 92h180a24 24 0 0 1 24 24v244a24 24 0 0 1-24 24H154a24 24 0 0 1-24-24V116a24 24 0 0 1 24-24Z" fill="#160711" opacity=".45" filter="url(#shadow)"/>
+  <g transform="rotate(-10 235 246)">
+    <rect x="125" y="83" width="190" height="300" rx="22" fill="url(#gold)"/>
+    <rect x="137" y="95" width="166" height="276" rx="15" fill="#fff8e9"/>
+    <path d="M158 119h45v8h-45z" fill="#a51f35"/>
+    <path d="M180 142 201 163 180 184 159 163Z" fill="#b51f35"/>
+    <path d="M262 286c-20-23-51-7-51 16 0 16 14 25 27 35 9 7 18 16 24 26 7-10 16-19 25-26 13-10 27-19 27-35 0-23-31-39-52-16Z" fill="#b51f35"/>
+    <path d="M158 326h45v8h-45z" fill="#a51f35"/>
+  </g>
+  <g transform="rotate(10 300 246)">
+    <rect x="202" y="104" width="190" height="300" rx="22" fill="url(#gold)"/>
+    <rect x="214" y="116" width="166" height="276" rx="15" fill="#fff8e9"/>
+    <path d="M235 140h45v8h-45z" fill="#1c2630"/>
+    <path d="M257 162c-8-16-28-11-28 5 0 12 17 24 28 36 11-12 28-24 28-36 0-16-20-21-28-5Z" fill="#1c2630"/>
+    <path d="M257 350 236 329h42Z" fill="#b51f35"/>
+  </g>
+  <text x="256" y="468" text-anchor="middle" font-family="Arial,sans-serif" font-size="48" font-weight="900" letter-spacing="8" fill="#fff0ad">LORIS</text>
 </svg>
