@@ -1517,7 +1517,8 @@ await _revealDealerDrawOnTable(
             score.teamAScore - scoreBeforeTeamA;
         final teamBPointsEarned =
             score.teamBScore - scoreBeforeTeamB;
-        final humanTeamWonRound = teamAPointsEarned > 0;
+        final humanTeamWonRound =
+            teamAPointsEarned > teamBPointsEarned;
 
         if (_matchController.isMatchOver) {
           final matchWinner = _matchController.matchWinner;
@@ -1525,7 +1526,7 @@ await _revealDealerDrawOnTable(
           final matchDraw = matchWinner == MatchWinner.draw;
           if (_soundEnabled && humanTeamWonMatch) {
             unawaited(_audio.play('match_win'));
-          } else if (!humanTeamWonMatch && !matchDraw) {
+          } else if (_soundEnabled && !humanTeamWonMatch && !matchDraw) {
             unawaited(SystemSound.play(SystemSoundType.alert));
           }
           if (humanTeamWonMatch) {
@@ -1546,7 +1547,7 @@ await _revealDealerDrawOnTable(
         } else {
           if (_soundEnabled && humanTeamWonRound) {
             unawaited(_audio.play('round_win'));
-          } else if (!humanTeamWonRound) {
+          } else if (_soundEnabled && !humanTeamWonRound) {
             unawaited(SystemSound.play(SystemSoundType.alert));
           }
           if (humanTeamWonRound) {
