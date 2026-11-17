@@ -8,7 +8,7 @@ import '../models/loris_card.dart' as loris;
 /// Native 3D LORIS table scene. All visible table props in this layer are
 /// actual meshes rendered with perspective, PBR materials and real lighting.
 class LorisTableSurface extends StatefulWidget {
-  const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const [], this.playedBy = const [], this.flyingCard, this.flyingFromPlayer, this.flightStarted = false, this.dealing = false, this.dealerIndex = 0});
+  const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const [], this.playedBy = const [], this.flyingCard, this.flyingFromPlayer, this.flightStarted = false, this.dealing = false, this.dealerIndex = 0, this.dealerDrawCards, this.dealerDrawVisibleCount = 0, this.dealerDrawStartPlayer = 0, this.dealerDrawActive = false});
 
   final int playerCount;
   final List<List<loris.Card>>? hands;
@@ -19,6 +19,10 @@ class LorisTableSurface extends StatefulWidget {
   final bool flightStarted;
   final bool dealing;
   final int dealerIndex;
+  final List<loris.Card>? dealerDrawCards;
+  final int dealerDrawVisibleCount;
+  final int dealerDrawStartPlayer;
+  final bool dealerDrawActive;
 
   @override
   State<LorisTableSurface> createState() => _LorisTableSurfaceState();
@@ -31,6 +35,10 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   Node? _flyingNode;
   Duration? _flightStartElapsed;
   Duration? _dealStartElapsed;
+  Node? _dealerDrawNode;
+  Duration? _dealerDrawStartElapsed;
+  vm.Vector3? _dealerDrawStart;
+  vm.Vector3? _dealerDrawTarget;
   final List<Node> _dealNodes = [];
   final List<vm.Vector3> _dealStarts = [];
   final List<vm.Vector3> _dealTargets = [];
@@ -49,7 +57,10 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
         ? 'undealt'
         : hands.map((hand) => hand.map((card) => card.toString()).join(',')).join('|');
     final playedSignature = widget.playedCards.map((card) => card.toString()).join(',');
-    return '$handSignature#played:$playedSignature#by:${widget.playedBy.join(',')}#flight:${widget.flyingCard}:${widget.flyingFromPlayer}:${widget.flightStarted}#deal:${widget.dealing}:${widget.dealerIndex}';
+    final dealerSignature = widget.dealerDrawCards == null
+        ? 'no-dealer-draw'
+        : '${widget.dealerDrawVisibleCount}:${widget.dealerDrawStartPlayer}:${widget.dealerDrawActive}:${widget.dealerDrawCards!.take(widget.dealerDrawVisibleCount).join(',')}';
+    return '$handSignature#played:$playedSignature#by:${widget.playedBy.join(',')}#flight:${widget.flyingCard}:${widget.flyingFromPlayer}:${widget.flightStarted}#deal:${widget.dealing}:${widget.dealerIndex}#$dealerSignature';
   }
 
   @override
@@ -71,6 +82,10 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     _dealStarts.clear();
     _dealTargets.clear();
     _dealStartElapsed = null;
+    _dealerDrawNode = null;
+    _dealerDrawStartElapsed = null;
+    _dealerDrawStart = null;
+    _dealerDrawTarget = null;
     _flyingNode = null;
     _flightStartElapsed = null;
     try {
@@ -216,6 +231,11 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
       _scene.add(card);
     }
 
+    if (widget.dealerDrawCards != null) {
+      _addDealerDrawCards();
+      return;
+    }
+
     final count = widget.playerCount == 4 ? 4 : 6;
     final hands = widget.hands;
     if (widget.dealing && hands != null) {
@@ -256,6 +276,41 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
           ));
         }
         _scene.add(card);
+      }
+    }
+  }
+
+  void _addDealerDrawCards() {
+    final cards = widget.dealerDrawCards!;
+    final visibleCount = widget.dealerDrawVisibleCount.clamp(0, cards.length);
+    final cardBack = _pbr(0x8B1E30, metallic: 0.28, roughness: 0.36);
+    final cardFace = _pbr(0xFFF7E8, roughness: 0.48);
+    final gold = _pbr(0xD7AE59, metallic: 0.96, roughness: 0.2);
+    final start = vm.Vector3(0, 0.84, 0);
+    final count = widget.playerCount;
+
+    for (var i = 0; i < visibleCount; i++) {
+      final player = (widget.dealerDrawStartPlayer + i) % count;
+      final angle = math.pi / 2 + math.pi * 2 * player / count;
+      final target = vm.Vector3(
+        math.cos(angle) * 1.24,
+        0.675 + i * 0.002,
+        math.sin(angle) * 0.84,
+      );
+      final card = Node(name: 'dealer_draw_card_$i');
+      final isCurrent = widget.dealerDrawActive && i == visibleCount - 1;
+      card.position = isCurrent ? start.clone() : target;
+      card.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), angle + math.pi);
+      card.add(_child(CuboidGeometry(vm.Vector3(0.36, 0.026, 0.51)), cardBack, vm.Vector3.zero()));
+      card.add(_child(CuboidGeometry(vm.Vector3(0.344, 0.004, 0.494)), gold, vm.Vector3(0, 0.015, 0)));
+      card.add(_child(CuboidGeometry(vm.Vector3(0.332, 0.004, 0.482)), cardFace, vm.Vector3(0, 0.018, 0)));
+      _addCardFace(card, cards[i], gold);
+      _scene.add(card);
+      if (isCurrent) {
+        _dealerDrawNode = card;
+        _dealerDrawStart = start;
+        _dealerDrawTarget = target;
+        _dealerDrawStartElapsed = null;
       }
     }
   }
@@ -469,6 +524,21 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   double _flightStartAngle = 0;
 
   void _tickCardFlight(Duration elapsed, double deltaSeconds) {
+    final dealerNode = _dealerDrawNode;
+    final dealerStart = _dealerDrawStart;
+    final dealerTarget = _dealerDrawTarget;
+    if (dealerNode != null && dealerStart != null && dealerTarget != null) {
+      _dealerDrawStartElapsed ??= elapsed;
+      final seconds = (elapsed - _dealerDrawStartElapsed!).inMicroseconds / 1000000;
+      final raw = (seconds / 0.48).clamp(0.0, 1.0);
+      final eased = 1 - math.pow(1 - raw, 3).toDouble();
+      final arc = math.sin(raw * math.pi) * 0.24;
+      dealerNode.position = vm.Vector3(
+        dealerStart.x + (dealerTarget.x - dealerStart.x) * eased,
+        dealerStart.y + (dealerTarget.y - dealerStart.y) * eased + arc,
+        dealerStart.z + (dealerTarget.z - dealerStart.z) * eased,
+      );
+    }
     if (_dealNodes.isNotEmpty) {
       _dealStartElapsed ??= elapsed;
       final seconds = (elapsed - _dealStartElapsed!).inMicroseconds / 1000000;
