@@ -10,7 +10,7 @@ class GameRoundController {
   GameRoundController({
     required List<List<Card>> hands,
     required this.dealerIndex,
-    required Suit trumpSuit,
+    required Suit? trumpSuit,
     required this.biddingTeam,
     required this.bidAmount,
     required this.matchScoreEngine,
