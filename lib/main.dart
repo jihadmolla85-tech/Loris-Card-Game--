@@ -547,6 +547,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   loris.Card? _flyingCard;
   int? _flyingFromPlayer;
   bool _flightStarted = false;
+  int _cardImpactKey = 0;
   String? _playEffect;
   String? _winCelebration;
   List<loris.Card>? _dealerDrawCards;
@@ -632,6 +633,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _flyingFromPlayer = null;
       _flightStarted = false;
       _playEffect = null;
+      _cardImpactKey++;
     });
   }
 
@@ -3062,6 +3064,44 @@ await _revealDealerDrawOnTable(
                         );
                       },
                       child: _buildCard(_flyingCard!, compact: true),
+                    ),
+                  ),
+                if (_cardImpactKey > 0)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        child: TweenAnimationBuilder<double>(
+                          key: ValueKey('card-impact-$_cardImpactKey'),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 360),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, progress, child) {
+                            final diameter = 24.0 + progress * 76.0;
+                            return Opacity(
+                              opacity: (1.0 - progress).clamp(0.0, 1.0),
+                              child: Container(
+                                width: diameter,
+                                height: diameter,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFFFE6A0),
+                                    width: 2.4 - progress * 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFFD36A)
+                                          .withValues(alpha: .42 * (1 - progress)),
+                                      blurRadius: 16,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 if (_playEffect != null)
