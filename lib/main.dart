@@ -2352,7 +2352,7 @@ await DealerRevealDialog.show(
                 // The table mesh is rendered by Three.js in real perspective 3D.
                 // Flutter keeps the cards, avatars and controls interactive above it.
                 Positioned.fill(
-                  child: LorisTableSurface(playerCount: widget.playerCount, hands: _hands),
+                  child: LorisTableSurface(playerCount: widget.playerCount, hands: _hands, playedCards: plays.map((play) => play.card).toList()),
                 ),
                 Positioned.fill(
                   child: Padding(
