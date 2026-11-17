@@ -233,5 +233,28 @@ void main() {
         throwsStateError,
       );
     });
+
+    test('offers the exact-bid call in a six-player game for team B', () {
+      engine = createEngine(players: 6, team: 1);
+
+      // Team B occupies odd seats in the six-player A-B-A-B-A-B layout.
+      for (final winner in [1, 3, 5, 1]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.completedTricks, 4);
+      expect(engine.biddingTeamTricks, 4);
+      expect(engine.canCall, isTrue);
+
+      // No extra trick is required after the bid is reached.
+      engine.call16(callerPlayerIndex: 1);
+      expect(engine.status, SixteenCallStatus.inProgress);
+
+      engine.recordTrickWinner(0);
+
+      expect(engine.status, SixteenCallStatus.failed);
+      expect(engine.biddingTeamPoints, -16);
+      expect(engine.opposingTeamPoints, 16);
+    });
   });
 }
