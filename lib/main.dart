@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
 import 'game/widgets/dealer_reveal_dialog.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
+import 'game/widgets/loris_3d_table.dart';
 import 'game/engine/game_settings_service.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -2322,6 +2323,11 @@ await DealerRevealDialog.show(
               alignment: Alignment.center,
               clipBehavior: Clip.none,
               children: [
+                // The table mesh is rendered by Three.js in real perspective 3D.
+                // Flutter keeps the cards, avatars and controls interactive above it.
+                Positioned.fill(
+                  child: Loris3DTable(),
+                ),
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.all(8),
@@ -2332,7 +2338,7 @@ await DealerRevealDialog.show(
                         gradient: const RadialGradient(
                           center: Alignment(0, -.25),
                           radius: 1.15,
-                          colors: [Color(0xFF16795A), Color(0xFF032D25)],
+                          colors: [Color(0x0016795A), Color(0x00032D25)],
                         ),
                       ),
                     ),
