@@ -132,6 +132,41 @@ void main() {
       expect(game.winnerIndex, 2);
     });
 
+    test('Joker mode compares the rank of every suit', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: null,
+      );
+      hands[2].removeWhere((c) => c.suit == Suit.hearts);
+      hands[3].removeWhere((c) => c.suit == Suit.hearts);
+      hands[0].removeWhere((c) => c.suit == Suit.hearts);
+
+      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(2, card(Suit.spades, 11));
+      game.playCard(3, card(Suit.diamonds, 13));
+      game.playCard(0, card(Suit.clubs, 10));
+
+      expect(game.winnerIndex, 3);
+    });
+
+    test('Joker beats every card in Joker mode', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: null,
+      );
+      final joker = Card.loris(replacesRank: 7);
+      hands[2].add(joker);
+
+      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(2, joker);
+      game.playCard(3, card(Suit.hearts, 13));
+      game.playCard(0, card(Suit.hearts, 10));
+
+      expect(game.winnerIndex, 2);
+    });
+
     test('highest trump wins when trump is played', () {
       final game = TrickEngine(
         hands: hands,
