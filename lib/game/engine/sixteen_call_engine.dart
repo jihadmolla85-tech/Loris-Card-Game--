@@ -47,9 +47,9 @@ class SixteenCallEngine {
 
   bool get canCall =>
       status == SixteenCallStatus.notCalled &&
-      completedTricks > bidAmount &&
+      completedTricks == bidAmount &&
       completedTricks < 8 &&
-      biddingTeamTricks >= bidAmount &&
+      biddingTeamTricks == bidAmount &&
       lastTrickWinnerIndex != null &&
       (lastTrickWinnerIndex! % 2) == biddingTeam;
 
@@ -58,13 +58,13 @@ class SixteenCallEngine {
       throw StateError('16 Call has already been made.');
     }
 
-    if (completedTricks <= bidAmount || completedTricks >= 8) {
+    if (completedTricks != bidAmount || completedTricks >= 8) {
       throw StateError(
-        '16 Call requires one additional trick after reaching the bid.',
+        '16 Call is available immediately after the bidding team wins its bid number of consecutive tricks.',
       );
     }
 
-    if (biddingTeamTricks < bidAmount) {
+    if (biddingTeamTricks != bidAmount) {
       throw StateError(
         'Bidding team has not reached its bid.',
       );

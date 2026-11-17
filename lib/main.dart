@@ -2254,6 +2254,68 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     flightStarted: _flightStarted,
                   ),
                 ),
+                // Face-up trick cards stay readable above the stable 3D scene.
+                if (plays.isNotEmpty)
+                  Positioned(
+                    top: tableHeight * .39,
+                    left: 4,
+                    right: 4,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 5,
+                          runSpacing: 4,
+                          children: [
+                            for (final play in plays)
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xDD17243B),
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(color: const Color(0x99FFD978), width: .6),
+                                    ),
+                                    child: Text(
+                                      _playerNames[play.playerIndex],
+                                      style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w800),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  _buildCard(play.card, compact: true),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_flightStarted && _flyingCard != null && _flyingFromPlayer != null)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: TweenAnimationBuilder<double>(
+                        key: ValueKey('flight-$_flyingFromPlayer-$_flyingCard'),
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 560),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, progress, child) {
+                          final origin = seatAlignments[_flyingFromPlayer!];
+                          final position = Alignment.lerp(origin, Alignment.center, progress)!;
+                          final arc = sin(progress * pi) * 34;
+                          return Align(
+                            alignment: position,
+                            child: Transform.translate(
+                              offset: Offset(0, -arc),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _buildCard(_flyingCard!, compact: true),
+                      ),
+                    ),
+                  ),
                 Positioned.fill(
                   child: Padding(
                     padding: const EdgeInsets.all(8),

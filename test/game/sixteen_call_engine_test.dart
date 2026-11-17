@@ -69,25 +69,31 @@ void main() {
       );
     });
 
-    test('Cannot call on the same trick that reaches the bid', () {
+    test('Can call immediately after winning the bid number of consecutive tricks', () {
       engine = createEngine();
       winFirstFour(engine);
+      expect(engine.canCall, isTrue);
+      engine.call16(callerPlayerIndex: 2);
+      expect(engine.status, SixteenCallStatus.inProgress);
+    });
+
+    test('An opponent trick prevents 16 call eligibility', () {
+      engine = createEngine(bid: 4);
+      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(1);
+      engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
       expect(engine.canCall, isFalse);
-      expect(
-        () => engine.call16(callerPlayerIndex: 2),
-        throwsStateError,
-      );
+      expect(() => engine.call16(callerPlayerIndex: 0), throwsStateError);
     });
 
     test('Only previous trick winner can call', () {
       engine = createEngine();
       winFirstFour(engine);
 
-      expect(engine.canCall, isFalse);
-      engine.recordTrickWinner(0);
       expect(engine.canCall, isTrue);
       expect(
-        () => engine.call16(callerPlayerIndex: 2),
+        () => engine.call16(callerPlayerIndex: 0),
         throwsStateError,
       );
     });
@@ -111,7 +117,6 @@ void main() {
     test('Previous trick winner can make 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(2);
 
       engine.call16(callerPlayerIndex: 2);
 
@@ -124,8 +129,7 @@ void main() {
     test('Winning all remaining tricks succeeds', () {
       engine = createEngine();
       winFirstFour(engine);
-      engine.recordTrickWinner(0);
-      engine.call16(callerPlayerIndex: 0);
+      engine.call16(callerPlayerIndex: 2);
 
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
