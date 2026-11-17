@@ -2335,7 +2335,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                           ? 'CHOOSE TRUMP'
                                           : currentPlayer == null
                                               ? 'BIDDING'
-                                              : 'BID • ${_playerNames[currentPlayer]}',
+                                              : 'BID • ${_playerNames[currentPlayer]}'
                                       : currentPlayer == null
                                           ? 'ROUND COMPLETE'
                                           : 'TURN • ${_playerNames[currentPlayer]}',
