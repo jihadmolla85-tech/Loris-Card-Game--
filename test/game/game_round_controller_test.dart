@@ -13,11 +13,18 @@ void main() {
     List<List<Card>> createHands() {
       return List.generate(
         4,
-        (_) => List.generate(
+        (player) => List.generate(
           8,
-          (i) => Card.normal(
+          (_) => Card.normal(
             suit: Suit.clubs,
-            rank: 7 + i,
+            // Team A wins each fixture trick, allowing the 16-call
+            // test to reach the required bid plus one extra trick.
+            rank: switch (player) {
+              0 => 14,
+              1 => 10,
+              2 => 13,
+              _ => 9,
+            },
           ),
         ),
       );
