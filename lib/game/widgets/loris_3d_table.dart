@@ -8,10 +8,11 @@ import '../models/loris_card.dart' as loris;
 /// Native 3D LORIS table scene. All visible table props in this layer are
 /// actual meshes rendered with perspective, PBR materials and real lighting.
 class LorisTableSurface extends StatefulWidget {
-  const LorisTableSurface({super.key, this.playerCount = 6, this.hands});
+  const LorisTableSurface({super.key, this.playerCount = 6, this.hands, this.playedCards = const []});
 
   final int playerCount;
   final List<List<loris.Card>>? hands;
+  final List<loris.Card> playedCards;
 
   @override
   State<LorisTableSurface> createState() => _LorisTableSurfaceState();
@@ -32,7 +33,8 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
   }
 
   String _handsSignature(List<List<loris.Card>>? hands) =>
-      hands == null ? 'undealt' : hands.map((hand) => hand.map((card) => card.toString()).join(',')).join('|');
+      (hands == null ? 'undealt' : hands.map((hand) => hand.map((card) => card.toString()).join(',')).join('|')) +
+      '#played:' + widget.playedCards.map((card) => card.toString()).join(',');
 
   @override
   void didUpdateWidget(covariant LorisTableSurface oldWidget) {
@@ -101,6 +103,7 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
 
       _addPlayers();
       _addThreeDimensionalCards();
+      _addPlayedCards();
 
       if (mounted) setState(() => _ready = true);
     } catch (error) {
@@ -112,51 +115,62 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     final count = widget.playerCount == 4 ? 4 : 6;
     const skinTones = [0xE5B58F, 0xB97854, 0xD69A72, 0x8D563F, 0xF0C7A2, 0xA96B4B];
     const outfits = [0x263F63, 0x7C2636, 0x285C4B, 0x514071, 0x9A672D, 0x354A58];
+    const hairColors = [0x211820, 0x3A241D, 0x171C2A, 0x5B3325, 0x252525, 0x462A20];
     for (var i = 0; i < count; i++) {
       final angle = -math.pi / 2 + (math.pi * 2 * i / count);
       final x = math.cos(angle) * 2.48;
       final z = math.sin(angle) * 1.78;
       final avatar = Node(name: '3d_player_${i + 1}');
       avatar.position = vm.Vector3(x, -0.02, z);
-      avatar.rotation = vm.Quaternion.axisAngle(
-        vm.Vector3(0, 1, 0),
-        angle + math.pi / 2,
-      );
+      avatar.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), angle + math.pi / 2);
       final skin = _pbr(skinTones[i % skinTones.length], roughness: 0.78);
       final outfit = _pbr(outfits[i % outfits.length], roughness: 0.62);
-      final hair = _pbr(0x211820, roughness: 0.9);
+      final hair = _pbr(hairColors[i % hairColors.length], roughness: 0.9);
+      final eyeWhite = _pbr(0xFFF9EE, roughness: 0.24);
+      final iris = _pbr(0x4A2D22, roughness: 0.28);
+      final dark = _pbr(0x211820, roughness: 0.7);
+      final mouth = _pbr(0x873C43, roughness: 0.6);
 
-      avatar.add(_child(
-        CapsuleGeometry(radius: 0.27, height: 0.48),
-        outfit,
-        vm.Vector3(0, 0.42, 0),
-      ));
-      avatar.add(_child(
-        SphereGeometry(radius: 0.245, segments: 24, rings: 16),
-        skin,
-        vm.Vector3(0, 1.02, 0),
-      ));
-      avatar.add(_child(
-        SphereGeometry(radius: 0.25, segments: 24, rings: 12),
-        hair,
-        vm.Vector3(0, 1.19, 0.035),
-      ));
-      final eye = _pbr(0x211820, roughness: 0.3);
-      avatar.add(_child(
-        SphereGeometry(radius: 0.027, segments: 12, rings: 8),
-        eye,
-        vm.Vector3(-0.075, 1.035, -0.218),
-      ));
-      avatar.add(_child(
-        SphereGeometry(radius: 0.027, segments: 12, rings: 8),
-        eye,
-        vm.Vector3(0.075, 1.035, -0.218),
-      ));
-      avatar.add(_child(
-        SphereGeometry(radius: 0.026, segments: 12, rings: 8),
-        _pbr(0x8E3F43, roughness: 0.65),
-        vm.Vector3(0, 0.94, -0.232),
-      ));
+      // Torso, shoulders, neck and arms create a seated human bust in 3D.
+      avatar.add(_child(CapsuleGeometry(radius: 0.27, height: 0.48), outfit, vm.Vector3(0, 0.42, 0)));
+      avatar.add(_child(SphereGeometry(radius: 0.22, segments: 20, rings: 12), outfit, vm.Vector3(0, 0.62, 0)));
+      avatar.add(_child(CapsuleGeometry(radius: 0.075, height: 0.28), skin, vm.Vector3(0, 0.78, 0)));
+      for (final side in [-1.0, 1.0]) {
+        avatar.add(_child(CapsuleGeometry(radius: 0.075, height: 0.34), outfit, vm.Vector3(side * 0.27, 0.38, 0.015)));
+        avatar.add(_child(SphereGeometry(radius: 0.07, segments: 16, rings: 10), skin, vm.Vector3(side * 0.28, 0.24, -0.005)));
+        avatar.add(_child(SphereGeometry(radius: 0.073, segments: 16, rings: 10), skin, vm.Vector3(side * 0.235, 1.02, -0.005)));
+      }
+
+      // Head, hair cap, ears, nose and two layered eyes.
+      avatar.add(_child(SphereGeometry(radius: 0.245, segments: 28, rings: 18), skin, vm.Vector3(0, 1.02, 0)));
+      avatar.add(_child(SphereGeometry(radius: 0.25, segments: 28, rings: 14), hair, vm.Vector3(0, 1.19, 0.035)));
+      avatar.add(_child(SphereGeometry(radius: 0.065, segments: 16, rings: 10), hair, vm.Vector3(0, 1.225, -0.12)));
+      for (final side in [-1.0, 1.0]) {
+        avatar.add(_child(SphereGeometry(radius: 0.048, segments: 14, rings: 10), skin, vm.Vector3(side * 0.235, 1.0, 0)));
+        avatar.add(_child(SphereGeometry(radius: 0.052, segments: 16, rings: 10), eyeWhite, vm.Vector3(side * 0.078, 1.045, -0.219)));
+        avatar.add(_child(SphereGeometry(radius: 0.028, segments: 14, rings: 10), iris, vm.Vector3(side * 0.078, 1.045, -0.244)));
+        avatar.add(_child(SphereGeometry(radius: 0.014, segments: 10, rings: 8), dark, vm.Vector3(side * 0.078, 1.045, -0.258)));
+        avatar.add(_child(CapsuleGeometry(radius: 0.018, height: 0.105), hair, vm.Vector3(side * 0.078, 1.105, -0.22)));
+      }
+      avatar.add(_child(SphereGeometry(radius: 0.042, segments: 14, rings: 10), skin, vm.Vector3(0, 0.975, -0.247)));
+
+      // Six subtle mouth shapes provide visibly different expressions.
+      final expression = i % 6;
+      final mouthNode = _child(
+        CapsuleGeometry(radius: 0.018, height: expression == 2 ? 0.055 : 0.105),
+        mouth,
+        vm.Vector3(0, expression == 2 ? 0.895 : 0.905, -0.232),
+      );
+      mouthNode.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 0, 1), math.pi / 2);
+      avatar.add(mouthNode);
+      if (expression == 2) {
+        avatar.add(_child(SphereGeometry(radius: 0.025, segments: 12, rings: 8), mouth, vm.Vector3(0, 0.895, -0.24)));
+      }
+      if (expression == 0 || expression == 5) {
+        for (final side in [-1.0, 1.0]) {
+          avatar.add(_child(SphereGeometry(radius: 0.018, segments: 10, rings: 8), _pbr(0xD67D70, roughness: 0.8), vm.Vector3(side * 0.15, 0.93, -0.205)));
+        }
+      }
       _scene.add(avatar);
     }
   }
@@ -268,20 +282,24 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     switch (value.suit!) {
       case loris.Suit.diamonds:
         _addDiamond(card, ink, vm.Vector3(0, 0.025, suitZ));
+        break;
       case loris.Suit.hearts:
         card.add(_child(SphereGeometry(radius: 0.043, segments: 14, rings: 10), ink, vm.Vector3(-0.025, 0.026, suitZ)));
         card.add(_child(SphereGeometry(radius: 0.043, segments: 14, rings: 10), ink, vm.Vector3(0.025, 0.026, suitZ)));
         _addDiamond(card, ink, vm.Vector3(0, 0.026, suitZ + 0.035));
+        break;
       case loris.Suit.clubs:
         card.add(_child(SphereGeometry(radius: 0.038, segments: 14, rings: 10), ink, vm.Vector3(0, 0.026, suitZ - 0.025)));
         card.add(_child(SphereGeometry(radius: 0.034, segments: 14, rings: 10), ink, vm.Vector3(-0.031, 0.026, suitZ + 0.018)));
         card.add(_child(SphereGeometry(radius: 0.034, segments: 14, rings: 10), ink, vm.Vector3(0.031, 0.026, suitZ + 0.018)));
         card.add(_child(CuboidGeometry(vm.Vector3(0.014, 0.004, 0.06)), ink, vm.Vector3(0, 0.026, suitZ + 0.065)));
+        break;
       case loris.Suit.spades:
         _addDiamond(card, ink, vm.Vector3(0, 0.026, suitZ - 0.018));
         card.add(_child(SphereGeometry(radius: 0.034, segments: 14, rings: 10), ink, vm.Vector3(-0.03, 0.026, suitZ + 0.018)));
         card.add(_child(SphereGeometry(radius: 0.034, segments: 14, rings: 10), ink, vm.Vector3(0.03, 0.026, suitZ + 0.018)));
         card.add(_child(CuboidGeometry(vm.Vector3(0.014, 0.004, 0.06)), ink, vm.Vector3(0, 0.026, suitZ + 0.065)));
+        break;
     }
   }
 
@@ -312,6 +330,25 @@ class _LorisTableSurfaceState extends State<LorisTableSurface> {
     );
     pip.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), math.pi / 4);
     card.add(pip);
+  }
+
+  void _addPlayedCards() {
+    final cards = widget.playedCards;
+    final count = cards.length;
+    final back = _pbr(0x8B1E30, metallic: 0.25, roughness: 0.35);
+    final face = _pbr(0xFFF7E8, roughness: 0.45);
+    final gold = _pbr(0xD7AE59, metallic: 0.96, roughness: 0.2);
+    for (var i = 0; i < count; i++) {
+      final card = Node(name: 'played_card_$i');
+      final offset = i - (count - 1) / 2;
+      card.position = vm.Vector3(offset * 0.32, 0.69 + i * 0.002, offset * 0.12);
+      card.rotation = vm.Quaternion.axisAngle(vm.Vector3(0, 1, 0), offset * 0.12);
+      card.add(_child(CuboidGeometry(vm.Vector3(0.39, 0.025, 0.54)), back, vm.Vector3.zero()));
+      card.add(_child(CuboidGeometry(vm.Vector3(0.372, 0.004, 0.522)), gold, vm.Vector3(0, 0.014, 0)));
+      card.add(_child(CuboidGeometry(vm.Vector3(0.36, 0.004, 0.51)), face, vm.Vector3(0, 0.017, 0)));
+      _addCardFace(card, cards[i], gold);
+      _scene.add(card);
+    }
   }
 
   Node _child(
