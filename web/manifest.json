@@ -1,41 +1,19 @@
 {
-    "name": "LORIS – The Ultimate Card Game",
-    "short_name": "LORIS",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#FFF1D4",
-    "theme_color": "#D69A3A",
-    "description": "Play LORIS offline against AI in four-player and six-player team matches.",
-    "orientation": "portrait-primary",
-    "prefer_related_applications": false,
-    "icons": [
-        {
-            "src": "icons/loris-logo.svg",
-            "sizes": "any",
-            "type": "image/svg+xml",
-            "purpose": "any maskable"
-        },
-        {
-            "src": "icons/Icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/Icon-512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/Icon-maskable-192.png",
-            "sizes": "192x192",
-            "type": "image/png",
-            "purpose": "maskable"
-        },
-        {
-            "src": "icons/Icon-maskable-512.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "maskable"
-        }
-    ]
+  "name": "LORIS – The Ultimate Card Game",
+  "short_name": "LORIS",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FFF1D4",
+  "theme_color": "#D69A3A",
+  "description": "Play LORIS offline against AI in four-player and six-player team matches.",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/loris-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
