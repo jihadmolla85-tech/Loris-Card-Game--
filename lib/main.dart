@@ -1631,17 +1631,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 if (_error != null) _buildErrorBanner(),
                 if (_isDealingCards)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 5),
-                    child: Column(
-                      children: [
-                        Text(
-                          'DEALING CARDS  $_dealtCardCount / ${widget.playerCount * 8}',
-                          style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12),
-                        ),
-                        const SizedBox(height: 4),
-                        LinearProgressIndicator(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: LinearProgressIndicator(
                           value: _dealtCardCount / (widget.playerCount * 8),
-                          minHeight: 5,
+                          minHeight: 2,
                           backgroundColor: Colors.white24,
                           color: LorisApp.gold,
                         ),
@@ -1682,7 +1675,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
           child: Column(
             children: [
-              _buildTurnBanner(currentPlayer),
               _buildCompactMatchHeader(),
               if (_error != null) _buildErrorBanner(),
               Expanded(
@@ -1916,13 +1908,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   Widget _buildHandStrip(List<loris.Card> cards) {
     if (_isDealingCards) {
-      return const Center(
-        child: Text(
-          'CARDS ARE BEING DEALT AROUND THE TABLE',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: LorisApp.gold, fontSize: 11, fontWeight: FontWeight.w900, letterSpacing: 1),
-        ),
-      );
+      return const SizedBox.shrink();
     }
     return Column(
       children: [
