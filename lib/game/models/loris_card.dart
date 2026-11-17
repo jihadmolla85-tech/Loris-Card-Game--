@@ -27,7 +27,7 @@ class Card {
         isLoris = true;
 
   String get displayName {
-    if (isLoris) return 'LORIS';
+    if (isLoris) return 'JOKER';
     const names = {
       11: 'J',
       12: 'Q',
@@ -51,5 +51,5 @@ class Card {
 
   @override
   String toString() =>
-      isLoris ? 'LORIS' : '${displayName}_${suit!.name}';
+      isLoris ? 'JOKER' : '${displayName}_${suit!.name}';
 }
