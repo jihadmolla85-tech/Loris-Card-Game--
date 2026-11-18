@@ -126,59 +126,14 @@ class TrickEngine {
         .toList();
 
     if (ledSuitCards.isNotEmpty) {
-      // When trump was led, follow suit and overtrump if possible.
-      if (trumpSuit != null && currentLedSuit == trumpSuit) {
-        final highestTrump = _highestTrumpRankAlreadyPlayed();
-        if (highestTrump != null && !plays.any((play) => play.card.isLoris)) {
-          final higher = ledSuitCards
-              .where((card) => (card.rank ?? 0) > highestTrump)
-              .toList();
-          if (higher.isNotEmpty) {
-            return List.unmodifiable([...higher, ...lorisCards]);
-          }
-        }
-      }
+      // Following the led suit remains mandatory, but players are never
+      // forced to overtrump: any card of the led suit (or LORIS) is legal.
       return List.unmodifiable([...ledSuitCards, ...lorisCards]);
     }
 
-    // In Joker mode there is no trump suit; follow suit when possible,
-    // otherwise any card may be played.
-    if (trumpSuit == null) return List.unmodifiable(hand);
-
-    // The player is void in the led suit. Trump is compulsory when held.
-    final trumps = hand
-        .where((card) => !card.isLoris && card.suit == trumpSuit)
-        .toList();
-    if (trumps.isEmpty) {
-      return List.unmodifiable(hand);
-    }
-
-    // LORIS is already unbeatable, so no ordinary trump can overtrump it.
-    if (plays.any((play) => play.card.isLoris)) {
-      return List.unmodifiable([...trumps, ...lorisCards]);
-    }
-
-    final highestTrump = _highestTrumpRankAlreadyPlayed();
-    if (highestTrump != null) {
-      final higher = trumps
-          .where((card) => (card.rank ?? 0) > highestTrump)
-          .toList();
-      if (higher.isNotEmpty) {
-        return List.unmodifiable([...higher, ...lorisCards]);
-      }
-    }
-
-    return List.unmodifiable([...trumps, ...lorisCards]);
-  }
-
-  int? _highestTrumpRankAlreadyPlayed() {
-    if (trumpSuit == null) return null;
-    final ranks = plays
-        .where((play) => !play.card.isLoris && play.card.suit == trumpSuit)
-        .map((play) => play.card.rank ?? 0)
-        .toList();
-    if (ranks.isEmpty) return null;
-    return ranks.reduce((a, b) => a > b ? a : b);
+    // If void in the led suit, the player may discard any card.
+    // Trumping and overtrumping are optional in every suit-trump round.
+    return List.unmodifiable(hand);
   }
 
   void playCard(int playerIndex, Card card) {
