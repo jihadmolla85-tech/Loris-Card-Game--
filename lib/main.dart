@@ -1329,16 +1329,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (mounted) setState(() => _winCelebration = null);
     }
 
-    // Start the next round automatically after the result animation. If the
-    // human card handler still owns the busy lock, wait for it to release.
+    // Schedule (do not await) the next round. Waiting here would deadlock:
+    // the human-turn handler releases _busy only after _runAiTurns returns.
     if (mounted && _finished && !_matchController.isMatchOver) {
-      await Future.delayed(const Duration(milliseconds: 450));
-      while (mounted && _busy) {
-        await Future.delayed(const Duration(milliseconds: 80));
-      }
-      if (mounted && _finished && !_matchController.isMatchOver) {
-        await _nextRound();
-      }
+      Future<void>.delayed(const Duration(milliseconds: 450), () async {
+        while (mounted && _busy) {
+          await Future.delayed(const Duration(milliseconds: 80));
+        }
+        if (mounted && _finished && !_matchController.isMatchOver) {
+          await _nextRound();
+        }
+      });
     }
   }
 
