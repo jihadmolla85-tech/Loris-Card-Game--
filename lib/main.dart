@@ -536,6 +536,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _finished = false;
   bool _busy = false;
   bool _aiTurnsInProgress = false;
+  bool _isAdvancingBids = false;
+  int? _bidThinkingPlayer;
   bool _isShuffling = false;
   bool _showSixteenCallEffect = false;
   List<loris.Card>? _dealerDrawnCards;
@@ -841,6 +843,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
       if (controller.isComplete) {
         _finishBidding();
+      } else if (controller.isAiTurn) {
+        _advanceAiBidsWithAnimation();
       }
     } catch (e) {
       setState(() => _error = e.toString());
@@ -858,18 +862,73 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     });
     try {
       bidding.submitHumanBid(selectedBid);
-      setState(() {
-        _status = bidding.isComplete
-            ? 'Bidding complete.'
-            : bidding.isHumanTurn
-                ? 'Your turn to bid.'
-                : 'AI players are bidding.';
-      });
-      if (bidding.isComplete) await _finishBidding();
+      if (bidding.isComplete) {
+        setState(() => _status = 'Bidding complete.');
+        await _finishBidding();
+      } else {
+        await _advanceAiBidsWithAnimation();
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _advanceAiBidsWithAnimation() async {
+    final bidding = _biddingController;
+    if (bidding == null || bidding.isComplete || _isAdvancingBids) return;
+
+    _isAdvancingBids = true;
+    try {
+      while (mounted &&
+          identical(_biddingController, bidding) &&
+          bidding.isAiTurn) {
+        final playerIndex = bidding.currentPlayerIndex;
+        setState(() {
+          _bidThinkingPlayer = playerIndex;
+          _status = '${_playerNames[playerIndex]} IS THINKING…';
+        });
+
+        await Future.delayed(
+          Duration(milliseconds: 650 + _random.nextInt(450)),
+        );
+        if (!mounted || !identical(_biddingController, bidding)) return;
+
+        final record = bidding.submitAiBid();
+        setState(() {
+          _bidThinkingPlayer = null;
+          _status = record.amount == null
+              ? '${_playerNames[playerIndex]} PASSED'
+              : '${_playerNames[playerIndex]} BID ${record.amount}';
+        });
+
+        // Keep each announcement visible before the next player thinks.
+        await Future.delayed(const Duration(milliseconds: 520));
+      }
+
+      if (!mounted || !identical(_biddingController, bidding)) return;
+      if (bidding.isComplete) {
+        await _finishBidding();
+      } else if (bidding.isHumanTurn) {
+        setState(() {
+          _bidThinkingPlayer = null;
+          _status = 'YOUR TURN TO BID';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _bidThinkingPlayer = null;
+          _error = 'Bidding error: $e';
+          _status = 'BIDDING PAUSED';
+        });
+      }
+    } finally {
+      _isAdvancingBids = false;
+      if (mounted && _bidThinkingPlayer != null) {
+        setState(() => _bidThinkingPlayer = null);
+      }
     }
   }
 
@@ -1762,6 +1821,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               children: [
                 _buildCompactMatchHeader(),
                 if (_error != null) _buildErrorBanner(),
+                if (bidding != null && bidding.history.isNotEmpty)
+                  _buildBiddingProgress(bidding),
                 if (_isDealingCards)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
@@ -1788,10 +1849,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 if (!_isDealingCards && !_awaitingTrumpSelection &&
                     bidding != null && bidding.isHumanTurn && !bidding.isComplete)
                   _buildBiddingControls(bidding),
-                SizedBox(
-                  height: constraints.maxHeight < 650 ? 96 : 112,
-                  child: _buildHandStrip(hands[0]),
-                ),
+                if (!_awaitingTrumpSelection)
+                  SizedBox(
+                    height: constraints.maxHeight < 650 ? 96 : 112,
+                    child: _buildHandStrip(hands[0]),
+                  ),
               ],
             ),
           );
@@ -1945,6 +2007,93 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBiddingProgress(BiddingRoundController bidding) {
+    final history = bidding.history;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(5, 2, 5, 5),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xCC32111B),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0x88D8AD61), width: .8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'BID HISTORY',
+                  style: TextStyle(
+                    color: LorisApp.gold,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const Spacer(),
+                if (_bidThinkingPlayer != null)
+                  Text(
+                    '${_playerNames[_bidThinkingPlayer!]} THINKING…',
+                    style: const TextStyle(
+                      color: Color(0xFFFFE5A0),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  )
+                else
+                  Text(
+                    bidding.isComplete
+                        ? 'BIDDING COMPLETE'
+                        : bidding.isHumanTurn
+                            ? 'YOUR TURN'
+                            : 'WAITING',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Wrap(
+              spacing: 5,
+              runSpacing: 4,
+              children: [
+                for (final record in history)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: record.amount == null
+                          ? const Color(0x663A3A3A)
+                          : const Color(0x663E704E),
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(
+                        color: record.amount == null
+                            ? Colors.white24
+                            : const Color(0x889BE7B1),
+                      ),
+                    ),
+                    child: Text(
+                      '${_playerNames[record.playerIndex]} ${record.amount ?? 'PASS'}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
