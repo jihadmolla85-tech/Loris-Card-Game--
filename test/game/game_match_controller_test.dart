@@ -89,7 +89,10 @@ void main() {
         match.playCard(player, card);
       }
 
-      match.completeTrick();
+      final winner = match.completeTrick();
+      if (match.currentRound.sixteenCallEngine?.canCall == true) {
+        match.pass16(callerPlayerIndex: winner);
+      }
     }
 
     test('Starts with the initial dealer', () {
