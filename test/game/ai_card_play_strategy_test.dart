@@ -108,5 +108,65 @@ void main() {
       final chosen = strategy.chooseCard(engine: engine, playerIndex: 2);
       expect(engine.legalCardsFor(2), contains(chosen));
     });
+
+    test('six-player decisions do not change when unseen hands are redistributed', () {
+      final deck = <Card>[
+        for (final suit in Suit.values)
+          for (var rank = 3; rank <= 14; rank++)
+            if (!(suit == Suit.spades && rank == 3)) c(suit, rank),
+        const Card.loris(replacesRank: 3),
+      ];
+      final dealtHands = List.generate(
+        6,
+        (index) => deck.skip(index * 8).take(8).toList(),
+      );
+      final original = TrickEngine(
+        hands: dealtHands.map(List<Card>.from).toList(),
+        dealerIndex: 5,
+        trumpSuit: Suit.spades,
+      );
+
+      original.playCard(0, original.legalCardsFor(0).first);
+      original.playCard(1, original.legalCardsFor(1).first);
+
+      final redistributed = original.hands.map(List<Card>.from).toList();
+      // Exchange seven unplayed cards with player 3, preserving a valid
+      // 7-card remainder for player 0 and an 8-card hand for player 3.
+      final partnerRemainder = redistributed[0].toList();
+      final hiddenOpponent = redistributed[3].toList();
+      redistributed[0] = hiddenOpponent.take(7).toList();
+      redistributed[3] = [
+        ...partnerRemainder,
+        hiddenOpponent.last,
+      ];
+      // Rotate the remaining hidden hands, including the AI's other teammate.
+      final seatThree = redistributed[3];
+      final seatFour = redistributed[4];
+      final seatFive = redistributed[5];
+      redistributed[3] = seatFour;
+      redistributed[4] = seatFive;
+      redistributed[5] = seatThree;
+
+      final alternate = TrickEngine(
+        hands: redistributed,
+        dealerIndex: 5,
+        trumpSuit: Suit.spades,
+        initialPlays: original.plays,
+        restoredFirstPlayerIndex: original.firstPlayerIndex,
+      );
+
+      final originalChoice = strategy.chooseCard(
+        engine: original,
+        playerIndex: 2,
+      );
+      final alternateChoice = strategy.chooseCard(
+        engine: alternate,
+        playerIndex: 2,
+      );
+
+      expect(alternateChoice, originalChoice);
+      expect(original.legalCardsFor(2), contains(originalChoice));
+      expect(alternate.legalCardsFor(2), contains(alternateChoice));
+    });
   });
 }

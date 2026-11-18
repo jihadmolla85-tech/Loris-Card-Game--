@@ -24,7 +24,7 @@ class AiCardPlayStrategy {
       return _chooseLead(nonLoris.isEmpty ? legal : nonLoris, hand, engine.trumpSuit);
     }
 
-    final currentWinner = _winnerOf(plays, engine.trumpSuit);
+    final currentWinner = engine.currentWinnerIndex;
     final partnerIsWinning = currentWinner % 2 == playerIndex % 2;
 
     if (partnerIsWinning) {
@@ -32,13 +32,10 @@ class AiCardPlayStrategy {
       return _cheapest(legal, engine.trumpSuit);
     }
 
-    final cardsThatWin = legal.where((card) {
-      final simulated = [
-        ...plays,
-        TrickPlay(playerIndex: playerIndex, card: card),
-      ];
-      return _winnerOf(simulated, engine.trumpSuit) == playerIndex;
-    }).toList();
+    final cardsThatWin = legal
+        .where((card) =>
+            engine.currentWinnerIfPlayed(playerIndex, card) == playerIndex)
+        .toList();
 
     // Spend the least valuable card that actually takes the trick.
     if (cardsThatWin.isNotEmpty) {
@@ -96,20 +93,5 @@ class AiCardPlayStrategy {
     return honourCost + (card.suit == trumpSuit ? 25 : 0);
   }
 
-  int _winnerOf(List<TrickPlay> plays, Suit trumpSuit) {
-    final lorisPlay = plays.where((play) => play.card.isLoris);
-    if (lorisPlay.isNotEmpty) return lorisPlay.first.playerIndex;
 
-    final firstCard = plays.first.card;
-    final ledSuit = firstCard.isLoris ? Suit.spades : firstCard.suit;
-    final trumpPlays = plays
-        .where((play) => !play.card.isLoris && play.card.suit == trumpSuit)
-        .toList();
-    final candidates = trumpPlays.isNotEmpty
-        ? trumpPlays
-        : plays.where((play) => play.card.suit == ledSuit).toList();
-
-    return candidates.reduce((best, next) =>
-        (next.card.rank ?? 0) > (best.card.rank ?? 0) ? next : best).playerIndex;
-  }
 }

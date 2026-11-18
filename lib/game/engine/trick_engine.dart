@@ -187,29 +187,64 @@ class TrickEngine {
     plays.add(TrickPlay(playerIndex: playerIndex, card: card));
   }
 
+  /// The provisional winner among cards already played in this trick.
+  ///
+  /// This is useful to a player deciding whether to overtake an existing play;
+  /// it is not a promise that later players cannot beat the current leader.
+  int get currentWinnerIndex {
+    if (plays.isEmpty) {
+      throw StateError('No cards have been played in this trick.');
+    }
+    return _winnerForPlays(plays);
+  }
+
+  /// Returns the provisional winner if the current player plays [card].
+  ///
+  /// The card must be legal now. The same comparison routine is used by the
+  /// completed-trick result, preventing AI and rules-engine ranking from
+  /// drifting apart.
+  int currentWinnerIfPlayed(int playerIndex, Card card) {
+    if (isComplete) {
+      throw StateError('Trick is already complete.');
+    }
+    if (playerIndex != currentPlayerIndex) {
+      throw StateError('It is not this player’s turn.');
+    }
+    if (!legalCardsFor(playerIndex).contains(card)) {
+      throw ArgumentError('This card cannot be played under LORIS rules.');
+    }
+
+    return _winnerForPlays([
+      ...plays,
+      TrickPlay(playerIndex: playerIndex, card: card),
+    ]);
+  }
+
   int get winnerIndex {
     if (!isComplete) {
       throw StateError('Trick is not complete.');
     }
+    return _winnerForPlays(plays);
+  }
 
-    final lorisPlay = plays.where((p) => p.card.isLoris).firstOrNull;
-
+  int _winnerForPlays(List<TrickPlay> trickPlays) {
+    final lorisPlay = trickPlays.where((play) => play.card.isLoris).firstOrNull;
     if (lorisPlay != null) {
       return lorisPlay.playerIndex;
     }
 
-    final currentLedSuit = ledSuit;
-
+    final firstCard = trickPlays.first.card;
+    final currentLedSuit = firstCard.isLoris ? Suit.spades : firstCard.suit;
     final trumpPlays =
-        plays.where((p) => p.card.suit == trumpSuit).toList();
+        trickPlays.where((play) => play.card.suit == trumpSuit).toList();
 
     if (trumpPlays.isNotEmpty) {
       return _highestRankPlay(trumpPlays).playerIndex;
     }
 
-    final ledSuitPlays =
-        plays.where((p) => p.card.suit == currentLedSuit).toList();
-
+    final ledSuitPlays = trickPlays
+        .where((play) => play.card.suit == currentLedSuit)
+        .toList();
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }
 

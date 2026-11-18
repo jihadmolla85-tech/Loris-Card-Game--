@@ -330,5 +330,46 @@ void main() {
       expect(game.plays.length, 3);
     });
 
+
+    test('AI preview shares trump ranking with the completed trick engine', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: Suit.spades,
+      );
+      hands[2].removeWhere((c) => c.suit == Suit.hearts);
+
+      game.playCard(1, card(Suit.hearts, 12));
+      expect(game.currentWinnerIndex, 1);
+      expect(
+        game.currentWinnerIfPlayed(2, card(Suit.spades, 11)),
+        2,
+      );
+      expect(
+        () => game.currentWinnerIfPlayed(2, card(Suit.clubs, 7)),
+        throwsArgumentError,
+      );
+    });
+
+    test('AI preview rejects out-of-turn and completed-trick requests', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: Suit.spades,
+      );
+      expect(
+        () => game.currentWinnerIfPlayed(0, card(Suit.hearts, 10)),
+        throwsStateError,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        final player = game.currentPlayerIndex;
+        game.playCard(player, game.legalCardsFor(player).first);
+      }
+      expect(
+        () => game.currentWinnerIfPlayed(1, card(Suit.hearts, 7)),
+        throwsStateError,
+      );
+    });
   });
 }
