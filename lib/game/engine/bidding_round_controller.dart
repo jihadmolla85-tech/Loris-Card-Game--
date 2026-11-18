@@ -26,7 +26,6 @@ class BiddingRoundController {
       throw ArgumentError('Invalid human player index.');
     }
 
-    advanceAiBids();
   }
 
   final List<List<Card>> hands;
@@ -39,6 +38,10 @@ class BiddingRoundController {
   bool get isHumanTurn =>
       !engine.isComplete &&
       engine.currentPlayerIndex == humanPlayerIndex;
+
+  bool get isAiTurn =>
+      !engine.isComplete &&
+      engine.currentPlayerIndex != humanPlayerIndex;
 
   bool get everyonePassed => engine.everyonePassed;
 
@@ -55,22 +58,23 @@ class BiddingRoundController {
     }
 
     engine.submitBid(amount);
-    advanceAiBids();
   }
 
-  void advanceAiBids() {
-    while (!engine.isComplete &&
-        engine.currentPlayerIndex != humanPlayerIndex) {
-      final playerIndex = engine.currentPlayerIndex;
-
-      final decision = strategy.chooseBid(
-        hand: hands[playerIndex],
-        playerIndex: playerIndex,
-        highestBid: engine.highestBid,
-        highestBidder: engine.highestBidder,
-      );
-
-      engine.submitBid(decision.bidAmount);
+  /// Resolves exactly one AI turn so the UI can animate its thinking and bid.
+  BidRecord submitNextAiBid() {
+    if (!isAiTurn) {
+      throw StateError('It is not an AI player turn.');
     }
+
+    final playerIndex = engine.currentPlayerIndex;
+    final decision = strategy.chooseBid(
+      hand: hands[playerIndex],
+      playerIndex: playerIndex,
+      highestBid: engine.highestBid,
+      highestBidder: engine.highestBidder,
+    );
+
+    engine.submitBid(decision.bidAmount);
+    return engine.history.last;
   }
 }
