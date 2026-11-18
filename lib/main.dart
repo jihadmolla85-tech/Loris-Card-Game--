@@ -241,10 +241,14 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 ),
                 _RuleSection(
                   title: 'CALL 16',
-                  body: 'After winning the number of tricks equal to your bid, '
-                      'a player may call 16 after winning the next trick. Their '
-                      'team must then win every remaining trick. Losing even '
-                      'one remaining trick gives that team -16.',
+                  body: 'A CALL 16 opportunity appears immediately when the '
+                      'bidding team reaches its bid and wins that trick, but only '
+                      'if the opponents have won zero tricks in the round. The '
+                      'last-trick winner on the bidding team may CALL 16 or PASS. '
+                      'The choice is available only once per round. After CALL 16, '
+                      'the team must win every remaining trick; losing even one '
+                      'gives that team -16 and the opponents +16. If the team '
+                      'passes, normal scoring continues.',
                 ),
               ],
             ),
