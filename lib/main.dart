@@ -535,6 +535,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _started = false;
   bool _finished = false;
   bool _busy = false;
+  bool _aiTurnsInProgress = false;
   bool _isShuffling = false;
   bool _showSixteenCallEffect = false;
   List<loris.Card>? _dealerDrawnCards;
@@ -633,33 +634,45 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
+  /// Device feedback is optional and must never hold the game state machine.
+  /// Some Android platform-channel calls can stall when the app backgrounds.
+  Future<void> _safeFeedback(Future<void> Function() feedback) async {
+    try {
+      await feedback().timeout(const Duration(milliseconds: 650));
+    } catch (_) {
+      // A missing or stalled haptic/audio device must not block a turn.
+    }
+  }
+
   Future<void> _playSound(String effect) async {
-    if (widget.soundEnabled) await _audio.play(effect);
+    if (widget.soundEnabled) {
+      await _safeFeedback(() => _audio.play(effect));
+    }
   }
 
   Future<void> _playCardFeedback(loris.Card card) async {
     if (card.isLoris) {
       await _playSound('loris');
-      await HapticFeedback.heavyImpact();
+      await _safeFeedback(HapticFeedback.heavyImpact);
     } else {
       await _playSound('card_place');
-      await HapticFeedback.lightImpact();
+      await _safeFeedback(HapticFeedback.lightImpact);
     }
   }
 
   Future<void> _playShuffleSound() async {
     await _playSound('shuffle');
-    await HapticFeedback.lightImpact();
+    await _safeFeedback(HapticFeedback.lightImpact);
   }
 
   Future<void> _triggerSixteenCallEffect() async {
     if (!mounted) return;
     setState(() => _showSixteenCallEffect = true);
     await _playSound('loris');
-    await HapticFeedback.heavyImpact();
+    await _safeFeedback(HapticFeedback.heavyImpact);
     await Future.delayed(const Duration(milliseconds: 220));
     await _playSound('trump');
-    await HapticFeedback.vibrate();
+    await _safeFeedback(HapticFeedback.vibrate);
     await Future.delayed(const Duration(milliseconds: 1450));
     if (mounted) setState(() => _showSixteenCallEffect = false);
   }
@@ -747,7 +760,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         setState(() => _dealerRevealVisibleCount = i + 1);
         final card = dealerSelection.drawnCards[i];
         if (!card.isLoris && card.rank == 11) {
-          await HapticFeedback.heavyImpact();
+          await _safeFeedback(HapticFeedback.heavyImpact);
           break;
         }
       }
@@ -1217,33 +1230,51 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _runAiTurns() async {
-    if (!_started || _finished || !mounted) return;
+    if (!_started || _finished || !mounted || _aiTurnsInProgress) return;
 
-    var safetyCounter = 0;
+    _aiTurnsInProgress = true;
+    try {
+      var safetyCounter = 0;
+      var previousPlayerIndex = -1;
 
-    while (mounted &&
-        !_matchController.currentRound.isRoundEnded &&
-        _matchController.currentRound.nextPlayerIndex != 0 &&
-        safetyCounter < widget.playerCount + 1) {
-      safetyCounter++;
+      while (mounted &&
+          !_matchController.currentRound.isRoundEnded &&
+          _matchController.currentRound.nextPlayerIndex != 0 &&
+          safetyCounter < widget.playerCount) {
+        safetyCounter++;
 
-      final playerIndex =
-          _matchController.currentRound.nextPlayerIndex!;
+        final playerIndex =
+            _matchController.currentRound.nextPlayerIndex;
+        if (playerIndex == null || playerIndex == previousPlayerIndex) {
+          throw StateError('AI turn order did not advance.');
+        }
+        previousPlayerIndex = playerIndex;
 
-      try {
         final card = _chooseAiCard(playerIndex);
-
         await _commitAndAnimateCard(playerIndex, card);
-
         await _afterCardPlayed();
 
         if (!mounted || _finished) return;
-      } catch (e) {
-        if (mounted) {
-          setState(() => _error = 'AI play error: $e');
-        }
-        return;
       }
+
+      if (mounted &&
+          !_finished &&
+          !_matchController.currentRound.isRoundEnded &&
+          _matchController.currentRound.nextPlayerIndex != 0) {
+        setState(() {
+          _error = 'AI turn paused because the player order did not advance.';
+          _status = 'AI TURN PAUSED • Please resume the match.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'AI play error: $e';
+          _status = 'AI TURN PAUSED • The match state was preserved.';
+        });
+      }
+    } finally {
+      _aiTurnsInProgress = false;
     }
   }
 
@@ -1262,7 +1293,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
       await _playSound('trick_win');
-      await HapticFeedback.heavyImpact();
+      await _safeFeedback(HapticFeedback.heavyImpact);
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
       await Future.delayed(const Duration(milliseconds: 550));
@@ -1308,11 +1339,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (_finished) {
         if (_matchController.isMatchOver) {
           await _playSound('match_win');
-          await HapticFeedback.vibrate();
+          await _safeFeedback(HapticFeedback.vibrate);
           if (mounted) setState(() => _winCelebration = 'MATCH CHAMPION!');
         } else {
           await _playSound('round_win');
-          await HapticFeedback.heavyImpact();
+          await _safeFeedback(HapticFeedback.heavyImpact);
           if (mounted) setState(() => _winCelebration = 'ROUND WON!');
         }
         final score = _matchController.matchScoreEngine;
