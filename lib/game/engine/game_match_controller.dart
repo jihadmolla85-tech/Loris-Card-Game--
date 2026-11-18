@@ -245,6 +245,10 @@ class GameMatchController {
     );
   }
 
+  void pass16({required int callerPlayerIndex}) {
+    currentRound.pass16(callerPlayerIndex: callerPlayerIndex);
+  }
+
   int completeTrick() {
     final round = currentRound;
     final winnerIndex = round.completeTrick();
