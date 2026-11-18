@@ -3090,9 +3090,9 @@ await _revealDealerDrawOnTable(
                             runSpacing: 2,
                             children: [
                               if (_dealerIndex == index)
-                                _seatRoleBadge('DEALER', const Color(0xFFFFD76A), const Color(0xFF3B2608)),
+                                _seatRoleBadge('D', const Color(0xFFFFD76A), const Color(0xFF3B2608)),
                               if (_biddingController?.highestBidder == index)
-                                _seatRoleBadge('BID ${_biddingController!.highestBid}', const Color(0xFF9BE7FF), const Color(0xFF082B3A)),
+                                _seatRoleBadge('${_biddingController!.highestBid}', const Color(0xFF9BE7FF), const Color(0xFF082B3A)),
                             ],
                           ),
                           if (currentPlayer == index)
