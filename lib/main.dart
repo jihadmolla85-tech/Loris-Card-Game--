@@ -219,10 +219,10 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   title: 'BIDDING & TRUMP',
                   body: 'Bidding starts with the player to the dealer’s right. '
                       'Players may pass. A bid must be higher than the current '
-                      'highest bid. The winning bidder selects a trump suit they '
-                      'also hold, or chooses the LORIS Joker from their own '
-                      'hand for Joker mode. A teammate may reveal one eligible '
-                      'suit card for a normal trump selection.',
+                      'highest bid. The winning bidder selects a trump suit '
+                      'present in their own eight-card hand. The LORIS card can '
+                      'be chosen for Joker mode only when the bidder holds it. '
+                      'No teammate card is revealed during trump selection.',
                 ),
                 _RuleSection(
                   title: 'PLAYING TRICKS',
