@@ -27,7 +27,7 @@ class Card {
         isLoris = true;
 
   String get displayName {
-    if (isLoris) return 'JOKER';
+    if (isLoris) return 'L';
     const names = {
       11: 'J',
       12: 'Q',
