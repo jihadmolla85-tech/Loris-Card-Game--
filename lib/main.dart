@@ -785,13 +785,16 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _hands = dealtHands;
         _isDealingCards = true;
         _dealtCardCount = 0;
-        _status = '${_playerNames[dealerSelection.dealerIndex]} is dealing 8 cards to each player';
+        _status = '${_playerNames[dealerSelection.dealerIndex]} is dealing two packets of four cards';
       });
       final totalCards = widget.playerCount * 8;
-      for (var dealt = 1; dealt <= totalCards; dealt++) {
-        await Future.delayed(const Duration(milliseconds: 90));
-        if (!mounted) return;
-        setState(() => _dealtCardCount = dealt);
+      // Two clockwise passes: each seat receives a visible packet of four.
+      for (var packet = 0; packet < 2; packet++) {
+        for (var seat = 0; seat < widget.playerCount; seat++) {
+          await Future.delayed(const Duration(milliseconds: 210));
+          if (!mounted) return;
+          setState(() => _dealtCardCount += 4);
+        }
       }
       await Future.delayed(const Duration(milliseconds: 350));
       if (!mounted) return;
