@@ -1403,6 +1403,27 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _pass16() async {
+    if (!_humanCanCall16 || _busy) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      _matchController.pass16(callerPlayerIndex: 0);
+      setState(() {
+        _status = '16 CALL PASSED. Continue playing normally.';
+      });
+      await _runAiTurns();
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   // ----------------------------------------------------------
   // SAVE
   // ----------------------------------------------------------
@@ -1764,16 +1785,34 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ),
               if (_humanCanCall16)
                 SizedBox(
-                  height: 38,
+                  height: 42,
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _busy ? null : _call16,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: LorisApp.gold,
-                      foregroundColor: LorisApp.navy,
-                      padding: EdgeInsets.zero,
-                    ),
-                    child: const Text('CALL 16', style: TextStyle(fontWeight: FontWeight.w900)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _busy ? null : _call16,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: LorisApp.gold,
+                            foregroundColor: LorisApp.navy,
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: const Text('CALL 16', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _busy ? null : _pass16,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: LorisApp.gold,
+                            side: const BorderSide(color: LorisApp.gold, width: 1.5),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: const Text('PASS', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               if (_finished)
