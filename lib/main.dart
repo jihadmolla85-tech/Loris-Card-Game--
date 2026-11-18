@@ -1328,6 +1328,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       await Future.delayed(const Duration(milliseconds: 1150));
       if (mounted) setState(() => _winCelebration = null);
     }
+
+    // Start the next round automatically after the result animation. If the
+    // human card handler still owns the busy lock, wait for it to release.
+    if (mounted && _finished && !_matchController.isMatchOver) {
+      await Future.delayed(const Duration(milliseconds: 450));
+      while (mounted && _busy) {
+        await Future.delayed(const Duration(milliseconds: 80));
+      }
+      if (mounted && _finished && !_matchController.isMatchOver) {
+        await _nextRound();
+      }
+    }
   }
 
   Future<void> _autoSaveGame() async {
@@ -1454,6 +1466,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // ----------------------------------------------------------
   // HELPERS
   // ----------------------------------------------------------
+
+  bool _isFemalePlayer(String playerName) {
+    const femaleNames = {
+      'Jannat', 'Ayesha', 'Sheto', 'Shima', 'Roma', 'Mitu',
+      'Tania', 'Nusrat', 'Mim', 'Sumi', 'Rima', 'Nila',
+      'Faria', 'Sumaiya', 'Tisha', 'Anika', 'Maliha',
+    };
+    return femaleNames.contains(playerName);
+  }
 
   String _suitName(loris.Suit suit) {
     switch (suit) {
@@ -2353,7 +2374,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _AnimePortrait(seed: index, size: 42),
+                          _AnimePortrait(seed: index, isFemale: _isFemalePlayer(_playerNames[index]), size: 42),
                           const SizedBox(height: 3),
                           Text(
                             _playerNames[index],
