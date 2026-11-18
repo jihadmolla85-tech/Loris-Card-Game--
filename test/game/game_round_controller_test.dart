@@ -47,7 +47,7 @@ void main() {
       );
     });
 
-    void playOneTrick() {
+    void playOneTrick({bool resolve16Decision = true}) {
       for (var i = 0; i < 4; i++) {
         final player = controller.trickEngine.currentPlayerIndex;
         final card = controller.trickEngine.hands[player].first;
@@ -55,7 +55,10 @@ void main() {
         controller.playCard(player, card);
       }
 
-      controller.completeTrick();
+      final winner = controller.completeTrick();
+      if (resolve16Decision && controller.sixteenCallEngine?.canCall == true) {
+        controller.pass16(callerPlayerIndex: winner);
+      }
     }
 
     test('Starts with the dealer right player', () {
@@ -99,11 +102,18 @@ void main() {
     });
 
     test('Pauses the next trick until the human passes the 16 decision', () {
-      for (var i = 0; i < 4; i++) {
-        final player = controller.trickEngine.currentPlayerIndex;
-        final card = controller.trickEngine.hands[player].first;
-        controller.playCard(player, card);
+      for (var trick = 0; trick < 4; trick++) {
+        for (var i = 0; i < 4; i++) {
+          final player = controller.trickEngine.currentPlayerIndex;
+          final card = controller.trickEngine.hands[player].first;
+          controller.playCard(player, card);
+        }
+        if (trick < 3) {
+          controller.completeTrick();
+        }
       }
+      // The fourth trick is complete on the table; complete it to open the
+      // CALL 16 decision window before the next trick begins.
       controller.completeTrick();
 
       expect(controller.sixteenCallEngine!.canCall, isTrue);
@@ -124,9 +134,10 @@ void main() {
 
     test('Applies 16 Call success points only once', () {
       // Bid is 4: call 16 immediately after the bidding team reaches four tricks.
-      for (var i = 0; i < 4; i++) {
+      for (var i = 0; i < 3; i++) {
         playOneTrick();
       }
+      playOneTrick(resolve16Decision: false);
 
       controller.call16(callerPlayerIndex: 0);
 
