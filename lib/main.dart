@@ -1176,6 +1176,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     return nonLoris.isNotEmpty ? nonLoris.first : legalCards.first;
   }
 
+  Future<void> _commitAndAnimateCard(int playerIndex, loris.Card card) async {
+    // Commit first so the card leaves the player's hand as soon as it is tapped.
+    // The table renderer temporarily hides the committed copy while its flight
+    // animation is in progress, then reveals it in the player's directional slot.
+    _matchController.playCard(playerIndex, card);
+    await _animateCardToTable(playerIndex, card);
+  }
+
   Future<void> _playHumanCard(loris.Card card) async {
     if (!_started || _finished || _busy) return;
 
@@ -1189,8 +1197,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     });
 
     try {
-      await _animateCardToTable(0, card);
-      _matchController.playCard(0, card);
+      await _commitAndAnimateCard(0, card);
 
       await _afterCardPlayed();
 
@@ -1221,8 +1228,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       try {
         final card = _chooseAiCard(playerIndex);
 
-        await _animateCardToTable(playerIndex, card);
-        _matchController.playCard(playerIndex, card);
+        await _commitAndAnimateCard(playerIndex, card);
 
         await _afterCardPlayed();
 
@@ -2297,6 +2303,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   for (var playIndex = 0; playIndex < plays.length; playIndex++)
                     Builder(builder: (context) {
                       final play = plays[playIndex];
+                      if (_flightStarted &&
+                          play.playerIndex == _flyingFromPlayer &&
+                          play.card == _flyingCard) {
+                        return const SizedBox.shrink();
+                      }
                       final angles = widget.playerCount == 4 ? const [pi / 2, pi, -pi / 2, 0.0] : const [pi / 2, 2.59, 3.69, -pi / 2, -0.55, 0.55];
                       final angle = angles[play.playerIndex];
                       const cardWidth = 60.0, cardHeight = 86.0;
