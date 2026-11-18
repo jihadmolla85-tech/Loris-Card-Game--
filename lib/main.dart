@@ -787,7 +787,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _dealtCardCount = 0;
         _status = '${_playerNames[dealerSelection.dealerIndex]} is dealing two packets of four cards';
       });
-      final totalCards = widget.playerCount * 8;
       // Two clockwise passes: each seat receives a visible packet of four.
       for (var packet = 0; packet < 2; packet++) {
         for (var seat = 0; seat < widget.playerCount; seat++) {
