@@ -2145,8 +2145,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   Widget _buildCompactMatchHeader() {
     final activeRound = _started ? _matchController.currentRound : null;
-    final sixteenActive = activeRound?.sixteenCallEngine?.status ==
-        SixteenCallStatus.inProgress;
+    final sixteenStatus = activeRound?.sixteenCallEngine?.status;
+    final sixteenActive = sixteenStatus == SixteenCallStatus.inProgress ||
+        sixteenStatus == SixteenCallStatus.succeeded ||
+        sixteenStatus == SixteenCallStatus.failed;
 
     final teamATricks = activeRound == null
         ? 0
