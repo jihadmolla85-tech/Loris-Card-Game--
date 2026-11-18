@@ -1818,11 +1818,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 if (!_isDealingCards && !_awaitingTrumpSelection &&
                     bidding != null && bidding.isHumanTurn && !bidding.isComplete)
                   _buildBiddingControls(bidding),
-                if (!_awaitingTrumpSelection)
-                  SizedBox(
-                    height: constraints.maxHeight < 650 ? 96 : 112,
-                    child: _buildHandStrip(hands[0]),
-                  ),
+                SizedBox(
+                  height: constraints.maxHeight < 650 ? 104 : 118,
+                  child: _buildHandStrip(hands[0]),
+                ),
               ],
             ),
           );
@@ -2185,7 +2184,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       ),
                     const SizedBox(width: 6),
                     Text(
-                      isJoker ? 'L' : _suitName(suit),
+                      isJoker ? 'L' : _suitName(suit!),
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10),
                     ),
                   ],
@@ -2217,26 +2216,56 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildHandStrip(List<loris.Card> cards) {
-    if (_isDealingCards) {
-      return const SizedBox.shrink();
-    }
+    if (_isDealingCards) return const SizedBox.shrink();
     final sortedCards = _sortedHand(cards);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'YOUR HAND  •  REVIEW BEFORE BIDDING',
-            style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
+        Text(
+          _awaitingTrumpSelection
+              ? 'YOUR HAND  •  SELECT TRUMP FROM THESE 8 CARDS'
+              : 'YOUR HAND  •  REVIEW BEFORE BIDDING',
+          style: const TextStyle(
+            color: LorisApp.gold,
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+            letterSpacing: .6,
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Expanded(
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: sortedCards.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 3),
-            itemBuilder: (context, index) => _buildCard(sortedCards[index]),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const cardWidth = 48.0;
+              const cardHeight = 68.0;
+              final count = sortedCards.length;
+              final overlap = count <= 1
+                  ? cardWidth
+                  : ((constraints.maxWidth - cardWidth) / (count - 1))
+                      .clamp(25.0, 44.0);
+              final fanWidth = count == 0
+                  ? 0.0
+                  : cardWidth + (count - 1) * overlap;
+              return SizedBox(
+                width: constraints.maxWidth,
+                height: cardHeight,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (var index = 0; index < count; index++)
+                      Positioned(
+                        left: (constraints.maxWidth - fanWidth) / 2 + index * overlap,
+                        top: 1,
+                        child: Transform.rotate(
+                          angle: (index - (count - 1) / 2) * .025,
+                          alignment: Alignment.bottomCenter,
+                          child: _buildCard(sortedCards[index], compact: true),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ],
