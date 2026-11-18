@@ -39,10 +39,10 @@ class TrumpSelectionEngine {
       throw StateError('Only the highest bidder can select trump.');
     }
 
-    // Trump must be declared from the winning bidder's own eight cards.
-    // Teammate cards are never exposed or used to select the trump suit.
-    if (cardOwnerIndex != bidderIndex) {
-      throw ArgumentError('Trump must be selected from the bidder own hand.');
+    // A bidder may privately draw a random normal card from a teammate.
+    // Opponent cards are never eligible, and the selected card is not revealed.
+    if (cardOwnerIndex % 2 != bidderIndex % 2) {
+      throw ArgumentError('Trump card must belong to the bidder or a teammate.');
     }
 
     if (!hands[cardOwnerIndex].contains(selectedCard)) {
@@ -75,7 +75,7 @@ class TrumpSelectionEngine {
       trumpSuit: trumpSuit,
       cardOwnerIndex: cardOwnerIndex,
       selectedCard: selectedCard,
-      revealedToEveryone: cardOwnerIndex != bidderIndex,
+      revealedToEveryone: false,
       bidderHasTrumpSuit: bidderHasTrumpSuit,
     );
   }
