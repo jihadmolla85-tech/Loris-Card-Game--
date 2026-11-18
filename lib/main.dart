@@ -533,6 +533,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _started = false;
   bool _finished = false;
   bool _busy = false;
+  bool _aiBiddingInProgress = false;
   bool _isShuffling = false;
   bool _isDealing = false;
   int? _dealTargetPlayer;
@@ -918,11 +919,47 @@ await _revealDealerDrawOnTable(
             : 'AI players are bidding.';
       });
 
-      if (controller.isComplete) {
-        _finishBidding();
-      }
+      unawaited(_runAiBiddingTurns());
     } catch (e) {
       setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _runAiBiddingTurns() async {
+    if (_aiBiddingInProgress) return;
+    _aiBiddingInProgress = true;
+    try {
+      final bidding = _biddingController;
+      if (bidding == null) return;
+
+      while (mounted && bidding.isAiTurn && !bidding.isComplete) {
+        final playerIndex = bidding.engine.currentPlayerIndex;
+        setState(() {
+          _status = '${_playerNames[playerIndex]} is thinking about the bid...';
+        });
+
+        await Future.delayed(Duration(milliseconds: 650 + _random.nextInt(550)));
+        if (!mounted || bidding.isComplete || !bidding.isAiTurn) return;
+
+        final record = bidding.submitNextAiBid();
+        setState(() {
+          _status = record.amount == null
+              ? '${_playerNames[playerIndex]} • PASS'
+              : '${_playerNames[playerIndex]} • BID ${record.amount}';
+        });
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      if (!mounted) return;
+      if (bidding.isComplete) {
+        await _finishBidding();
+      } else if (bidding.isHumanTurn) {
+        setState(() => _status = 'Your turn to bid.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Bidding error: $e');
+    } finally {
+      _aiBiddingInProgress = false;
     }
   }
 
@@ -1050,16 +1087,12 @@ await _revealDealerDrawOnTable(
       );
 
       setState(() {
-        _status = bidding.isComplete
-            ? 'Bidding complete.'
-            : bidding.isHumanTurn
-                ? 'Your turn to bid.'
-                : 'AI players are bidding.';
+        _status = selectedBid == -1
+            ? 'YOU • PASS'
+            : 'YOU • BID $selectedBid';
       });
 
-      if (bidding.isComplete) {
-        await _finishBidding();
-      }
+      await _runAiBiddingTurns();
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -1136,21 +1169,62 @@ await _revealDealerDrawOnTable(
             child: ListView(
               children: [
                 const Text(
-                  'YOUR CARDS',
+                  'CHOOSE A SUIT FROM YOUR HAND',
                   style: TextStyle(
                     color: LorisApp.gold,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...ownCards.map((card) => ListTile(
-                      title: Text(_cardName(card)),
-                      subtitle: const Text('Select this card as trump'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: loris.Suit.values
+                      .where((suit) => ownCards.any((card) => card.suit == suit))
+                      .map((suit) {
+                    final representative = ownCards.firstWhere(
+                      (card) => card.suit == suit,
+                    );
+                    final red = _isRedSuit(suit);
+                    return InkWell(
                       onTap: () => Navigator.pop(
                         dialogContext,
-                        MapEntry(bidder, card),
+                        MapEntry(bidder, representative),
                       ),
-                    )),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 72,
+                        height: 74,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF152A40),
+                          border: Border.all(color: LorisApp.gold, width: 1.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _suitSymbol(suit),
+                              style: TextStyle(
+                                color: red ? Colors.redAccent : Colors.white,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              _suitName(suit).toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
                 if (teammateCards.isNotEmpty) ...[
                   const Divider(color: Colors.white24),
                   const Text(
@@ -2724,6 +2798,9 @@ await _revealDealerDrawOnTable(
                       : '${records.last.amount}';
 
               final isHuman = index == 0;
+              final isCurrent = !bidding.isComplete &&
+                  bidding.engine.currentPlayerIndex == index;
+              final isThinking = isCurrent && bidding.isAiTurn;
 
               final isHighest =
                   bidding.highestBidder == index;
@@ -2731,7 +2808,20 @@ await _revealDealerDrawOnTable(
               return Expanded(
                 child: Column(
                   children: [
-                    CircleAvatar(
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isCurrent ? LorisApp.gold : Colors.transparent,
+                          width: 2,
+                        ),
+                        boxShadow: isThinking
+                            ? [BoxShadow(color: LorisApp.gold.withValues(alpha: .5), blurRadius: 12)]
+                            : const [],
+                      ),
+                      child: CircleAvatar(
                       radius: 19,
                       backgroundColor: isHighest
                           ? LorisApp.gold
@@ -2746,12 +2836,26 @@ await _revealDealerDrawOnTable(
                         size: 38,
                       ),
                     ),
+                    ),
                     const SizedBox(height: 7),
                     Text(
-                      bidText,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      isThinking ? 'THINKING…' : bidText,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isThinking ? LorisApp.gold : Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                    Text(
+                      _playerNames[index],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isCurrent ? LorisApp.gold : Colors.white60,
+                        fontSize: 9,
+                        fontWeight: isCurrent ? FontWeight.w900 : FontWeight.normal,
                       ),
                     ),
                   ],
