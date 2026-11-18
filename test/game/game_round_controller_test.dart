@@ -1,5 +1,4 @@
-
-import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter.dart';
 import 'package:loris_card_game/game/engine/game_round_controller.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
@@ -18,7 +17,7 @@ void main() {
           (_) => Card.normal(
             suit: Suit.clubs,
             // Team A wins each fixture trick, allowing the 16-call
-            // test to reach the required bid plus one extra trick.
+            // test to reach the required bid number of tricks.
             rank: switch (player) {
               0 => 14,
               1 => 10,
@@ -99,14 +98,14 @@ void main() {
     });
 
     test('Applies 16 Call success points only once', () {
-      // Bid is 4: win a fifth trick before the extra-trick call is allowed.
-      for (var i = 0; i < 5; i++) {
+      // Bid is 4: call 16 immediately after the bidding team reaches four tricks.
+      for (var i = 0; i < 4; i++) {
         playOneTrick();
       }
 
       controller.call16(callerPlayerIndex: 0);
 
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < 4; i++) {
         playOneTrick();
       }
 
