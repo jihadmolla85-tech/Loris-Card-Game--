@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
 import 'game/engine/game_settings_service.dart';
@@ -2936,6 +2937,15 @@ class _AnimePortrait extends StatelessWidget {
   final bool isFemale;
   final double size;
 
+  static final Future<ui.Image> _portraitAtlas = _loadPortraitAtlas();
+
+  static Future<ui.Image> _loadPortraitAtlas() async {
+    final data = await rootBundle.load('assets/images/loris_portrait_atlas.jpg');
+    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
   @override
   Widget build(BuildContext context) => Container(
     width: size,
@@ -2948,149 +2958,57 @@ class _AnimePortrait extends StatelessWidget {
       ],
     ),
     child: ClipOval(
-      child: CustomPaint(
-        painter: _SuperheroPortraitPainter(seed, isFemale),
+      child: FutureBuilder<ui.Image>(
+        future: _portraitAtlas,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const ColoredBox(color: Color(0xFF29445C));
+          }
+          return CustomPaint(
+            painter: _PortraitAtlasPainter(
+              image: snapshot.data!,
+              portraitIndex: seed % 6,
+            ),
+            child: const SizedBox.expand(),
+          );
+        },
       ),
     ),
   );
 }
 
-class _SuperheroPortraitPainter extends CustomPainter {
-  const _SuperheroPortraitPainter(this.seed, this.isFemale);
+class _PortraitAtlasPainter extends CustomPainter {
+  const _PortraitAtlasPainter({
+    required this.image,
+    required this.portraitIndex,
+  });
 
-  final int seed;
-  final bool isFemale;
+  final ui.Image image;
+  final int portraitIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    const backgrounds = [
-      0xFF183D59, 0xFF612B43, 0xFF205342,
-      0xFF40305F, 0xFF76502A, 0xFF24545E,
-    ];
-    const hairColors = [
-      0xFF17151D, 0xFF45251D, 0xFF182432,
-      0xFF71402A, 0xFF29202D, 0xFF4B3427,
-    ];
-    const suitColors = [
-      0xFFB52E3D, 0xFF2476A4, 0xFFB47B25,
-      0xFF6946A0, 0xFF267A68, 0xFFB64D27,
-    ];
-    const skinColors = [
-      0xFFE7B995, 0xFFD49A75, 0xFFB97855,
-      0xFF8E5944, 0xFFF0C7A2, 0xFFC88968,
-    ];
-    final background = Paint()..color = Color(backgrounds[seed % 6]);
-    final hair = Paint()..color = Color(hairColors[seed % 6]);
-    final suit = Paint()..color = Color(suitColors[seed % 6]);
-    final skin = Paint()..color = Color(skinColors[seed % 6]);
-    final dark = Paint()..color = const Color(0xFF171923);
-    final white = Paint()..color = const Color(0xFFFFF8E9);
-    final iris = Paint()..color = Color(suitColors[(seed + 2) % 6]);
-    final gold = Paint()..color = const Color(0xFFFFD978);
-
-    canvas.drawRect(Offset.zero & size, background);
-    // Cape/shoulders and a distinct superhero suit.
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(w * .5, h * 1.02), width: w * .98, height: h * .62),
-      suit,
+    const tileSize = 40.0;
+    final column = portraitIndex % 3;
+    final row = portraitIndex ~/ 3;
+    final source = Rect.fromLTWH(
+      column * tileSize,
+      row * tileSize,
+      tileSize,
+      tileSize,
     );
-    final emblem = Path()
-      ..moveTo(w * .5, h * .77)
-      ..lineTo(w * .39, h * .88)
-      ..lineTo(w * .5, h * .85)
-      ..lineTo(w * .61, h * .88)
-      ..close();
-    canvas.drawPath(emblem, gold);
-
-    // Hair silhouette differs by gender and player identity.
-    if (isFemale) {
-      canvas.drawOval(Rect.fromLTWH(w * .10, h * .08, w * .80, h * .88), hair);
-      canvas.drawOval(Rect.fromLTWH(w * .23, h * .12, w * .54, h * .72), skin);
-      canvas.drawOval(Rect.fromLTWH(w * .13, h * .20, w * .20, h * .64), hair);
-      canvas.drawOval(Rect.fromLTWH(w * .67, h * .20, w * .20, h * .64), hair);
-      final fringe = Path()
-        ..moveTo(w * .19, h * .39)
-        ..quadraticBezierTo(w * .25, h * .03, w * .56, h * .13)
-        ..quadraticBezierTo(w * .78, h * .12, w * .82, h * .38)
-        ..lineTo(w * .65, h * .31)
-        ..lineTo(w * .51, h * .39)
-        ..lineTo(w * .37, h * .30)
-        ..close();
-      canvas.drawPath(fringe, hair);
-    } else {
-      canvas.drawOval(Rect.fromLTWH(w * .19, h * .10, w * .62, h * .75), hair);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(w * .25, h * .23, w * .50, h * .61),
-          Radius.circular(w * .18),
-        ),
-        skin,
-      );
-      final fringe = Path()
-        ..moveTo(w * .19, h * .39)
-        ..quadraticBezierTo(w * .22, h * .06, w * .52, h * .10)
-        ..quadraticBezierTo(w * .78, h * .07, w * .82, h * .35)
-        ..lineTo(w * .67, h * .30)
-        ..lineTo(w * .55, h * .38)
-        ..lineTo(w * .43, h * .29)
-        ..lineTo(w * .29, h * .39)
-        ..close();
-      canvas.drawPath(fringe, hair);
-    }
-
-    // Eye mask gives each portrait a clear superhero identity.
-    final mask = Path()
-      ..moveTo(w * .20, h * .43)
-      ..quadraticBezierTo(w * .34, h * .35, w * .48, h * .43)
-      ..quadraticBezierTo(w * .66, h * .35, w * .80, h * .43)
-      ..lineTo(w * .73, h * .57)
-      ..lineTo(w * .56, h * .52)
-      ..lineTo(w * .50, h * .57)
-      ..lineTo(w * .43, h * .52)
-      ..lineTo(w * .27, h * .57)
-      ..close();
-    canvas.drawPath(mask, suit);
-    for (final x in [w * .39, w * .61]) {
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(x, h * .47), width: w * .17, height: h * .09),
-        white,
-      );
-      canvas.drawCircle(Offset(x, h * .47), w * .035, iris);
-      canvas.drawCircle(Offset(x, h * .47), w * .017, dark);
-    }
-
-    // Nose, mouth and gender-specific lower-face detail.
-    canvas.drawLine(
-      Offset(w * .5, h * .52),
-      Offset(w * .48, h * .62),
-      Paint()..color = const Color(0xFF9A604B)..strokeWidth = w * .025,
+    canvas.drawImageRect(
+      image,
+      source,
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.high,
     );
-    if (!isFemale) {
-      canvas.drawArc(
-        Rect.fromLTWH(w * .35, h * .60, w * .30, h * .20),
-        0.15, 2.85, false,
-        Paint()
-          ..color = hair.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = w * .055,
-      );
-    } else {
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(w * .5, h * .68), width: w * .15, height: h * .045),
-        Paint()..color = const Color(0xFF8E3E4C),
-      );
-    }
-    // Distinct insignia and metallic trim.
-    canvas.drawCircle(Offset(w * .5, h * .93), w * .035, gold);
   }
 
   @override
-  bool shouldRepaint(covariant _SuperheroPortraitPainter oldDelegate) =>
-      oldDelegate.seed != seed || oldDelegate.isFemale != isFemale;
+  bool shouldRepaint(covariant _PortraitAtlasPainter oldDelegate) =>
+      oldDelegate.image != image || oldDelegate.portraitIndex != portraitIndex;
 }
-
 
 class _LorisJokerArt extends StatelessWidget {
   const _LorisJokerArt({this.width = 36, this.height = 48});
