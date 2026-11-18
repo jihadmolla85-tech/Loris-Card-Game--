@@ -2152,7 +2152,7 @@ await _revealDealerDrawOnTable(
                   ),
                 ),
               SizedBox(
-                height: constraints.maxHeight < 650 ? 112 : 124,
+                height: constraints.maxHeight < 650 ? 132 : 144,
                 child: Column(
                   children: [
                     Row(
@@ -2180,19 +2180,23 @@ await _revealDealerDrawOnTable(
                         ],
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 3),
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, handConstraints) {
                           const cardWidth = 62.0;
+                          // Fit the complete hand to the available screen width.
+                          // Cards overlap like a real hand of playing cards; no
+                          // horizontal scrolling is needed, even with eight cards.
                           final overlap = handCount <= 1
                               ? cardWidth
-                              : ((handConstraints.maxWidth - cardWidth) / (handCount - 1)).clamp(24.0, 43.0);
+                              : (handConstraints.maxWidth - cardWidth) / (handCount - 1);
+                          final middle = (handCount - 1) / 2;
                           return SizedBox(
                             width: handConstraints.maxWidth,
                             child: Stack(
                               alignment: Alignment.bottomLeft,
-                              clipBehavior: Clip.none,
+                              clipBehavior: Clip.hardEdge,
                               children: [
                                 for (var index = 0; index < handCount; index++)
                                   Positioned(
@@ -2205,18 +2209,20 @@ await _revealDealerDrawOnTable(
                                             !_busy &&
                                             currentPlayer == 0 &&
                                             legalHumanCards.contains(card);
-                                        final middle = (handCount - 1) / 2;
-                                        final angle = (index - middle) * .025;
+                                        // A gentle fan: outer cards turn outward,
+                                        // while the middle cards remain upright.
+                                        final angle = (index - middle) * .052;
                                         return Draggable<loris.Card>(
                                           data: card,
                                           maxSimultaneousDrags: playable ? 1 : 0,
                                           feedback: Material(color: Colors.transparent, child: _buildCard(card, enabled: true)),
                                           childWhenDragging: Opacity(opacity: .28, child: _buildCard(card, enabled: false)),
                                           child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
                                             onTap: playable ? () => _playHumanCard(card) : null,
                                             child: AnimatedContainer(
                                               duration: const Duration(milliseconds: 180),
-                                              curve: Curves.easeOut,
+                                              curve: Curves.easeOutCubic,
                                               transform: Matrix4.identity()
                                                 ..translateByDouble(0, playable ? -7 : 0, 0, 1)
                                                 ..rotateZ(angle),
