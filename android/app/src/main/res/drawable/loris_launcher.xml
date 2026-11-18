@@ -1,12 +1,2 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path android:fillColor="#4B1020" android:pathData="M0,0h108v108h-108z"/>
-    <path android:fillColor="#D8A64A" android:pathData="M25,12h42a5,5 0,0 1,5 5v69a5,5 0,0 1,-5 5h-42a5,5 0,0 1,-5 -5v-69a5,5 0,0 1,5 -5z"/>
-    <path android:fillColor="#FFF8E9" android:pathData="M34,9h42a5,5 0,0 1,5 5v69a5,5 0,0 1,-5 5h-42a5,5 0,0 1,-5 -5v-69a5,5 0,0 1,5 -5z"/>
-    <path android:fillColor="#B51F35" android:pathData="M55,26l14,14 -14,14 -14,-14z"/>
-    <path android:fillColor="#1D2630" android:pathData="M55,56c-7,-13 -20,-8 -20,2 0,9 13,17 20,25 7,-8 20,-16 20,-25 0,-10 -13,-15 -20,-2z"/>
-    <path android:fillColor="#D8A64A" android:pathData="M43,77h24v3h-24z"/>
-</vector>
+<?xml version="1.0" encoding="utf-8"?>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android" android:src="@drawable/loris_icon" android:gravity="center" />
