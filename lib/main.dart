@@ -1377,6 +1377,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Future<void> _call16() async {
     if (!_humanCanCall16 || _busy) return;
 
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
     try {
       _matchController.call16(callerPlayerIndex: 0);
 
@@ -1388,7 +1393,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       await _triggerSixteenCallEffect();
       await _runAiTurns();
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
