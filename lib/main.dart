@@ -225,10 +225,10 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 ),
                 _RuleSection(
                   title: 'PLAYING TRICKS',
-                  body: 'Follow the suit led whenever possible. If you cannot '
-                      'follow suit when possible. If you cannot follow suit, you may '
-                      'play any card; trumping and overtrumping are optional. The LORIS card is '
-                      'the Joker and beats every card. In Joker mode there is '
+                  body: 'You must follow the suit led if you have a card of that suit. '
+                      'If you are void in the led suit, you may play any card. '
+                      'Trumping and overtrumping are optional. The LORIS card '
+                      'is the Joker and beats every card. In Joker mode there is '
                       'no trump suit; the highest rank wins across all suits.',
                 ),
                 _RuleSection(
@@ -1470,7 +1470,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   bool _isFemalePlayer(String playerName) {
     const femaleNames = {
-      'Jannat', 'Ayesha', 'Sheto', 'Shima', 'Roma', 'Mitu',
+      'Jannat', 'Ayesha', 'Shima', 'Roma', 'Mitu',
       'Tania', 'Nusrat', 'Mim', 'Sumi', 'Rima', 'Nila',
       'Faria', 'Sumaiya', 'Tisha', 'Anika', 'Maliha',
     };
