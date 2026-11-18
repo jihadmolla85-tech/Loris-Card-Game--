@@ -220,10 +220,9 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   body: 'Bidding starts with the player to the dealer’s right. '
                       'Players may pass. A bid must be higher than the current '
                       'highest bid. The winning bidder selects a trump suit '
-                      'present in their own eight-card hand, or draw one random '
-                      'suit card privately from their teammate’s hand. The card '
-                      'face and rank are never revealed during trump selection. '
-                      'Joker mode is available only when the bidder holds LORIS.',
+                      'present in their own eight-card hand. The LORIS card can '
+                      'be chosen for Joker mode only when the bidder holds it. '
+                      'No teammate card is revealed during trump selection.',
                 ),
                 _RuleSection(
                   title: 'PLAYING TRICKS',
@@ -342,7 +341,21 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const _LorisBrandMark(size: 116),
+                  Container(
+                    width: 112,
+                    height: 112,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFE8A6), Color(0xFFB9772E)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: Color(0xFFFFF5D8), width: 3),
+                      boxShadow: const [BoxShadow(color: Color(0x66834B1C), blurRadius: 22, offset: Offset(0, 9))],
+                    ),
+                    child: const Icon(Icons.auto_awesome, size: 68, color: Color(0xFF6B351D)),
+                  ),
                   const SizedBox(height: 18),
                   const Text(
                     'LORIS',
@@ -970,14 +983,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     // Joker mode is available only when the bidder personally holds LORIS.
     final heldJoker = hands[bidder].where((card) => card.isLoris).firstOrNull;
     if (heldJoker != null) choices.add(MapEntry(bidder, heldJoker));
-    final teammateIndex = (bidder + 2) % hands.length;
-    final teammateCards = hands[teammateIndex].where((card) => !card.isLoris).toList();
-    if (teammateCards.isNotEmpty) choices.add(MapEntry(teammateIndex, teammateCards.first));
     setState(() {
       _pendingTrumpBidder = bidder;
       _pendingTrumpChoices = choices;
       _awaitingTrumpSelection = true;
-      _status = 'Choose a trump suit from your hand or your teammate’s hand.';
+      _status = 'Choose a trump suit from your hand.'
     });
   }
 
@@ -1016,14 +1026,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
 
     await _applyTrump(bidder, bidder, selectedCard);
-  }
-
-  Future<void> _selectRandomTeammateTrump(int bidder, int teammateIndex) async {
-    final hands = _hands;
-    if (hands == null || teammateIndex < 0 || teammateIndex >= hands.length) return;
-    final cards = hands[teammateIndex].where((card) => !card.isLoris).toList();
-    if (cards.isEmpty) return;
-    await _applyTrump(bidder, teammateIndex, cards[_random.nextInt(cards.length)]);
   }
 
   Future<void> _applyTrump(
@@ -1600,6 +1602,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
+  String _cardName(loris.Card card) {
+    if (card.isLoris) return 'L';
+
+    return '${card.displayName}${_suitSymbol(card.suit)}';
+  }
+
   bool _isRedSuit(loris.Suit? suit) {
     return suit == loris.Suit.hearts ||
         suit == loris.Suit.diamonds;
@@ -2156,9 +2164,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               return OutlinedButton(
                 onPressed: _busy
                     ? null
-                    : () => choice.key == bidder
-                        ? _applyTrump(bidder, bidder, choice.value)
-                        : _selectRandomTeammateTrump(bidder, choice.key),
+                    : () => _applyTrump(bidder, bidder, choice.value),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: accent,
                   disabledForegroundColor: Colors.white30,
@@ -2168,16 +2174,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (choice.key != bidder) ...[
-                      const Icon(Icons.groups_rounded, color: LorisApp.gold, size: 24),
-                      const SizedBox(width: 6),
-                      const Flexible(child: Text('TEAMMATE’S HAND', maxLines: 2, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10))),
-                    ] else ...[
-                      if (isJoker) const _LorisJokerArt(width: 22, height: 29)
-                      else Text(_suitSymbol(suit), style: TextStyle(color: accent, fontSize: 25, fontWeight: FontWeight.w900)),
-                      const SizedBox(width: 6),
-                      Text(isJoker ? 'L' : _suitName(suit!), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
-                    ],
+                    if (isJoker)
+                      const _LorisJokerArt(width: 22, height: 29)
+                    else
+                      Text(
+                        _suitSymbol(suit),
+                        style: TextStyle(color: accent, fontSize: 25, fontWeight: FontWeight.w900),
+                      ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isJoker ? 'L' : _suitName(suit!),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10),
+                    ),
                   ],
                 ),
               );
@@ -2842,7 +2850,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               ),
                             )
                           : const _LorisJokerArt(width: 25, height: 31),
-                    ),
                   ),
               ],
           ),
@@ -2906,7 +2913,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           Align(alignment: Alignment.bottomRight, child: corner(upsideDown: true)),
           Center(
             child: card.isLoris
-                ? const _LorisBrandMark(size: 38)
+                ? _LorisJokerArt(
+                    width: tableCard ? 34 : compact ? 25 : 37,
+                    height: tableCard ? 48 : compact ? 34 : 51,
+                  )
                 : card.rank != null && card.rank! >= 11 && card.rank! <= 13
                     ? _CourtCardArt(
                         rank: card.rank!,
@@ -3095,18 +3105,6 @@ class _SuperheroPortraitPainter extends CustomPainter {
       oldDelegate.seed != seed || oldDelegate.isFemale != isFemale;
 }
 
-
-class _LorisBrandMark extends StatelessWidget {
-  const _LorisBrandMark({this.size = 112});
-  final double size;
-  @override
-  Widget build(BuildContext context) => Container(width:size,height:size,decoration:BoxDecoration(color:const Color(0xFF07366B),borderRadius:BorderRadius.circular(size*.22),border:Border.all(color:LorisApp.gold,width:2.5),boxShadow:const [BoxShadow(color:Color(0xAA06234A),blurRadius:20,offset:Offset(0,8))]),child:CustomPaint(painter:_LorisBrandPainter()));
-}
-class _LorisBrandPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas,Size size){final w=size.width,h=size.height;final gold=Paint()..color=const Color(0xFFFFD36A)..style=PaintingStyle.stroke..strokeWidth=w*.075..strokeJoin=StrokeJoin.round;final path=Path()..moveTo(w*.22,h*.12)..lineTo(w*.66,h*.12)..lineTo(w*.66,h*.23)..lineTo(w*.48,h*.23)..lineTo(w*.48,h*.75)..lineTo(w*.80,h*.75)..lineTo(w*.80,h*.88)..lineTo(w*.18,h*.88)..lineTo(w*.18,h*.75)..lineTo(w*.33,h*.75)..lineTo(w*.33,h*.25)..lineTo(w*.22,h*.25)..close();canvas.drawPath(path,gold);final suits=[['♥',Offset(w*.48,h*.20),const Color(0xFFFF5270)],['♣',Offset(w*.77,h*.35),const Color(0xFFFFD36A)],['♠',Offset(w*.70,h*.55),const Color(0xFFEAF4FF)],['♦',Offset(w*.30,h*.69),const Color(0xFF55C9FF)]];for(final item in suits){final tp=TextPainter(text:TextSpan(text:item[0] as String,style:TextStyle(color:item[2] as Color,fontSize:w*.19,fontWeight:FontWeight.w900)),textDirection:TextDirection.ltr)..layout();final p=item[1] as Offset;tp.paint(canvas,Offset(p.dx-tp.width/2,p.dy-tp.height/2));}}
-  @override bool shouldRepaint(covariant _LorisBrandPainter oldDelegate)=>false;
-}
 
 class _LorisJokerArt extends StatelessWidget {
   const _LorisJokerArt({this.width = 36, this.height = 48});

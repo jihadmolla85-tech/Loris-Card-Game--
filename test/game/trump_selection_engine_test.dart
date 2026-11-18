@@ -39,6 +39,7 @@ void main() {
     expect(result.trumpSuit, Suit.spades);
     expect(result.revealedToEveryone, false);
     expect(result.cardOwnerIndex, 2);
+    expect(result.bidderHasTrumpSuit, true);
   });
 
   test('selected bidder card remains in the private hand', () {

@@ -67,8 +67,9 @@ class TrumpSelectionEngine {
 
     final trumpSuit = selectedCard.suit!;
 
-    final bidderHasTrumpSuit = hands[bidderIndex].any(
-      (card) => !card.isLoris && card.suit == trumpSuit,
+    final bidderHasTrumpSuit = hands.asMap().entries.any(
+      (entry) => entry.key % 2 == bidderIndex % 2 &&
+          entry.value.any((card) => !card.isLoris && card.suit == trumpSuit),
     );
 
     return TrumpSelectionResult(
