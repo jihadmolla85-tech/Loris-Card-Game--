@@ -2316,22 +2316,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
-                Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(130),
-                        border: Border.all(color: const Color(0x55E8D09A), width: 1),
-                        gradient: const RadialGradient(
-                          center: Alignment(0, -.25),
-                          radius: 1.15,
-                          colors: [Color(0x0016795A), Color(0x00032D25)],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // The entire screen is the play surface; no inset oval/table overlay.
+                // Played cards remain in directional slots around the center so each
+                // card is visibly associated with the seat that played it.
                 for (var index = 0; index < widget.playerCount; index++)
                   Align(
                     alignment: seatAlignments[index],
