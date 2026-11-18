@@ -34,31 +34,30 @@ void main() {
     expect(result.bidderHasTrumpSuit, true);
   });
 
-  test('teammate card is revealed to everyone', () {
+  test('teammate card cannot be selected as trump', () {
+    expect(
+      () => TrumpSelectionEngine.select(
+        hands: hands,
+        bidderIndex: 0,
+        highestBidderIndex: 0,
+        cardOwnerIndex: 2,
+        selectedCard: teammateCard,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('selected bidder card remains in the private hand', () {
     final result = TrumpSelectionEngine.select(
       hands: hands,
       bidderIndex: 0,
       highestBidderIndex: 0,
-      cardOwnerIndex: 2,
-      selectedCard: teammateCard,
+      cardOwnerIndex: 0,
+      selectedCard: ownCard,
     );
 
-    expect(result.trumpSuit, Suit.spades);
-    expect(result.revealedToEveryone, true);
-    expect(result.cardOwnerIndex, 2);
-    expect(result.bidderHasTrumpSuit, false);
-  });
-
-  test('selected card remains in owner hand', () {
-    TrumpSelectionEngine.select(
-      hands: hands,
-      bidderIndex: 0,
-      highestBidderIndex: 0,
-      cardOwnerIndex: 2,
-      selectedCard: teammateCard,
-    );
-
-    expect(hands[2].contains(teammateCard), true);
+    expect(hands[0].contains(ownCard), true);
+    expect(result.revealedToEveryone, false);
   });
 
   test('opponent card cannot be selected', () {
