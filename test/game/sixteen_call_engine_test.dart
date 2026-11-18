@@ -114,6 +114,20 @@ void main() {
       );
     });
 
+    test('Previous trick winner can pass the one-time 16 decision', () {
+      engine = createEngine();
+      winFirstFour(engine);
+
+      engine.pass16(callerPlayerIndex: 2);
+
+      expect(engine.status, SixteenCallStatus.passed);
+      expect(engine.canCall, isFalse);
+      expect(
+        () => engine.call16(callerPlayerIndex: 2),
+        throwsStateError,
+      );
+    });
+
     test('Previous trick winner can make 16 Call', () {
       engine = createEngine();
       winFirstFour(engine);
