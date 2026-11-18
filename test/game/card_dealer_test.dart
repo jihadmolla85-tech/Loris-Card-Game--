@@ -19,7 +19,7 @@ void main() {
       ];
     }
 
-    test('Deals 8 cards to each of 4 players one at a time', () {
+    test('Deals two packets of four cards to each of 4 players', () {
       final deck = createDeck(4);
 
       final hands = CardDealer.deal(
@@ -37,12 +37,14 @@ void main() {
 
         expect(
           hands[player],
-          [for (var i = 0; i < 8; i++) deck[offset + i * 4]],
+          [for (var packet = 0; packet < 2; packet++)
+            for (var i = 0; i < 4; i++)
+              deck[packet * 16 + i * 4 + offset]],
         );
       }
     });
 
-    test('Deals 8 cards to each of 6 players one at a time', () {
+    test('Deals two packets of four cards to each of 6 players', () {
       final deck = createDeck(6);
 
       final hands = CardDealer.deal(
@@ -60,7 +62,9 @@ void main() {
 
         expect(
           hands[player],
-          [for (var i = 0; i < 8; i++) deck[offset + i * 6]],
+          [for (var packet = 0; packet < 2; packet++)
+            for (var i = 0; i < 4; i++)
+              deck[packet * 24 + i * 6 + offset]],
         );
       }
     });
