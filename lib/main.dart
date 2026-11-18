@@ -949,12 +949,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (heldCard != null) choices.add(MapEntry(bidder, heldCard));
     }
 
-    // Joker mode is available only when the bidder personally holds LORIS.
-    final heldJoker = hands[bidder].where((card) => card.isLoris).firstOrNull;
-    if (heldJoker != null) choices.add(MapEntry(bidder, heldJoker));
+    // Place the teammate draw in the former seventh-card slot, before Joker.
     final teammateIndex = (bidder + 2) % hands.length;
     final teammateCards = hands[teammateIndex].where((card) => !card.isLoris).toList();
     if (teammateCards.isNotEmpty) choices.add(MapEntry(teammateIndex, teammateCards.first));
+
+    // Joker mode is available only when the bidder personally holds LORIS.
+    final heldJoker = hands[bidder].where((card) => card.isLoris).firstOrNull;
+    if (heldJoker != null) choices.add(MapEntry(bidder, heldJoker));
     setState(() {
       _pendingTrumpBidder = bidder;
       _pendingTrumpChoices = choices;
