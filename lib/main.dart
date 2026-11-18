@@ -1560,15 +1560,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // HELPERS
   // ----------------------------------------------------------
 
-  bool _isFemalePlayer(String playerName) {
-    const femaleNames = {
-      'Jannat', 'Ayesha', 'Shima', 'Roma', 'Mitu',
-      'Tania', 'Nusrat', 'Mim', 'Sumi', 'Rima', 'Nila',
-      'Faria', 'Sumaiya', 'Tisha', 'Anika', 'Maliha',
-    };
-    return femaleNames.contains(playerName);
-  }
-
   String _suitName(loris.Suit suit) {
     switch (suit) {
       case loris.Suit.clubs:
