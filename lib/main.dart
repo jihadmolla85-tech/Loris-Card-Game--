@@ -1638,10 +1638,10 @@ await _revealDealerDrawOnTable(
           if (_soundEnabled && humanTeamWonRound) {
             unawaited(_audio.play('round_win'));
           } else if (_soundEnabled && !humanTeamWonRound) {
-            unawaited(SystemSound.play(SystemSoundType.alert));
+            unawaited(_safeDeviceFeedback(() => SystemSound.play(SystemSoundType.alert)));
           }
           if (humanTeamWonRound) {
-            await HapticFeedback.heavyImpact();
+            await _safeDeviceFeedback(HapticFeedback.heavyImpact);
           } else {
             await _safeDeviceFeedback(HapticFeedback.mediumImpact);
           }
