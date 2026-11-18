@@ -119,6 +119,9 @@ class GameRoundController {
       matchScoreEngine.checkWinner();
 
   void playCard(int playerIndex, Card card) {
+    if (sixteenCallEngine?.canCall == true) {
+      throw StateError('Resolve the CALL 16 decision before the next trick.');
+    }
     if (isRoundEnded) {
       throw StateError('The round has ended.');
     }
@@ -170,6 +173,17 @@ class GameRoundController {
     engine.call16(
       callerPlayerIndex: callerPlayerIndex,
     );
+  }
+
+  void pass16({required int callerPlayerIndex}) {
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
+    }
+    final engine = sixteenCallEngine;
+    if (engine == null) {
+      throw StateError('16 Call is not allowed on an 8 bid.');
+    }
+    engine.pass16(callerPlayerIndex: callerPlayerIndex);
   }
 
   void _applyRoundScore() {
