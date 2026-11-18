@@ -2616,7 +2616,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _AnimePortrait(seed: index, isFemale: _isFemalePlayer(_playerNames[index]), size: 42),
+                          _AnimePortrait(seed: index, size: 42),
                           const SizedBox(height: 3),
                           Text(
                             _playerNames[index],
@@ -2929,12 +2929,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 class _AnimePortrait extends StatelessWidget {
   const _AnimePortrait({
     required this.seed,
-    required this.isFemale,
     this.size = 36,
   });
 
   final int seed;
-  final bool isFemale;
   final double size;
 
   static final Future<ui.Image> _portraitAtlas = _loadPortraitAtlas();
