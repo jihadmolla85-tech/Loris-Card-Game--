@@ -37,7 +37,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LorisApp());
 
-    expect(find.text('LORIS'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName == 'assets/images/loris_logo.jpg',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('NEW GAME'), findsOneWidget);
     expect(find.text('RESUME GAME'), findsOneWidget);
     expect(find.text('SETTINGS'), findsOneWidget);
