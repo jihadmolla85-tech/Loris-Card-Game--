@@ -15,15 +15,11 @@ class SixteenCallEngine {
     if (playerCount != 4 && playerCount != 6) {
       throw ArgumentError('Player count must be 4 or 6.');
     }
-
     if (biddingTeam != 0 && biddingTeam != 1) {
       throw ArgumentError('Team must be 0 or 1.');
     }
-
     if (bidAmount < 4 || bidAmount > 7) {
-      throw ArgumentError(
-        '16 Call is allowed only after bids 4 to 7.',
-      );
+      throw ArgumentError('16 Call is allowed only after bids 4 to 7.');
     }
   }
 
@@ -37,7 +33,6 @@ class SixteenCallEngine {
   int? callerIndex;
 
   SixteenCallStatus status = SixteenCallStatus.notCalled;
-
   int biddingTeamPoints = 0;
   int opposingTeamPoints = 0;
 
@@ -46,6 +41,8 @@ class SixteenCallEngine {
       status == SixteenCallStatus.failed ||
       status == SixteenCallStatus.succeeded;
 
+  // Since completedTricks must equal bidAmount and the bidding team must
+  // have won every one of them, this only opens after a consecutive streak.
   bool get canCall =>
       status == SixteenCallStatus.notCalled &&
       completedTricks == bidAmount &&
@@ -54,40 +51,19 @@ class SixteenCallEngine {
       lastTrickWinnerIndex != null &&
       (lastTrickWinnerIndex! % 2) == biddingTeam;
 
-  void call16({required int callerPlayerIndex}) {
-    if (status != SixteenCallStatus.notCalled) {
-      throw StateError('16 Call has already been made.');
+  void _validateDecision({required int callerPlayerIndex}) {
+    if (!canCall) {
+      throw StateError('16 Call decision is not available.');
     }
-
-    if (completedTricks != bidAmount || completedTricks >= 8) {
-      throw StateError(
-        '16 Call is available immediately after the bidding team wins its bid number of consecutive tricks.',
-      );
-    }
-
-    if (biddingTeamTricks != bidAmount) {
-      throw StateError(
-        'Bidding team has not reached its bid.',
-      );
-    }
-
-    if (callerPlayerIndex < 0 ||
-        callerPlayerIndex >= playerCount) {
+    if (callerPlayerIndex < 0 || callerPlayerIndex >= playerCount) {
       throw ArgumentError('Invalid caller index.');
     }
-
     if (callerPlayerIndex != lastTrickWinnerIndex) {
-      throw StateError(
-        'Only the previous trick winner can call 16.',
-      );
+      throw StateError('Only the previous trick winner can decide.');
     }
-
     if (callerPlayerIndex % 2 != biddingTeam) {
-      throw StateError(
-        'Only a member of the bidding team can call 16.',
-      );
+      throw StateError('Only a member of the bidding team can decide.');
     }
-
   }
 
   void call16({required int callerPlayerIndex}) {
@@ -106,16 +82,13 @@ class SixteenCallEngine {
     if (isRoundEnded) {
       throw StateError('The round has already ended.');
     }
-
     if (winnerIndex < 0 || winnerIndex >= playerCount) {
       throw ArgumentError('Invalid winner index.');
     }
 
     completedTricks++;
     lastTrickWinnerIndex = winnerIndex;
-
     final winnerTeam = winnerIndex % 2;
-
     if (winnerTeam == biddingTeam) {
       biddingTeamTricks++;
     }
@@ -131,7 +104,6 @@ class SixteenCallEngine {
         opposingTeamPoints = -16;
       }
     }
-
     return status;
   }
 }
