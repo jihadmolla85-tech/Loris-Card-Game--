@@ -2145,6 +2145,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   Widget _buildCompactMatchHeader() {
     final activeRound = _started ? _matchController.currentRound : null;
+    final sixteenActive = activeRound?.sixteenCallEngine?.status ==
+        SixteenCallStatus.inProgress;
+
     final teamATricks = activeRound == null
         ? 0
         : activeRound.biddingTeam == 0
@@ -2155,16 +2158,21 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         : activeRound.biddingTeam == 1
             ? activeRound.biddingTeamTricks
             : activeRound.completedTricks - activeRound.biddingTeamTricks;
+
     final teamATarget = activeRound == null
         ? 0
-        : activeRound.biddingTeam == 0
-            ? activeRound.bidAmount
-            : 8 - activeRound.bidAmount;
+        : sixteenActive
+            ? (activeRound.biddingTeam == 0 ? 8 : 1)
+            : activeRound.biddingTeam == 0
+                ? activeRound.bidAmount
+                : 9 - activeRound.bidAmount;
     final teamBTarget = activeRound == null
         ? 0
-        : activeRound.biddingTeam == 1
-            ? activeRound.bidAmount
-            : 8 - activeRound.bidAmount;
+        : sixteenActive
+            ? (activeRound.biddingTeam == 1 ? 8 : 1)
+            : activeRound.biddingTeam == 1
+                ? activeRound.bidAmount
+                : 9 - activeRound.bidAmount;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -2186,7 +2194,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore)),
               Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
               Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore)),
-
             ],
           ),
           if (activeRound != null) ...[
@@ -2195,7 +2202,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               children: [
                 Expanded(
                   child: _teamTrickProgress(
-                    'TEAM A TRICKS',
+                    'TEAM A  ${sixteenActive && activeRound.biddingTeam == 0 ? "CALL 16" : "TARGET"}',
                     teamATricks,
                     teamATarget,
                     const Color(0xFFFFD36A),
@@ -2204,7 +2211,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 const SizedBox(width: 8),
                 Expanded(
                   child: _teamTrickProgress(
-                    'TEAM B TRICKS',
+                    'TEAM B  ${sixteenActive && activeRound.biddingTeam == 1 ? "CALL 16" : "TARGET"}',
                     teamBTricks,
                     teamBTarget,
                     const Color(0xFFB8D9FF),
