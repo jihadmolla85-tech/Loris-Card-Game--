@@ -1,4 +1,3 @@
-
 import '../ai/ai_bidding_strategy.dart';
 import '../models/loris_card.dart';
 import 'bidding_engine.dart';
@@ -25,8 +24,6 @@ class BiddingRoundController {
         humanPlayerIndex >= hands.length) {
       throw ArgumentError('Invalid human player index.');
     }
-
-    advanceAiBids();
   }
 
   final List<List<Card>> hands;
@@ -40,37 +37,39 @@ class BiddingRoundController {
       !engine.isComplete &&
       engine.currentPlayerIndex == humanPlayerIndex;
 
+  bool get isAiTurn => !engine.isComplete && !isHumanTurn;
+
+  int get currentPlayerIndex => engine.currentPlayerIndex;
+
   bool get everyonePassed => engine.everyonePassed;
 
   int? get highestBid => engine.highestBid;
 
   int? get highestBidder => engine.highestBidder;
 
-  List<BidRecord> get history =>
-      List.unmodifiable(engine.history);
+  List<BidRecord> get history => List.unmodifiable(engine.history);
 
   void submitHumanBid(int? amount) {
     if (!isHumanTurn) {
       throw StateError('It is not the human player turn.');
     }
-
     engine.submitBid(amount);
-    advanceAiBids();
   }
 
-  void advanceAiBids() {
-    while (!engine.isComplete &&
-        engine.currentPlayerIndex != humanPlayerIndex) {
-      final playerIndex = engine.currentPlayerIndex;
-
-      final decision = strategy.chooseBid(
-        hand: hands[playerIndex],
-        playerIndex: playerIndex,
-        highestBid: engine.highestBid,
-        highestBidder: engine.highestBidder,
-      );
-
-      engine.submitBid(decision.bidAmount);
+  /// Resolves exactly one AI action so the UI can show its thinking and bid.
+  BidRecord submitAiBid() {
+    if (!isAiTurn) {
+      throw StateError('It is not an AI player turn.');
     }
+
+    final playerIndex = engine.currentPlayerIndex;
+    final decision = strategy.chooseBid(
+      hand: hands[playerIndex],
+      playerIndex: playerIndex,
+      highestBid: engine.highestBid,
+      highestBidder: engine.highestBidder,
+    );
+    engine.submitBid(decision.bidAmount);
+    return engine.history.last;
   }
 }
