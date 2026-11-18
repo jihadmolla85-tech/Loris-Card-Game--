@@ -60,6 +60,7 @@ flutter:
     - assets/sounds/
     - assets/images/loris_logo.jpg
     - assets/images/loris_icon.jpg
+    - assets/images/loris_portrait_atlas.jpg
 
 
   # The following line ensures that the Material Icons font is
