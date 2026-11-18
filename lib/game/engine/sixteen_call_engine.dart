@@ -1,5 +1,6 @@
 enum SixteenCallStatus {
   notCalled,
+  passed,
   inProgress,
   succeeded,
   failed,
@@ -87,8 +88,18 @@ class SixteenCallEngine {
       );
     }
 
+  }
+
+  void call16({required int callerPlayerIndex}) {
+    _validateDecision(callerPlayerIndex: callerPlayerIndex);
     callerIndex = callerPlayerIndex;
     status = SixteenCallStatus.inProgress;
+  }
+
+  void pass16({required int callerPlayerIndex}) {
+    _validateDecision(callerPlayerIndex: callerPlayerIndex);
+    callerIndex = callerPlayerIndex;
+    status = SixteenCallStatus.passed;
   }
 
   SixteenCallStatus recordTrickWinner(int winnerIndex) {
