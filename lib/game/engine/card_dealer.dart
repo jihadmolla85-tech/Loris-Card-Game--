@@ -1,4 +1,3 @@
-
 import '../models/loris_card.dart';
 
 class CardDealer {
@@ -15,26 +14,22 @@ class CardDealer {
       throw ArgumentError('Deck must contain 8 cards per player.');
     }
 
-    if (firstPlayerIndex < 0 ||
-        firstPlayerIndex >= playerCount) {
+    if (firstPlayerIndex < 0 || firstPlayerIndex >= playerCount) {
       throw ArgumentError('Invalid first player index.');
     }
 
-    final hands = List.generate(
-      playerCount,
-      (_) => <Card>[],
-    );
-
+    final hands = List.generate(playerCount, (_) => <Card>[]);
     var deckIndex = 0;
 
-    // Eight clockwise rounds: one card to each player per turn.
-    for (var round = 0; round < 8; round++) {
-      for (var offset = 0; offset < playerCount; offset++) {
-        final playerIndex =
-            (firstPlayerIndex + offset) % playerCount;
-
-        hands[playerIndex].add(deck[deckIndex]);
-        deckIndex++;
+    // Deal two packets of four cards to each player, clockwise from the
+    // player after the dealer. The packet order is retained in each hand.
+    for (var packet = 0; packet < 2; packet++) {
+      for (var cardInPacket = 0; cardInPacket < 4; cardInPacket++) {
+        for (var offset = 0; offset < playerCount; offset++) {
+          final playerIndex = (firstPlayerIndex + offset) % playerCount;
+          hands[playerIndex].add(deck[deckIndex]);
+          deckIndex++;
+        }
       }
     }
 
