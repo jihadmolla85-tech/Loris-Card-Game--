@@ -2902,13 +2902,13 @@ class _CourtCardPainter extends CustomPainter {
       canvas.save();
       if (flip) {
         canvas.translate(w, h);
-        canvas.rotate(math.pi);
+        canvas.rotate(pi);
       }
       canvas.drawOval(Rect.fromLTWH(w * .13, h * .55, w * .74, h * .43), cloth);
       canvas.drawOval(Rect.fromLTWH(w * .29, h * .22, w * .42, h * .43), face);
       canvas.drawArc(
         Rect.fromLTWH(w * .25, h * .13, w * .50, h * .34),
-        math.pi, math.pi, false,
+        pi, pi, false,
         Paint()
           ..color = dark.color
           ..style = PaintingStyle.stroke
@@ -2936,7 +2936,7 @@ class _CourtCardPainter extends CustomPainter {
       } else {
         canvas.drawArc(
           Rect.fromLTWH(w * .39, h * .53, w * .22, h * .12),
-          0, math.pi, false,
+          0, pi, false,
           Paint()
             ..color = const Color(0xFF9B624D)
             ..style = PaintingStyle.stroke
