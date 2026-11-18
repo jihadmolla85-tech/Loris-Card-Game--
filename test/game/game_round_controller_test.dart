@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter.dart';
+import 'package:test/test.dart';
 import 'package:loris_card_game/game/engine/game_round_controller.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
