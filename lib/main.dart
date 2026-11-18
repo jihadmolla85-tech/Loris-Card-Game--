@@ -534,6 +534,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _finished = false;
   bool _busy = false;
   bool _aiBiddingInProgress = false;
+  int _biddingRunId = 0;
   bool _isShuffling = false;
   bool _isDealing = false;
   int? _dealTargetPlayer;
@@ -928,6 +929,7 @@ await _revealDealerDrawOnTable(
   Future<void> _runAiBiddingTurns() async {
     if (_aiBiddingInProgress) return;
     _aiBiddingInProgress = true;
+    final runId = ++_biddingRunId;
     try {
       final bidding = _biddingController;
       if (bidding == null) return;
@@ -952,6 +954,8 @@ await _revealDealerDrawOnTable(
 
       if (!mounted) return;
       if (bidding.isComplete) {
+        // Let a redeal start a fresh bidding sequence from inside finishBidding.
+        _aiBiddingInProgress = false;
         await _finishBidding();
       } else if (bidding.isHumanTurn) {
         // Release the animation guard before exposing the human bid button,
@@ -962,7 +966,7 @@ await _revealDealerDrawOnTable(
     } catch (e) {
       if (mounted) setState(() => _error = 'Bidding error: $e');
     } finally {
-      _aiBiddingInProgress = false;
+      if (runId == _biddingRunId) _aiBiddingInProgress = false;
     }
   }
 
