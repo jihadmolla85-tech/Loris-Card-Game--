@@ -299,7 +299,7 @@ void main() {
       );
     });
 
-    test('must play trump when void in the led suit and holding trump', () {
+    test('may discard any suit when void in the led suit, even while holding trump', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -308,19 +308,12 @@ void main() {
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
       game.playCard(1, card(Suit.hearts, 12));
 
-      expect(
-        () => game.playCard(2, card(Suit.clubs, 7)),
-        throwsArgumentError,
-      );
-      expect(
-        game.legalCardsFor(2).every(
-          (c) => c.isLoris || c.suit == Suit.spades,
-        ),
-        isTrue,
-      );
+      expect(game.legalCardsFor(2), contains(card(Suit.clubs, 7)));
+      game.playCard(2, card(Suit.clubs, 7));
+      expect(game.plays.last.card, card(Suit.clubs, 7));
     });
 
-    test('must overtrump when void in led suit and a higher trump is held', () {
+    test('may play a lower trump when a higher trump is already in the trick', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -334,15 +327,9 @@ void main() {
       hands[3].removeWhere((c) => c.suit == Suit.hearts);
       hands[3].add(card(Suit.spades, 8));
 
-      expect(
-        () => game.playCard(3, card(Suit.spades, 8)),
-        throwsArgumentError,
-      );
-      expect(
-        game.legalCardsFor(3).where((c) => c.suit == Suit.spades)
-            .every((c) => (c.rank ?? 0) > 11),
-        isTrue,
-      );
+      expect(game.legalCardsFor(3), contains(card(Suit.spades, 8)));
+      game.playCard(3, card(Suit.spades, 8));
+      expect(game.plays.last.card, card(Suit.spades, 8));
     });
 
     test('may play a lower trump when no higher trump is held', () {
