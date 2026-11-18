@@ -2233,6 +2233,14 @@ await _revealDealerDrawOnTable(
     );
   }
 
+  Color _teamColor(int playerIndex) => playerIndex.isEven
+      ? const Color(0xFF35C9FF) // Team A: electric cyan
+      : const Color(0xFFFF795C); // Team B: warm coral
+
+  Color _teamDarkColor(int playerIndex) => playerIndex.isEven
+      ? const Color(0xFF092D43)
+      : const Color(0xFF431B19);
+
   Widget _buildCompactMatchHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -2251,10 +2259,10 @@ await _revealDealerDrawOnTable(
         children: [
           Row(
             children: [
-              Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore)),
-              Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
-              Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore)),
-              Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
+              Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore, _teamColor(0))),
+              Container(width: 1, height: 30, color: Colors.white24),
+              Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore, _teamColor(1))),
+              Container(width: 1, height: 30, color: Colors.white24),
               Column(
                 children: [
                   const Text('TRUMP', style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold)),
@@ -2340,9 +2348,8 @@ await _revealDealerDrawOnTable(
     required bool isBiddingTeam,
   }) {
     final double progress = target <= 0 ? 1.0 : (won / target).clamp(0.0, 1.0).toDouble();
-    final accent = isBiddingTeam
-        ? const Color(0xFFFFD477)
-        : const Color(0xFFE7B6BE);
+    final teamIndex = label == 'TEAM A' ? 0 : 1;
+    final accent = _teamColor(teamIndex);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
@@ -2442,12 +2449,20 @@ await _revealDealerDrawOnTable(
     );
   }
 
-  Widget _compactScore(String label, int value) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: LorisApp.gold, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
-        Text('$value', style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900)),
-      ],
+  Widget _compactScore(String label, int value, Color teamColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: teamColor.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: teamColor.withValues(alpha: .65), width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(color: teamColor, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          Text('$value', style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900)),
+        ],
+      ),
     );
   }
 
@@ -2474,52 +2489,39 @@ await _revealDealerDrawOnTable(
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        vertical: 14,
-        horizontal: 18,
-      ),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: LorisApp.blue,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: LorisApp.gold.withValues(alpha: .7),
-          width: 1.5,
-        ),
+        border: Border.all(color: Colors.white24, width: 1),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _scoreItem('TEAM A', score.teamAScore),
-          Container(
-            width: 1,
-            height: 40,
-            color: LorisApp.gold,
-          ),
-          _scoreItem('TEAM B', score.teamBScore),
+          Expanded(child: _scoreItem('TEAM A', score.teamAScore, _teamColor(0))),
+          const SizedBox(width: 8),
+          Expanded(child: _scoreItem('TEAM B', score.teamBScore, _teamColor(1))),
         ],
       ),
     );
   }
 
-  Widget _scoreItem(String label, int value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: LorisApp.gold,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$value',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
+  Widget _scoreItem(String label, int value, Color teamColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: teamColor.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: teamColor.withValues(alpha: .8), width: 1.4),
+        boxShadow: [BoxShadow(color: teamColor.withValues(alpha: .12), blurRadius: 10)],
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(color: teamColor, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          const SizedBox(height: 4),
+          Text('$value', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)),
+        ],
+      ),
     );
   }
 
@@ -2821,12 +2823,12 @@ await _revealDealerDrawOnTable(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isCurrent ? LorisApp.gold : Colors.transparent,
-                          width: 2,
+                          color: _teamColor(index).withValues(alpha: isCurrent ? 1 : .9),
+                          width: isCurrent ? 3 : 2,
                         ),
-                        boxShadow: isThinking
-                            ? [BoxShadow(color: LorisApp.gold.withValues(alpha: .5), blurRadius: 12)]
-                            : const [],
+                        boxShadow: [
+                          BoxShadow(color: _teamColor(index).withValues(alpha: isThinking ? .55 : .18), blurRadius: isThinking ? 12 : 6),
+                        ],
                       ),
                       child: CircleAvatar(
                       radius: 19,
@@ -2997,16 +2999,16 @@ await _revealDealerDrawOnTable(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: _collectingTrickWinner == index
-                              ? const [Color(0xFFFFE7A0), Color(0xFFB77A2D), Color(0xFF63351C)]
+                              ? [_teamColor(index), _teamDarkColor(index), _teamDarkColor(index)]
                               : currentPlayer == index
-                                  ? const [Color(0xFF314F70), Color(0xFF152A45)]
-                                  : const [Color(0xFF263B55), Color(0xFF0A1729)],
+                                  ? [_teamColor(index).withValues(alpha: .72), _teamDarkColor(index), const Color(0xFF101827)]
+                                  : [_teamColor(index).withValues(alpha: .30), _teamDarkColor(index), const Color(0xFF101827)],
                         ),
                         border: Border.all(
-                          color: _collectingTrickWinner == index || currentPlayer == index
-                              ? const Color(0xFFFFE6A0)
-                              : const Color(0xFF9B855C),
-                          width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.6 : .8,
+                          color: _teamColor(index).withValues(
+                            alpha: _collectingTrickWinner == index || currentPlayer == index ? 1 : .72,
+                          ),
+                          width: _collectingTrickWinner == index ? 2.8 : currentPlayer == index ? 2.2 : 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: 8, offset: const Offset(0, 4)),
@@ -3021,8 +3023,9 @@ await _revealDealerDrawOnTable(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(colors: [Color(0xFFFFF4C5), Color(0xFFB4772E), Color(0xFFFFE5A0)]),
-                              boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 5, offset: Offset(0, 2))],
+                              color: _teamDarkColor(index),
+                              border: Border.all(color: _teamColor(index), width: 2.5),
+                              boxShadow: [BoxShadow(color: _teamColor(index).withValues(alpha: .48), blurRadius: 8)],
                             ),
                             child: LorisPortraitAvatar(
                               variant: index,
@@ -3040,7 +3043,7 @@ await _revealDealerDrawOnTable(
                           ),
                           Text(
                             'TEAM ${index.isEven ? "A" : "B"}',
-                            style: const TextStyle(color: Color(0xFFFFD978), fontSize: 7, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: _teamColor(index), fontSize: 7, fontWeight: FontWeight.w900, letterSpacing: .5),
                           ),
                           Wrap(
                             alignment: WrapAlignment.center,
