@@ -39,12 +39,10 @@ class TrumpSelectionEngine {
       throw StateError('Only the highest bidder can select trump.');
     }
 
-    // Teams sit alternately: A-B-A-B-A-B.
-    final sameTeam =
-        bidderIndex % 2 == cardOwnerIndex % 2;
-
-    if (!sameTeam) {
-      throw ArgumentError('Card must belong to the bidder or a teammate.');
+    // Trump must be declared from the winning bidder's own eight cards.
+    // Teammate cards are never exposed or used to select the trump suit.
+    if (cardOwnerIndex != bidderIndex) {
+      throw ArgumentError('Trump must be selected from the bidder own hand.');
     }
 
     if (!hands[cardOwnerIndex].contains(selectedCard)) {
