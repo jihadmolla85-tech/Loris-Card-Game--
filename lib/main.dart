@@ -2288,7 +2288,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         child: IgnorePointer(child: Column(mainAxisSize: MainAxisSize.min, children: [
                           Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), decoration: BoxDecoration(color: const Color(0xEE17243B), borderRadius: BorderRadius.circular(5), border: Border.all(color: const Color(0xFFFFD978), width: .7)), child: Text(_playerNames[play.playerIndex], style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900))),
                           const SizedBox(height: 2),
-                          Transform.rotate(angle: angle - pi / 2, child: _buildCard(play.card, compact: true, tableCard: true)),
+                          Transform.rotate(angle: angle + pi / 2, child: _buildCard(play.card, compact: true, tableCard: true)),
                         ])),
                       );
                     }),
