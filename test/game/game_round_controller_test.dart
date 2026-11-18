@@ -1,5 +1,6 @@
 import 'package:test/test.dart';
 import 'package:loris_card_game/game/engine/game_round_controller.dart';
+import 'package:loris_card_game/game/engine/sixteen_call_engine.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
@@ -94,6 +95,30 @@ void main() {
           Card.normal(suit: Suit.clubs, rank: 7),
         ),
         throwsStateError,
+      );
+    });
+
+    test('Pauses the next trick until the human passes the 16 decision', () {
+      for (var i = 0; i < 4; i++) {
+        final player = controller.trickEngine.currentPlayerIndex;
+        final card = controller.trickEngine.hands[player].first;
+        controller.playCard(player, card);
+      }
+      controller.completeTrick();
+
+      expect(controller.sixteenCallEngine!.canCall, isTrue);
+      final nextPlayer = controller.nextPlayerIndex!;
+      final nextCard = controller.trickEngine.hands[nextPlayer].first;
+      expect(
+        () => controller.playCard(nextPlayer, nextCard),
+        throwsStateError,
+      );
+
+      controller.pass16(callerPlayerIndex: 0);
+      expect(controller.sixteenCallEngine!.status, SixteenCallStatus.passed);
+      expect(
+        () => controller.playCard(nextPlayer, nextCard),
+        returnsNormally,
       );
     });
 
