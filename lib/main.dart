@@ -954,6 +954,9 @@ await _revealDealerDrawOnTable(
       if (bidding.isComplete) {
         await _finishBidding();
       } else if (bidding.isHumanTurn) {
+        // Release the animation guard before exposing the human bid button,
+        // so a fast tap cannot race the previous AI-turn future's finally block.
+        _aiBiddingInProgress = false;
         setState(() => _status = 'Your turn to bid.');
       }
     } catch (e) {
