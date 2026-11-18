@@ -226,8 +226,8 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 _RuleSection(
                   title: 'PLAYING TRICKS',
                   body: 'Follow the suit led whenever possible. If you cannot '
-                      'follow suit, you must play trump when you have one. If a '
-                      'higher trump is available, you must overtrump. The LORIS card is '
+                      'follow suit when possible. If you cannot follow suit, you may '
+                      'play any card; trumping and overtrumping are optional. The LORIS card is '
                       'the Joker and beats every card. In Joker mode there is '
                       'no trump suit; the highest rank wins across all suits.',
                 ),
