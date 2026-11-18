@@ -505,6 +505,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _finished = false;
   bool _busy = false;
   bool _aiTurnsInProgress = false;
+  bool _trickCompletionInProgress = false;
   bool _isAdvancingBids = false;
   int? _bidThinkingPlayer;
   bool _isShuffling = false;
@@ -1248,6 +1249,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
       while (mounted &&
           !_matchController.currentRound.isRoundEnded &&
+          !_matchController.currentRound.trickEngine.isComplete &&
           _matchController.currentRound.nextPlayerIndex != 0 &&
           safetyCounter < widget.playerCount) {
         safetyCounter++;
@@ -1291,6 +1293,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final round = _matchController.currentRound;
 
     if (round.trickEngine.isComplete) {
+      // A completed trick remains visible during its collection animation.
+      // Ignore duplicate callbacks until the controller has reset the trick.
+      if (_trickCompletionInProgress) return;
+      _trickCompletionInProgress = true;
+
       // Hold the completed trick on the table before advancing to the next one.
       final completedPlays = List<TrickPlay>.from(round.trickEngine.plays);
       final winnerPreview = round.trickEngine.winnerIndex;
@@ -1313,7 +1320,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       await Future.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
 
-      final winner = _matchController.completeTrick();
+      late final int winner;
+      try {
+        winner = _matchController.completeTrick();
+      } finally {
+        _trickCompletionInProgress = false;
+      }
       _trickNumber = round.completedTricks;
 
       setState(() {
