@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
 import 'package:loris_card_game/game/engine/trump_selection_engine.dart';
@@ -17,6 +19,37 @@ void main() {
       [teammateCard, Card.normal(suit: Suit.spades, rank: 9)],
       [Card.normal(suit: Suit.diamonds, rank: 10)],
     ];
+  });
+
+  test('random teammate draw can select from either partner in six-player game', () {
+    final sixPlayerHands = [
+      [ownCard],
+      [opponentCard],
+      [teammateCard],
+      [Card.normal(suit: Suit.diamonds, rank: 10)],
+      [Card.normal(suit: Suit.clubs, rank: 8)],
+      [Card.normal(suit: Suit.hearts, rank: 11)],
+    ];
+    final selection = TrumpSelectionEngine.selectRandomTeammateCard(
+      hands: sixPlayerHands,
+      bidderIndex: 0,
+      random: Random(7),
+    );
+
+    expect([2, 4], contains(selection.key));
+    expect(sixPlayerHands[selection.key].contains(selection.value), true);
+    expect(selection.value.isLoris, false);
+  });
+
+  test('random teammate draw never selects bidder or opponent cards', () {
+    final selection = TrumpSelectionEngine.selectRandomTeammateCard(
+      hands: hands,
+      bidderIndex: 0,
+      random: Random(3),
+    );
+
+    expect(selection.key, 2);
+    expect(selection.value, teammateCard);
   });
 
   test('own card selects trump without revealing it', () {
