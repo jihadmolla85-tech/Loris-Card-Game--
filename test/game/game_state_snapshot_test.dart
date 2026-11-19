@@ -16,6 +16,30 @@ void main() {
       expect(snapshot.dealerIndex, 0);
     });
 
+    test('round-trips the one-time 16-call decision through JSON', () {
+      const snapshot = GameStateSnapshot(
+        dealerIndex: 1,
+        dealerAdvanced: false,
+        teamAScore: 0,
+        teamBScore: 0,
+        playerCount: 6,
+        completedTricks: 4,
+        biddingTeamTricks: 4,
+        sixteenCallStatus: 'passed',
+        sixteenCompletedTricks: 4,
+        sixteenBiddingTeamTricks: 4,
+        sixteenLastTrickWinnerIndex: 3,
+      );
+
+      final restored = GameStateSnapshot.fromJson(snapshot.toJson());
+
+      expect(restored.sixteenCallStatus, 'passed');
+      expect(restored.sixteenCompletedTricks, 4);
+      expect(restored.sixteenBiddingTeamTricks, 4);
+      expect(restored.sixteenLastTrickWinnerIndex, 3);
+      expect(restored.sixteenCallerIndex, isNull);
+    });
+
     test('rejects snapshots from unsupported future versions', () {
       expect(
         () => GameStateSnapshot.fromJson({

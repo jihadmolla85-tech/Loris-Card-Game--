@@ -1858,12 +1858,6 @@ await _revealDealerDrawOnTable(
     }
   }
 
-  String _cardName(loris.Card card) {
-    if (card.isLoris) return 'LORIS';
-
-    return '${card.displayName}${_suitSymbol(card.suit)}';
-  }
-
   bool _isRedSuit(loris.Suit? suit) {
     return suit == loris.Suit.hearts ||
         suit == loris.Suit.diamonds;
