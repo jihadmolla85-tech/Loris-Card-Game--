@@ -114,7 +114,7 @@ void main() {
       expect(game.plays.length, 2);
     });
 
-    test('LORIS is scored as its replaced Spades rank, not an unbeatable card', () {
+    test('LORIS always wins even when a higher card of led suit is played', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -129,7 +129,7 @@ void main() {
       game.playCard(1, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.hearts, 10));
 
-      expect(game.winnerIndex, 1);
+      expect(game.winnerIndex, 2);
     });
 
     test('LORIS mode compares only the led suit', () {
@@ -150,7 +150,7 @@ void main() {
       expect(game.winnerIndex, 3);
     });
 
-    test('LORIS does not automatically win in LORIS mode', () {
+    test('LORIS always wins when LORIS is selected as trump mode', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -164,7 +164,7 @@ void main() {
       game.playCard(1, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.hearts, 10));
 
-      expect(game.winnerIndex, 1);
+      expect(game.winnerIndex, 2);
     });
 
     test('highest trump wins when trump is played', () {
@@ -238,7 +238,7 @@ void main() {
       );
     });
 
-    test('LORIS lead makes Spades the led suit and rank is compared normally', () {
+    test('LORIS lead wins even when other Spades cards are played', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
