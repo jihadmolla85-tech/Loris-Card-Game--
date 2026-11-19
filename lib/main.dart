@@ -1264,7 +1264,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _aiTurnsInProgress = true;
     try {
       var safetyCounter = 0;
-      var previousPlayerIndex = -1;
 
       while (mounted &&
           !_matchController.currentRound.isRoundEnded &&
@@ -1275,16 +1274,30 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
         final playerIndex =
             _matchController.currentRound.nextPlayerIndex;
-        if (playerIndex == null || playerIndex == previousPlayerIndex) {
-          throw StateError('AI turn order did not advance.');
+        if (playerIndex == null) {
+          throw StateError('AI turn order is unavailable.');
         }
-        previousPlayerIndex = playerIndex;
 
+        // The same AI may legally lead the next trick after winning the
+        // previous one. Detect stalled turns by checking that a card was
+        // actually removed, not by comparing player indexes across tricks.
+        final handSizeBefore =
+            _matchController.currentRound.trickEngine.hands[playerIndex].length;
+        final completedTricksBefore =
+            _matchController.currentRound.completedTricks;
         final card = _chooseAiCard(playerIndex);
         await _commitAndAnimateCard(playerIndex, card);
         await _afterCardPlayed();
 
         if (!mounted || _finished) return;
+        final roundAfterPlay = _matchController.currentRound;
+        final handSizeAfter =
+            roundAfterPlay.trickEngine.hands[playerIndex].length;
+        final completedTricksAfter = roundAfterPlay.completedTricks;
+        if (handSizeAfter >= handSizeBefore &&
+            completedTricksAfter <= completedTricksBefore) {
+          throw StateError('AI card was not committed to the trick.');
+        }
       }
 
       if (mounted &&
@@ -2002,28 +2015,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 const Spacer(),
-                if (_bidThinkingPlayer != null)
-                  Text(
-                    '${_playerNames[_bidThinkingPlayer!]} THINKING…',
-                    style: const TextStyle(
-                      color: Color(0xFFFFE5A0),
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  )
-                else
-                  Text(
-                    bidding.isComplete
-                        ? 'BIDDING COMPLETE'
-                        : bidding.isHumanTurn
-                            ? 'YOUR TURN'
-                            : 'WAITING',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                    ),
+                Text(
+                  bidding.isComplete
+                      ? 'BIDDING COMPLETE'
+                      : bidding.isHumanTurn
+                          ? 'YOUR TURN'
+                          : 'WAITING',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
                   ),
+                ),
               ],
             ),
             const SizedBox(height: 5),
@@ -2625,7 +2628,29 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _AnimePortrait(seed: index, size: 42),
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              _AnimePortrait(seed: index, size: 42),
+                              if (_bidThinkingPlayer == index)
+                                Positioned(
+                                  right: -34,
+                                  top: -5,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF17243B),
+                                      borderRadius: BorderRadius.circular(7),
+                                      border: Border.all(color: LorisApp.gold, width: .8),
+                                    ),
+                                    child: const Text(
+                                      'THINKING…',
+                                      style: TextStyle(color: Color(0xFFFFE5A0), fontSize: 7, fontWeight: FontWeight.w900),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           const SizedBox(height: 3),
                           Text(
                             _playerNames[index],
