@@ -1169,19 +1169,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (legalCards.length == 1) return legalCards.first;
 
     int winningPlayer(List<TrickPlay> trick) {
-      final firstCard = trick.first.card;
-      final ledSuit = firstCard.isLoris ? loris.Suit.spades : firstCard.suit;
-      loris.Suit? effectiveSuit(loris.Card card) =>
-          card.isLoris ? loris.Suit.spades : card.suit;
-      int effectiveRank(loris.Card card) =>
-          card.isLoris ? (card.replacesRank ?? 0) : (card.rank ?? 0);
+      final lorisPlays = trick.where((play) => play.card.isLoris).toList();
+      if (lorisPlays.isNotEmpty) return lorisPlays.first.playerIndex;
+      final ledSuit = trick.first.card.suit;
       final trumpPlays = engine.trumpSuit == null
           ? <TrickPlay>[]
-          : trick.where((play) => effectiveSuit(play.card) == engine.trumpSuit).toList();
+          : trick.where((play) => play.card.suit == engine.trumpSuit).toList();
       final candidates = trumpPlays.isNotEmpty
           ? trumpPlays
-          : trick.where((play) => effectiveSuit(play.card) == ledSuit).toList();
-      candidates.sort((a, b) => effectiveRank(b.card).compareTo(effectiveRank(a.card)));
+          : trick.where((play) => play.card.suit == ledSuit).toList();
+      candidates.sort((a, b) =>
+          (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
       return candidates.first.playerIndex;
     }
 
