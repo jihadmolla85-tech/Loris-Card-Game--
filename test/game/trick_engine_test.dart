@@ -22,7 +22,7 @@ void main() {
           card(Suit.diamonds, 10),
         ],
         [
-          card(Suit.hearts, 12),
+          card(Suit.hearts, 13),
           card(Suit.spades, 7),
           card(Suit.clubs, 8),
           card(Suit.diamonds, 8),
@@ -42,16 +42,16 @@ void main() {
           card(Suit.diamonds, 12),
         ],
         [
-          card(Suit.hearts, 11),
+          card(Suit.hearts, 12),
           card(Suit.spades, 13),
           card(Suit.clubs, 13),
           card(Suit.diamonds, 13),
-          card(Suit.hearts, 13),
+          card(Suit.hearts, 11),
           card(Suit.spades, 14),
           card(Suit.clubs, 14),
           card(Suit.diamonds, 14),
         ],
-      ];
+      ];;
     });
 
     test('first player is dealer right', () {
