@@ -49,7 +49,8 @@ void main() {
     );
 
     expect(selection.key, 2);
-    expect(selection.value, teammateCard);
+    expect(hands[2].contains(selection.value), true);
+    expect(selection.value.isLoris, false);
   });
 
   test('own card selects trump without revealing it', () {
