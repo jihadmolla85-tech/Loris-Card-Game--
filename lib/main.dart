@@ -720,7 +720,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         random: _random,
       );
       _dealerFirstPlayerIndex =
-          (dealerSelection.dealerIndex - (dealerSelection.drawnCards.length - 1)) %
+          (dealerSelection.dealerIndex + (dealerSelection.drawnCards.length - 1)) %
               widget.playerCount;
       setState(() {
         _dealerDrawnCards = dealerSelection.drawnCards;
