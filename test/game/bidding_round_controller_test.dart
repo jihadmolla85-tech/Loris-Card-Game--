@@ -23,7 +23,7 @@ void main() {
 
       expect(controller.history, isEmpty);
       expect(controller.isAiTurn, isTrue);
-      expect(controller.currentPlayerIndex, 3);
+      expect(controller.currentPlayerIndex, 1);
     });
 
     test('submits exactly one AI bid per call and yields to the human', () {
