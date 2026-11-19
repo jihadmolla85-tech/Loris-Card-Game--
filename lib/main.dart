@@ -760,11 +760,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _dealtCardCount = 0;
         _status = '${_playerNames[dealerSelection.dealerIndex]} is dealing two packets of four cards';
       });
-      // Two clockwise packets of four, starting with the player left of dealer.
+      // Two packets of four, moving right-to-left from the dealer's right-hand seat.
       for (var packet = 0; packet < 2; packet++) {
         for (var offset = 0; offset < widget.playerCount; offset++) {
           final receivingPlayer =
-              (dealerSelection.dealerIndex + 1 + offset) % widget.playerCount;
+              (dealerSelection.dealerIndex - 1 - offset + widget.playerCount * 2) % widget.playerCount;
           if (!mounted) return;
           setState(() {
             _dealingToPlayerIndex = receivingPlayer;
@@ -997,11 +997,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (hands == null) return;
 
     final joker = hands[bidder].where((card) => card.isLoris).firstOrNull;
-    if (joker != null) {
-      await _applyTrump(bidder, bidder, joker);
-      return;
-    }
-
+    // LORIS is optional; AI should not automatically choose it whenever held.
+    // Prefer the strongest ordinary suit and keep LORIS mode for explicit choice.
     loris.Suit? bestSuit;
     var bestCount = -1;
 
@@ -1173,30 +1170,19 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (legalCards.length == 1) return legalCards.first;
 
     int winningPlayer(List<TrickPlay> trick) {
-      final lorisPlay = trick.where((play) => play.card.isLoris);
-      if (lorisPlay.isNotEmpty) return lorisPlay.first.playerIndex;
-
-      if (engine.trumpSuit == null) {
-        final allCards = List<TrickPlay>.from(trick)
-          ..sort((a, b) =>
-              (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
-        return allCards.first.playerIndex;
-      }
-
       final firstCard = trick.first.card;
-      final ledSuit = firstCard.isLoris
-          ? loris.Suit.spades
-          : firstCard.suit;
-      final trumpPlays = trick
-          .where((play) => !play.card.isLoris &&
-              play.card.suit == engine.trumpSuit)
-          .toList();
+      final ledSuit = firstCard.isLoris ? loris.Suit.spades : firstCard.suit;
+      loris.Suit? effectiveSuit(loris.Card card) =>
+          card.isLoris ? loris.Suit.spades : card.suit;
+      int effectiveRank(loris.Card card) =>
+          card.isLoris ? (card.replacesRank ?? 0) : (card.rank ?? 0);
+      final trumpPlays = engine.trumpSuit == null
+          ? <TrickPlay>[]
+          : trick.where((play) => effectiveSuit(play.card) == engine.trumpSuit).toList();
       final candidates = trumpPlays.isNotEmpty
           ? trumpPlays
-          : trick.where((play) => play.card.suit == ledSuit).toList();
-
-      candidates.sort((a, b) =>
-          (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
+          : trick.where((play) => effectiveSuit(play.card) == ledSuit).toList();
+      candidates.sort((a, b) => effectiveRank(b.card).compareTo(effectiveRank(a.card)));
       return candidates.first.playerIndex;
     }
 
@@ -2574,7 +2560,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         curve: Curves.easeOutCubic,
                         builder: (context, progress, child) {
                           final drawingPlayer =
-                              (dealerDrawStartPlayer + dealerDrawVisibleCount - 1) %
+                              (dealerDrawStartPlayer - dealerDrawVisibleCount + 1 + widget.playerCount * 2) %
                                   widget.playerCount;
                           return Align(
                             alignment: Alignment.lerp(
