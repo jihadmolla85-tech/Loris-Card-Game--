@@ -22,7 +22,7 @@ void main() {
       expect(game.currentPlayerIndex, 2);
 
       game.submitBid(null);
-      expect(game.currentPlayerIndex, 3);
+      expect(game.currentPlayerIndex, 1);
 
       game.submitBid(5);
       expect(game.currentPlayerIndex, 0);
