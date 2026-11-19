@@ -2,10 +2,39 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 /// Local, distinct sound cues for the LORIS card table.
 class LorisAudioService {
   final AudioPlayer _player = AudioPlayer();
+  final FlutterTts _speech = FlutterTts();
+  bool _speechReady = false;
+
+  /// Announces bids in Bangla, falling back to English if unavailable.
+  Future<void> announceBid(int? amount) async {
+    const bangla = {4: 'চার', 5: 'পাঁচ', 6: 'ছয়', 7: 'সাত', 8: 'আট'};
+    const english = {4: 'Four', 5: 'Five', 6: 'Six', 7: 'Seven', 8: 'Eight'};
+    final banglaText = amount == null ? 'পাস' : bangla[amount] ?? '$amount';
+    final englishText = amount == null ? 'Pass' : english[amount] ?? '$amount';
+    try {
+      if (!_speechReady) {
+        var banglaAvailable = true;
+        try {
+          await _speech.setLanguage('bn-BD').timeout(const Duration(seconds: 2));
+        } catch (_) {
+          banglaAvailable = false;
+          await _speech.setLanguage('en-US').timeout(const Duration(seconds: 2));
+        }
+        await _speech.setSpeechRate(0.46);
+        await _speech.setPitch(1.0);
+        _speechReady = banglaAvailable;
+      }
+      await _speech.speak(_speechReady ? banglaText : englishText)
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Speech must never block a bid or an AI turn.
+    }
+  }
 
   Future<void> play(String effect) async {
     try {
@@ -70,5 +99,6 @@ class LorisAudioService {
 
   Future<void> dispose() async {
     await _player.dispose();
+    try { await _speech.stop(); } catch (_) {}
   }
 }
