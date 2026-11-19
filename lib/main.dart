@@ -951,10 +951,21 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (heldCard != null) choices.add(MapEntry(bidder, heldCard));
     }
 
-    // Place the teammate draw in the former seventh-card slot, before Joker.
-    final teammateIndex = (bidder + 2) % hands.length;
-    final teammateCards = hands[teammateIndex].where((card) => !card.isLoris).toList();
-    if (teammateCards.isNotEmpty) choices.add(MapEntry(teammateIndex, teammateCards.first));
+    // One shared teammate option. In six-player games either partner may
+    // contribute the random card; the actual owner and face remain private.
+    final teammateIndexes = List.generate(hands.length, (index) => index)
+        .where((index) => index != bidder && index % 2 == bidder % 2)
+        .toList();
+    final firstEligibleTeammate = teammateIndexes.cast<int?>().firstWhere(
+      (index) => index != null &&
+          hands[index].any((card) => !card.isLoris),
+      orElse: () => null,
+    );
+    if (firstEligibleTeammate != null) {
+      final placeholder = hands[firstEligibleTeammate]
+          .firstWhere((card) => !card.isLoris);
+      choices.add(MapEntry(firstEligibleTeammate, placeholder));
+    }
 
     // Joker mode is available only when the bidder personally holds LORIS.
     final heldJoker = hands[bidder].where((card) => card.isLoris).firstOrNull;
@@ -1004,12 +1015,19 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     await _applyTrump(bidder, bidder, selectedCard);
   }
 
-  Future<void> _selectRandomTeammateTrump(int bidder, int teammateIndex) async {
+  Future<void> _selectRandomTeammateTrump(int bidder) async {
     final hands = _hands;
-    if (hands == null || teammateIndex < 0 || teammateIndex >= hands.length) return;
-    final cards = hands[teammateIndex].where((card) => !card.isLoris).toList();
-    if (cards.isEmpty) return;
-    await _applyTrump(bidder, teammateIndex, cards[_random.nextInt(cards.length)]);
+    if (hands == null) return;
+    try {
+      final selection = TrumpSelectionEngine.selectRandomTeammateCard(
+        hands: hands,
+        bidderIndex: bidder,
+        random: _random,
+      );
+      await _applyTrump(bidder, selection.key, selection.value);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Teammate trump selection failed: $e');
+    }
   }
 
   Future<void> _applyTrump(
@@ -2146,7 +2164,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     ? null
                     : () => choice.key == bidder
                         ? _applyTrump(bidder, bidder, choice.value)
-                        : _selectRandomTeammateTrump(bidder, choice.key),
+                        : _selectRandomTeammateTrump(bidder),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: accent,
                   disabledForegroundColor: Colors.white30,
