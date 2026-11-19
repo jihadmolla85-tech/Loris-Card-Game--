@@ -1277,12 +1277,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _aiTurnsInProgress = true;
     try {
       var safetyCounter = 0;
+      // An AI can win the current trick and immediately lead the next one.
+      // That means one uninterrupted AI sequence can cross a trick boundary
+      // and contain nearly two full table rotations before reaching the human.
+      // A one-table-size cap incorrectly paused these perfectly legal turns.
+      final maxAiActionsBeforeHuman = widget.playerCount * 2;
 
       while (mounted &&
           !_matchController.currentRound.isRoundEnded &&
           !_matchController.currentRound.trickEngine.isComplete &&
           _matchController.currentRound.nextPlayerIndex != 0 &&
-          safetyCounter < widget.playerCount) {
+          safetyCounter < maxAiActionsBeforeHuman) {
         safetyCounter++;
 
         final playerIndex =
