@@ -114,6 +114,25 @@ void main() {
       expect(game.plays.length, 2);
     });
 
+    test('LORIS beats a higher ordinary trump card', () {
+      final game = TrickEngine(
+        hands: hands,
+        dealerIndex: 0,
+        trumpSuit: Suit.spades,
+      );
+      final loris = Card.loris(replacesRank: 7);
+      hands[1].add(loris);
+      hands[2].removeWhere((c) => c.suit == Suit.hearts);
+      hands[0].removeWhere((c) => c.suit == Suit.hearts);
+
+      game.playCard(3, card(Suit.hearts, 12));
+      game.playCard(2, card(Suit.spades, 11));
+      game.playCard(1, loris);
+      game.playCard(0, card(Suit.spades, 14));
+
+      expect(game.winnerIndex, 1);
+    });
+
     test('LORIS always wins even when a higher card of led suit is played', () {
       final game = TrickEngine(
         hands: hands,
