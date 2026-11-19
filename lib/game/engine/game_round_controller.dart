@@ -1,4 +1,3 @@
-
 import 'trick_engine.dart';
 import 'sixteen_call_engine.dart';
 import 'bid_scoring_engine.dart';
@@ -40,12 +39,6 @@ class GameRoundController {
     if (biddingTeam != 0 && biddingTeam != 1) {
       throw ArgumentError('Team must be 0 or 1.');
     }
-
-    // Dealer rotation is based on this round's points, not the match's
-    // cumulative score. Capture the dealer team's score before this round.
-    _dealerTeamScoreAtRoundStart = dealerIndex.isEven
-        ? matchScoreEngine.teamAScore
-        : matchScoreEngine.teamBScore;
 
     if (bidAmount < 4 || bidAmount > 8) {
       throw ArgumentError('Bid must be between 4 and 8.');
@@ -113,8 +106,6 @@ class GameRoundController {
   int biddingTeamTricks = 0;
 
   bool isRoundScored = false;
-
-  late final int _dealerTeamScoreAtRoundStart;
 
   int? get nextPlayerIndex =>
       isRoundEnded ? null : trickEngine.currentPlayerIndex;
@@ -234,17 +225,14 @@ class GameRoundController {
 
   int getNextDealerIndex({bool isRedeal = false}) {
     final dealerTeam = dealerIndex % 2;
-
     final dealerTeamTotalScore = dealerTeam == 0
         ? matchScoreEngine.teamAScore
         : matchScoreEngine.teamBScore;
-    final dealerTeamRoundPoints =
-        dealerTeamTotalScore - _dealerTeamScoreAtRoundStart;
 
     return DealerRotationEngine.nextDealerIndex(
       currentDealerIndex: dealerIndex,
       playerCount: trickEngine.playerCount,
-      dealerTeamScore: dealerTeamRoundPoints,
+      dealerTeamScore: dealerTeamTotalScore,
       isRedeal: isRedeal,
     );
   }
