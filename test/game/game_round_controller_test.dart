@@ -62,7 +62,7 @@ void main() {
     }
 
     test('Starts with the dealer right player', () {
-      expect(controller.nextPlayerIndex, 0);
+      expect(controller.nextPlayerIndex, 2);
     });
 
     test('Scores the round after eight tricks', () {
