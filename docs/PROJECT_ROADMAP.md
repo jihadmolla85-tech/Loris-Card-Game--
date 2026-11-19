@@ -60,3 +60,7 @@ This file is the continuity checklist for future development. Update it whenever
 3. Preserve existing features and tests when changing a screen or engine.
 4. Update this checklist as work is completed; distinguish code implementation from verified device behaviour.
 5. Never report a test, build, or device check as successful unless the corresponding result was actually observed.
+
+### 2026-11-19 — AI turn continuation fix
+- Increased the AI turn safety limit to allow a legal sequence to cross a completed-trick boundary when an AI wins and leads the next trick before the human's next turn. The old one-table-rotation limit could pause valid play early.
+- CI verification pending for this commit; physical-device gameplay verification remains pending.
