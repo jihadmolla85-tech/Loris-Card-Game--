@@ -12,7 +12,7 @@ void main() {
         isRedeal: true,
       );
 
-      expect(result, 2);
+      expect(result, 0);
     });
 
     test('Keeps same dealer when team score is below +1', () {
@@ -26,7 +26,7 @@ void main() {
       expect(result, 1);
     });
 
-    test('Moves dealer to the right in four-player game', () {
+    test('Moves dealer right-to-left in four-player game', () {
       final result = DealerRotationEngine.nextDealerIndex(
         currentDealerIndex: 1,
         playerCount: 4,
@@ -45,7 +45,7 @@ void main() {
         isRedeal: false,
       );
 
-      expect(result, 5);
+      expect(result, 3);
     });
 
     test('Wraps dealer index to zero', () {
@@ -56,7 +56,7 @@ void main() {
         isRedeal: false,
       );
 
-      expect(result, 0);
+      expect(result, 2);
     });
 
     test('Wraps dealer index in six-player game', () {
@@ -67,7 +67,7 @@ void main() {
         isRedeal: false,
       );
 
-      expect(result, 0);
+      expect(result, 4);
     });
 
     test('Rejects invalid player count', () {
