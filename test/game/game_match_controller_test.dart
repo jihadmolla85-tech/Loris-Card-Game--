@@ -148,10 +148,9 @@ void main() {
       expect(match.dealerIndex, 3);
     });
 
-    test('Keeps dealer when their cumulative score is positive but this round loses points', () {
+    test('Rotates dealer when cumulative score stays +1 or more after this round loses points', () {
       // Team B owns dealer seat 3 and already has a positive match total.
-      // A loss this round must not rotate the dealer merely because the
-      // cumulative total remains above zero.
+      // Rotation depends on the cumulative total, not this round's delta.
       matchScore.teamBScore = 6;
       matchScore.teamAScore = -6;
       match.startRound(
@@ -166,7 +165,7 @@ void main() {
       }
 
       expect(matchScore.teamBScore, 2);
-      expect(match.dealerIndex, 3);
+      expect(match.dealerIndex, 0);
     });
 
     test('Rotates dealer when dealer team reaches at least 1 point', () {
