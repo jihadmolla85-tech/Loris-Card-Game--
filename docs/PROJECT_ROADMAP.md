@@ -69,3 +69,11 @@ This file is the continuity checklist for future development. Update it whenever
 - Corrected the dealer rule to use the dealer team's cumulative match total: the dealer changes only when that team's total score is +1 or higher. A round's individual win/loss does not override this total-score threshold.
 - Added a regression test confirming the dealer rotates when the cumulative total remains +2 even though the team loses 4 points in the current round.
 - CI verification pending.
+
+
+### 2026-11-19 — Right-to-left play and LORIS trump correction
+- Bidding, dealing, and trick progression now move from the dealer's right-hand seat toward the left.
+- AI trump selection no longer automatically chooses LORIS whenever it holds the special card; it evaluates ordinary suit lengths and selects a suit.
+- LORIS/Joker trump mode is a no-trump round: the highest card of the suit led wins. LORIS behaves as the Spades card/rank it replaces and does not automatically win.
+- Updated regression tests for right-to-left order and LORIS-mode trick winners.
+- CI and physical-device verification pending.
