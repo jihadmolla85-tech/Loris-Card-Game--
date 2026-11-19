@@ -66,6 +66,6 @@ This file is the continuity checklist for future development. Update it whenever
 - CI verification pending for this commit; physical-device gameplay verification remains pending.
 
 ### 2026-11-19 — Dealer rotation scoring correction
-- Dealer rotation now checks the dealer team's points earned in the just-completed round, not its cumulative match score. The dealer changes only when that round's delta is +1 or higher; zero/negative rounds keep the same dealer.
-- Added a regression test for a dealer team whose cumulative score stays positive despite losing points in the current round.
+- Corrected the dealer rule to use the dealer team's cumulative match total: the dealer changes only when that team's total score is +1 or higher. A round's individual win/loss does not override this total-score threshold.
+- Added a regression test confirming the dealer rotates when the cumulative total remains +2 even though the team loses 4 points in the current round.
 - CI verification pending.
