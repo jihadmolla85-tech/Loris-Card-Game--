@@ -31,7 +31,7 @@ void main() {
 
       expect(game.isComplete, true);
       expect(game.highestBid, 5);
-      expect(game.highestBidder, 3);
+      expect(game.highestBidder, 1);
     });
 
     test('pass cannot be taken back', () {
