@@ -71,11 +71,11 @@ This file is the continuity checklist for future development. Update it whenever
 - CI verification pending.
 
 
-### 2026-11-19 — Right-to-left play and LORIS trump correction
-- Bidding, dealing, and trick progression now move from the dealer's right-hand seat toward the left.
-- AI trump selection no longer automatically chooses LORIS whenever it holds the special card; it evaluates ordinary suit lengths and selects a suit.
-- LORIS/Joker trump mode is a no-trump round: the highest card of the suit led wins. LORIS behaves as the Spades card/rank it replaces and does not automatically win.
-- Updated regression tests for right-to-left order and LORIS-mode trick winners.
+### 2026-11-19 — Right-to-left play and trump-selection correction
+- Bidding, dealing, and trick progression move from the dealer's right-hand seat toward the left.
+- AI trump selection evaluates ordinary suit lengths instead of automatically selecting LORIS when held.
+- LORIS is a special card, not an ordinary Spades card: whenever it is played, it wins the trick. If no LORIS is played, the highest card of the selected trump suit wins when trump is present; otherwise the highest card of the led suit wins.
+- LORIS/Joker trump mode has no ordinary trump suit; when no LORIS card appears, the highest card of the led suit wins.
 - CI and physical-device verification pending.
 
 
@@ -83,5 +83,6 @@ This file is the continuity checklist for future development. Update it whenever
 - Corrected the trick winner rule: if the special LORIS card appears in a trick, its player wins that trick.
 - If no LORIS card appears, the highest card of the selected trump suit wins when trump is present; otherwise the highest card of the led suit wins.
 - Updated the AI's simulated trick-winner calculation to match the engine rule.
-- Updated regression expectations for LORIS winning over ordinary cards.
+- Added regression coverage for LORIS beating a higher ordinary trump card.
+- Removed unused winner-helper methods that caused Flutter Analyze to fail.
 - Automated CI and physical-device verification pending.
