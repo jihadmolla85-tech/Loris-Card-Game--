@@ -1143,7 +1143,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _trickNumber = 0;
 
         _status = selectedTrump == null
-            ? 'Round started. LORIS mode — highest card of the led suit wins.'
+            ? 'Round started. LORIS wins whenever played; otherwise the highest led-suit card wins.'
             : 'Round started. ${_suitName(selectedTrump)} is trump.';
       });
 
