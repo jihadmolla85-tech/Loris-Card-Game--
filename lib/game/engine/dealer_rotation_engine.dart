@@ -26,7 +26,7 @@ class DealerRotationEngine {
       return currentDealerIndex;
     }
 
-    // New round: move to the player on the dealer's right.
-    return (currentDealerIndex + 1) % playerCount;
+    // New round: move one seat right-to-left around the table.
+    return (currentDealerIndex - 1 + playerCount) % playerCount;
   }
 }
