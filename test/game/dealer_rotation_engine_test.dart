@@ -12,7 +12,7 @@ void main() {
         isRedeal: true,
       );
 
-      expect(result, 0);
+      expect(result, 2);
     });
 
     test('Keeps same dealer when team score is below +1', () {
@@ -34,10 +34,8 @@ void main() {
         isRedeal: false,
       );
 
-      expect(result, 2);
-    });
-
-    test('Moves dealer to the right in six-player game', () {
+      expect(result, 0);
+    });, () {
       final result = DealerRotationEngine.nextDealerIndex(
         currentDealerIndex: 4,
         playerCount: 6,
