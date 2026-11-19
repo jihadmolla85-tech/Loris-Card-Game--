@@ -1,8 +1,6 @@
-
 class DealerRotationEngine {
   /// Returns the next dealer when a new round begins.
-  /// Rotate only when the dealer's team earned at least +1 point this round.
-  /// The score argument is the round delta, never the cumulative match total.
+  /// Rotate only when the dealer team's cumulative match total is +1 or more.
   static int nextDealerIndex({
     required int currentDealerIndex,
     required int playerCount,
@@ -23,7 +21,7 @@ class DealerRotationEngine {
       return currentDealerIndex;
     }
 
-    // Dealer's team has not reached +1: keep the same dealer.
+    // Rotate only if the dealer team's total match score is at least +1.
     if (dealerTeamScore < 1) {
       return currentDealerIndex;
     }
