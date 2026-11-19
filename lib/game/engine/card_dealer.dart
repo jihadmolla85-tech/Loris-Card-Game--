@@ -21,12 +21,12 @@ class CardDealer {
     final hands = List.generate(playerCount, (_) => <Card>[]);
     var deckIndex = 0;
 
-    // Deal two packets of four cards to each player, clockwise from the
-    // player after the dealer. The packet order is retained in each hand.
+    // Deal two packets of four cards to each player, right-to-left from the
+    // player to the dealer's right. The packet order is retained in each hand.
     for (var packet = 0; packet < 2; packet++) {
       for (var cardInPacket = 0; cardInPacket < 4; cardInPacket++) {
         for (var offset = 0; offset < playerCount; offset++) {
-          final playerIndex = (firstPlayerIndex + offset) % playerCount;
+          final playerIndex = (firstPlayerIndex - offset + playerCount) % playerCount;
           hands[playerIndex].add(deck[deckIndex]);
           deckIndex++;
         }
