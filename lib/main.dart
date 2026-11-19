@@ -771,7 +771,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             _dealingPacket = packet + 1;
             _dealtCardCount += 4;
           });
-          await Future.delayed(const Duration(milliseconds: 330));
+          await Future.delayed(const Duration(milliseconds: 500));
         }
       }
       if (!mounted) return;
@@ -845,6 +845,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     });
     try {
       bidding.submitHumanBid(selectedBid);
+      if (widget.soundEnabled) await _audio.announceBid(selectedBid);
       if (bidding.isComplete) {
         setState(() => _status = 'Bidding complete.');
         await _finishBidding();
@@ -879,6 +880,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         if (!mounted || !identical(_biddingController, bidding)) return;
 
         final record = bidding.submitAiBid();
+        if (widget.soundEnabled) await _audio.announceBid(record.amount);
+        if (!mounted || !identical(_biddingController, bidding)) return;
         setState(() {
           _bidThinkingPlayer = null;
           _status = record.amount == null
@@ -1428,7 +1431,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     // Persist after every card so an unexpected app close does not discard
     // the latest turn. Save failures are surfaced without interrupting play.
-    await _autoSaveGame();
+    // Do not let slow persistent storage block the next AI action.
+    Future<void>.microtask(_autoSaveGame);
     if (mounted && _winCelebration != null) {
       await Future.delayed(const Duration(milliseconds: 1150));
       if (mounted) setState(() => _winCelebration = null);
@@ -2415,6 +2419,23 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ],
             ),
           ],
+          if (_trumpSuit != null || _trumpCard?.isLoris == true)
+            Padding(
+              padding: const EdgeInsets.only(top: 5, bottom: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
+                  const SizedBox(width: 8),
+                  if (_trumpSuit != null)
+                    Text(_suitSymbol(_trumpSuit), style: TextStyle(color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF6575) : Colors.white, fontSize: 25, fontWeight: FontWeight.w900))
+                  else
+                    const _LorisJokerArt(width: 22, height: 27),
+                  const SizedBox(width: 6),
+                  Text(_trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
           const SizedBox(height: 4),
           Row(
             children: [
@@ -2430,7 +2451,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ),
               if (_dealerIndex != null)
                 Text(
-                  '${_dealerDrawActive ? "STARTER" : "DEALER"}  ${_playerNames[_dealerIndex!]}',
+                  'JACK WINNER • ${_playerNames[_dealerIndex!]}',
                   style: const TextStyle(color: LorisApp.gold, fontSize: 10, fontWeight: FontWeight.w900),
                 ),
             ],
