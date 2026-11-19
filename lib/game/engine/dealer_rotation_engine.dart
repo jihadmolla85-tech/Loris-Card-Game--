@@ -1,7 +1,8 @@
 
 class DealerRotationEngine {
   /// Returns the next dealer when a new round begins.
-  /// The next dealer is the player to the current dealer's right.
+  /// Rotate only when the dealer's team earned at least +1 point this round.
+  /// The score argument is the round delta, never the cumulative match total.
   static int nextDealerIndex({
     required int currentDealerIndex,
     required int playerCount,
