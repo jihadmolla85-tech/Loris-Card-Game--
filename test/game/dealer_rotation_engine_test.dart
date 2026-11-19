@@ -35,7 +35,9 @@ void main() {
       );
 
       expect(result, 0);
-    });, () {
+    });
+
+    test('Moves dealer right-to-left in six-player game', () {
       final result = DealerRotationEngine.nextDealerIndex(
         currentDealerIndex: 4,
         playerCount: 6,
