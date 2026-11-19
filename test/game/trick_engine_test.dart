@@ -139,7 +139,7 @@ void main() {
         trumpSuit: null,
       );
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
-      hands[3].removeWhere((c) => c.suit == Suit.hearts);
+      hands[1].removeWhere((c) => c.suit == Suit.hearts);
       hands[0].removeWhere((c) => c.suit == Suit.hearts);
 
       game.playCard(3, card(Suit.hearts, 12));
@@ -257,7 +257,7 @@ void main() {
     });
 
     test('cards are removed after being played', () {
-      final playedCard = card(Suit.hearts, 12);
+      final playedCard = card(Suit.hearts, 11);
 
       final game = TrickEngine(
         hands: hands,
