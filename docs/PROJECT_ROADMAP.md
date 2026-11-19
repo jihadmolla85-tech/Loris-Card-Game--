@@ -14,7 +14,7 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Joker/LORIS trump option is available only when the bidder personally holds LORIS.
 - [x] LORIS card is labelled L and has custom Joker artwork.
 - [x] CALL 16 eligibility, one-time pass/call choice, and success/failure scoring are covered by engine tests.
-- [x] Trick completion has a UI re-entry guard; AI loop stops when a trick is already complete.
+- [x] Trick completion has a UI re-entry guard; AI loop stops when a trick is already complete.\n- [x] AI turn progression allows the same player to lead consecutive tricks after winning; stall checks verify committed cards instead of banning repeated player indexes.
 - [ ] Verify the trick-completion fix in a full 4-player and 6-player match on a physical Android device.
 - [ ] Continue regression testing for AI turn stalls, saved-match resume, redeals, and all CALL 16 edge cases.
 
@@ -24,7 +24,7 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Trump indicator shows only the trump suit symbol or LORIS Joker art.
 - [x] Human bidder's own eight-card hand remains visible while choosing.
 - [ ] Confirm the random teammate card is selected from the correct partner seat in both 4-player and 6-player modes.
-- [ ] Add automated UI tests for trump-choice privacy and teammate random-card selection.
+- [x] Add engine tests for private random teammate-card selection in four- and six-player modes.\n- [ ] Add automated UI tests for trump-choice privacy and teammate random-card selection.
 
 ## Player portraits and branding
 
