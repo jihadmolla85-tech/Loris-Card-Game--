@@ -516,6 +516,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   int _dealerFirstPlayerIndex = 0;
   bool _isDealingCards = false;
   bool _dealerDrawActive = false;
+  int? _dealingToPlayerIndex;
+  int _dealingPacket = 0;
   int _dealtCardCount = 0;
   bool _awaitingTrumpSelection = false;
   int? _pendingTrumpBidder;
@@ -758,15 +760,23 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _dealtCardCount = 0;
         _status = '${_playerNames[dealerSelection.dealerIndex]} is dealing two packets of four cards';
       });
-      // Two clockwise passes: each seat receives a visible packet of four.
+      // Two clockwise packets of four, starting with the player left of dealer.
       for (var packet = 0; packet < 2; packet++) {
-        for (var seat = 0; seat < widget.playerCount; seat++) {
-          await Future.delayed(const Duration(milliseconds: 210));
+        for (var offset = 0; offset < widget.playerCount; offset++) {
+          final receivingPlayer =
+              (dealerSelection.dealerIndex + 1 + offset) % widget.playerCount;
           if (!mounted) return;
-          setState(() => _dealtCardCount += 4);
+          setState(() {
+            _dealingToPlayerIndex = receivingPlayer;
+            _dealingPacket = packet + 1;
+            _dealtCardCount += 4;
+          });
+          await Future.delayed(const Duration(milliseconds: 330));
         }
       }
-      await Future.delayed(const Duration(milliseconds: 350));
+      if (!mounted) return;
+      setState(() => _dealingToPlayerIndex = null);
+      await Future.delayed(const Duration(milliseconds: 250));
       if (!mounted) return;
       setState(() {
         _isDealingCards = false;
@@ -2529,17 +2539,75 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ),
                 // Flat screen play surface; no 3D avatar renderer.
                 if (dealerDrawCards != null && dealerDrawVisibleCount > 0)
-                  Positioned(
-                    top: tableHeight * .38, left: 0, right: 0,
+                  Positioned.fill(
                     child: IgnorePointer(
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        const Text('DEALER DRAW', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 5),
-                        _buildCard(dealerDrawCards[dealerDrawVisibleCount - 1], compact: true),
-                      ]),
+                      child: TweenAnimationBuilder<double>(
+                        key: ValueKey('dealer-reveal-$dealerDrawVisibleCount'),
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, progress, child) {
+                          final drawingPlayer =
+                              (dealerDrawStartPlayer + dealerDrawVisibleCount - 1) %
+                                  widget.playerCount;
+                          return Align(
+                            alignment: Alignment.lerp(
+                              Alignment.center,
+                              seatAlignments[drawingPlayer],
+                              progress,
+                            )!,
+                            child: child,
+                          );
+                        },
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          const Text('JACK DRAW', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900)),
+                          const SizedBox(height: 5),
+                          _buildCard(dealerDrawCards[dealerDrawVisibleCount - 1], compact: true),
+                        ]),
+                      ),
                     ),
                   ),
-                if (_isDealingCards)
+                if (_isDealingCards && _dealingToPlayerIndex != null)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: TweenAnimationBuilder<double>(
+                        key: ValueKey('packet-$_dealingPacket-$_dealingToPlayerIndex'),
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOutCubic,
+                        builder: (context, progress, child) {
+                          final from = seatAlignments[_dealerIndex ?? 0];
+                          final to = seatAlignments[_dealingToPlayerIndex!];
+                          return Align(
+                            alignment: Alignment.lerp(from, to, progress)!,
+                            child: child,
+                          );
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: List.generate(4, (index) => Transform.translate(
+                            offset: Offset(-index * 10.0, 0),
+                            child: Container(
+                              width: 29,
+                              height: 42,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(5),
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFB63B45), Color(0xFF651525)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                border: Border.all(color: const Color(0xFFFFE3A0), width: 1.2),
+                                boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 4, offset: Offset(1, 2))],
+                              ),
+                              child: const Center(child: Icon(Icons.auto_awesome, color: Color(0xFFFFD978), size: 15)),
+                            ),
+                          )),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_isDealingCards && _dealingToPlayerIndex == null)
                   Positioned(top: tableHeight * .40, left: 0, right: 0, child: const IgnorePointer(child: Center(child: Text('DEALING CARDS…', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 11, fontWeight: FontWeight.w900))))),
                 if (plays.isNotEmpty)
                   for (var playIndex = 0; playIndex < plays.length; playIndex++)
@@ -2848,31 +2916,38 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 if (_trumpSuit != null || _trumpCard?.isLoris == true)
                   Positioned(
                     right: 10,
-                    bottom: 8,
-                    child: Container(
-                      width: 42,
-                      height: 42,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: const Color(0xDD17243B),
-                        borderRadius: BorderRadius.circular(9),
-                        border: Border.all(color: LorisApp.gold, width: 1.2),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(1, 3)),
-                        ],
-                      ),
-                      child: _trumpSuit != null
-                          ? Text(
-                              _suitSymbol(_trumpSuit),
-                              style: TextStyle(
-                                color: _isRedSuit(_trumpSuit)
-                                    ? const Color(0xFFFF6575)
-                                    : Colors.white,
-                                fontSize: 25,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            )
-                          : const _LorisJokerArt(width: 25, height: 31),
+                    top: tableHeight * .34,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                        const SizedBox(height: 3),
+                        Container(
+                          width: 50,
+                          height: 50,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xEE17243B),
+                            borderRadius: BorderRadius.circular(11),
+                            border: Border.all(color: LorisApp.gold, width: 1.5),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(1, 3)),
+                            ],
+                          ),
+                          child: _trumpSuit != null
+                              ? Text(
+                                  _suitSymbol(_trumpSuit),
+                                  style: TextStyle(
+                                    color: _isRedSuit(_trumpSuit)
+                                        ? const Color(0xFFFF6575)
+                                        : Colors.white,
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                )
+                              : const _LorisJokerArt(width: 30, height: 36),
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -2937,7 +3012,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           Align(alignment: Alignment.bottomRight, child: corner(upsideDown: true)),
           Center(
             child: card.isLoris
-                ? Image.asset('assets/images/loris_icon.jpg', width: tableCard ? 34 : compact ? 25 : 37, height: tableCard ? 48 : compact ? 34 : 51, fit: BoxFit.contain)
+                ? Image.asset('assets/images/loris_logo.jpg', width: tableCard ? 40 : compact ? 30 : 42, height: tableCard ? 48 : compact ? 36 : 52, fit: BoxFit.contain)
                 : card.rank != null && card.rank! >= 11 && card.rank! <= 13
                     ? _CourtCardArt(
                         rank: card.rank!,
@@ -2999,7 +3074,7 @@ class _AnimePortrait extends StatelessWidget {
           return CustomPaint(
             painter: _PortraitAtlasPainter(
               image: snapshot.data!,
-              portraitIndex: seed % 6,
+              portraitIndex: seed % 24,
             ),
             child: const SizedBox.expand(),
           );
@@ -3020,14 +3095,21 @@ class _PortraitAtlasPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const tileSize = 40.0;
-    final column = portraitIndex % 3;
-    final row = portraitIndex ~/ 3;
+    // The supplied sheet is a 6-column by 4-row portrait atlas.
+    // Derive cell dimensions from the decoded image instead of assuming
+    // 40px cells (which cropped blank margins on the original sheet).
+    const columns = 6;
+    const rows = 4;
+    final cellWidth = image.width / columns;
+    final cellHeight = image.height / rows;
+    final column = portraitIndex % columns;
+    final row = (portraitIndex ~/ columns) % rows;
+    final cropSize = cellWidth < cellHeight ? cellWidth : cellHeight;
     final source = Rect.fromLTWH(
-      column * tileSize,
-      row * tileSize,
-      tileSize,
-      tileSize,
+      column * cellWidth,
+      row * cellHeight + (cellHeight - cropSize) * .08,
+      cropSize,
+      cropSize,
     );
     canvas.drawImageRect(
       image,
