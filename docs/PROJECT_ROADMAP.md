@@ -32,7 +32,7 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Six distinct portraits are integrated into player seats with circular gold frames.
 - [x] Existing LORIS logo assets are retained for the home screen and app branding.
 - [ ] Integrate the remaining supplied portrait choices as a larger selectable/random portrait pool.
-- [ ] Review portrait crop quality and visibility on small Android screens.
+- [x] Correct the supplied 6×4 portrait atlas crop to use dynamic cell dimensions.\n- [ ] Review portrait crop quality and visibility on small Android screens.
 - [ ] Keep Android, iOS, web and desktop app icons/splash assets consistent with the approved LORIS logo.
 
 ## Visual/gameplay experience
@@ -40,7 +40,7 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Burgundy play surface and 3D table scene are present.
 - [x] Player seats show names, team identity, and turn/dealer/winner emphasis.
 - [x] Card play, dealing, trick and round feedback systems exist in the project.
-- [ ] Continue improving card clarity, spacing, directional card orientation, and last-trick visibility.
+- [x] Add visible center-to-seat Jack reveal and dealer-to-player four-card packet animations.\n- [x] Move the AI bidding THINKING label from the scoreboard to the active player's portrait.\n- [x] Enlarge and label the in-game trump indicator.\n- [ ] Continue improving card clarity, spacing, directional card orientation, and last-trick visibility.
 - [ ] Review the quality and consistency of card, trump, LORIS, trick-win, round-win and match-win effects.
 - [ ] Check responsive layout with the bottom hand, dialogs, and ad-safe area on different phone sizes.
 - [ ] Verify sound effects and haptics never block the AI/game progression.
