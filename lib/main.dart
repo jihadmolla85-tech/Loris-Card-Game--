@@ -996,7 +996,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     if (hands == null) return;
 
-    final joker = hands[bidder].where((card) => card.isLoris).firstOrNull;
     // LORIS is optional; AI should not automatically choose it whenever held.
     // Prefer the strongest ordinary suit and keep LORIS mode for explicit choice.
     loris.Suit? bestSuit;
