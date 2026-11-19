@@ -61,8 +61,8 @@ void main() {
         trumpSuit: Suit.spades,
       );
 
-      expect(game.firstPlayerIndex, 1);
-      expect(game.currentPlayerIndex, 1);
+      expect(game.firstPlayerIndex, 3);
+      expect(game.currentPlayerIndex, 3);
     });
 
     test('players must follow led suit', () {
@@ -72,7 +72,7 @@ void main() {
         trumpSuit: Suit.spades,
       );
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
 
       expect(
         () => game.playCard(2, card(Suit.spades, 11)),
@@ -87,7 +87,7 @@ void main() {
         trumpSuit: Suit.spades,
       );
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
 
       hands[2].removeWhere(
         (c) => c.suit == Suit.hearts,
@@ -108,13 +108,13 @@ void main() {
       final loris = Card.loris(replacesRank: 7);
       hands[2].add(loris);
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, loris);
 
       expect(game.plays.length, 2);
     });
 
-    test('LORIS always wins the trick', () {
+    test('LORIS is scored as its replaced Spades rank, not an unbeatable card', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -124,15 +124,15 @@ void main() {
       final loris = Card.loris(replacesRank: 7);
       hands[2].add(loris);
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, loris);
-      game.playCard(3, card(Suit.hearts, 13));
+      game.playCard(1, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.hearts, 10));
 
-      expect(game.winnerIndex, 2);
+      expect(game.winnerIndex, 1);
     });
 
-    test('Joker mode compares the rank of every suit', () {
+    test('LORIS mode compares only the led suit', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -142,15 +142,15 @@ void main() {
       hands[3].removeWhere((c) => c.suit == Suit.hearts);
       hands[0].removeWhere((c) => c.suit == Suit.hearts);
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, card(Suit.spades, 11));
-      game.playCard(3, card(Suit.diamonds, 13));
+      game.playCard(1, card(Suit.diamonds, 13));
       game.playCard(0, card(Suit.clubs, 10));
 
       expect(game.winnerIndex, 3);
     });
 
-    test('Joker beats every card in Joker mode', () {
+    test('LORIS does not automatically win in LORIS mode', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -159,12 +159,12 @@ void main() {
       final joker = Card.loris(replacesRank: 7);
       hands[2].add(joker);
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, joker);
-      game.playCard(3, card(Suit.hearts, 13));
+      game.playCard(1, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.hearts, 10));
 
-      expect(game.winnerIndex, 2);
+      expect(game.winnerIndex, 1);
     });
 
     test('highest trump wins when trump is played', () {
@@ -182,9 +182,9 @@ void main() {
         (c) => c.suit == Suit.hearts,
       );
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, card(Suit.spades, 11));
-      game.playCard(3, card(Suit.hearts, 13));
+      game.playCard(1, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.spades, 8));
 
       expect(game.winnerIndex, 2);
@@ -197,9 +197,9 @@ void main() {
         trumpSuit: Suit.spades,
       );
 
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, card(Suit.hearts, 14));
-      game.playCard(3, card(Suit.hearts, 13));
+      game.playCard(1, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.hearts, 10));
 
       expect(game.winnerIndex, 2);
@@ -213,9 +213,9 @@ void main() {
       );
 
       final loris = Card.loris(replacesRank: 7);
-      hands[1].add(loris);
+      hands[3].add(loris);
 
-      game.playCard(1, loris);
+      game.playCard(3, loris);
 
       expect(game.ledSuit, Suit.spades);
     });
@@ -228,9 +228,9 @@ void main() {
       );
 
       final loris = Card.loris(replacesRank: 7);
-      hands[1].add(loris);
+      hands[3].add(loris);
 
-      game.playCard(1, loris);
+      game.playCard(3, loris);
 
       expect(
         () => game.playCard(2, card(Suit.hearts, 14)),
@@ -238,7 +238,7 @@ void main() {
       );
     });
 
-    test('LORIS wins even when it leads the trick', () {
+    test('LORIS lead makes Spades the led suit and rank is compared normally', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -246,11 +246,11 @@ void main() {
       );
 
       final loris = Card.loris(replacesRank: 7);
-      hands[1].add(loris);
+      hands[3].add(loris);
 
-      game.playCard(1, loris);
+      game.playCard(3, loris);
       game.playCard(2, card(Suit.spades, 11));
-      game.playCard(3, card(Suit.spades, 13));
+      game.playCard(1, card(Suit.spades, 13));
       game.playCard(0, card(Suit.spades, 8));
 
       expect(game.winnerIndex, 1);
@@ -265,7 +265,7 @@ void main() {
         trumpSuit: Suit.spades,
       );
 
-      game.playCard(1, playedCard);
+      game.playCard(3, playedCard);
 
       expect(hands[1].contains(playedCard), false);
     });
@@ -306,7 +306,7 @@ void main() {
         trumpSuit: Suit.spades,
       );
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
 
       expect(game.legalCardsFor(2), contains(card(Suit.clubs, 7)));
       game.playCard(2, card(Suit.clubs, 7));
@@ -321,14 +321,14 @@ void main() {
       );
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
       hands[2].add(card(Suit.spades, 14));
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, card(Suit.spades, 11));
 
       hands[3].removeWhere((c) => c.suit == Suit.hearts);
       hands[3].add(card(Suit.spades, 8));
 
       expect(game.legalCardsFor(3), contains(card(Suit.spades, 8)));
-      game.playCard(3, card(Suit.spades, 8));
+      game.playCard(1, card(Suit.spades, 8));
       expect(game.plays.last.card, card(Suit.spades, 8));
     });
 
@@ -340,7 +340,7 @@ void main() {
       );
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
       hands[2].add(card(Suit.spades, 14));
-      game.playCard(1, card(Suit.hearts, 12));
+      game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, card(Suit.spades, 14));
 
       hands[3].removeWhere((c) => c.suit == Suit.hearts);
@@ -348,7 +348,7 @@ void main() {
         game.legalCardsFor(3).any((c) => c.suit == Suit.spades),
         isTrue,
       );
-      game.playCard(3, card(Suit.spades, 13));
+      game.playCard(1, card(Suit.spades, 13));
       expect(game.plays.length, 3);
     });
 
