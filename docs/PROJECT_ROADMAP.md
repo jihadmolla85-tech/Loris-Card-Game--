@@ -64,3 +64,8 @@ This file is the continuity checklist for future development. Update it whenever
 ### 2026-11-19 — AI turn continuation fix
 - Increased the AI turn safety limit to allow a legal sequence to cross a completed-trick boundary when an AI wins and leads the next trick before the human's next turn. The old one-table-rotation limit could pause valid play early.
 - CI verification pending for this commit; physical-device gameplay verification remains pending.
+
+### 2026-11-19 — Dealer rotation scoring correction
+- Dealer rotation now checks the dealer team's points earned in the just-completed round, not its cumulative match score. The dealer changes only when that round's delta is +1 or higher; zero/negative rounds keep the same dealer.
+- Added a regression test for a dealer team whose cumulative score stays positive despite losing points in the current round.
+- CI verification pending.
