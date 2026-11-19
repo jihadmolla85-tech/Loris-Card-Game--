@@ -15,7 +15,7 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] LORIS card is labelled L and has custom Joker artwork.
 - [x] CALL 16 eligibility, one-time pass/call choice, and success/failure scoring are covered by engine tests.
 - [x] Trick completion has a UI re-entry guard; AI loop stops when a trick is already complete.\n- [x] AI turn progression allows the same player to lead consecutive tricks after winning; stall checks verify committed cards instead of banning repeated player indexes.
-- [ ] Verify the trick-completion fix in a full 4-player and 6-player match on a physical Android device.
+- [x] Detach per-card autosave from the AI turn loop so slow storage cannot hold the next AI action.\n- [x] Add spoken Bangla bid announcements with English fallback.\n- [x] Add persistent trump label and suit name in the compact header.\n- [x] Slow the four-card dealing packet animation to 500 ms per player.\n- [ ] Verify the trick-completion fix in a full 4-player and 6-player match on a physical Android device.
 - [ ] Continue regression testing for AI turn stalls, saved-match resume, redeals, and all CALL 16 edge cases.
 
 ## Privacy and trump selection
