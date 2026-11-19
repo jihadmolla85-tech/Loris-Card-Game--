@@ -231,8 +231,8 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   body: 'You must follow the suit led if you have a card of that suit. '
                       'If you are void in the led suit, you may play any card. '
                       'Trumping and overtrumping are optional. The LORIS card '
-                      'is the Joker and beats every card. In Joker mode there is '
-                      'no trump suit; the highest rank wins across all suits.',
+                      'acts as its replaced Spades card. In LORIS mode there is '
+                      'no trump suit; the highest card of the led suit wins.',
                 ),
                 _RuleSection(
                   title: 'SCORING',
@@ -1143,7 +1143,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _trickNumber = 0;
 
         _status = selectedTrump == null
-            ? 'Round started. LORIS JOKER mode — highest card wins.'
+            ? 'Round started. LORIS mode — highest card of the led suit wins.'
             : 'Round started. ${_suitName(selectedTrump)} is trump.';
       });
 
