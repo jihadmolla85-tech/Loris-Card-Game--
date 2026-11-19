@@ -86,3 +86,10 @@ This file is the continuity checklist for future development. Update it whenever
 - Added regression coverage for LORIS beating a higher ordinary trump card.
 - Removed unused winner-helper methods that caused Flutter Analyze to fail.
 - Automated CI and physical-device verification pending.
+
+
+### 2026-11-19 — CI regression repair for right-to-left gameplay
+- The first CI run confirmed Flutter Analyze passed but tests failed because several fixtures still expected clockwise turn order and some trick fixtures played cards that were not in the named player's hand.
+- Corrected trick-test hands to match the actual right-to-left seat sequence and fixed a malformed six-player dealer-rotation test.
+- Updated bidding, round, and match controller test expectations for dealer-right first action, right-to-left progression, and dealer rotation.
+- Re-running CI on the latest branch head; Android build and device verification remain unconfirmed.
