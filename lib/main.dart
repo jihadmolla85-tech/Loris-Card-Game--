@@ -3083,10 +3083,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 class _AnimePortrait extends StatelessWidget {
   const _AnimePortrait({
     required this.seed,
+    this.isFemale = false,
     this.size = 36,
   });
 
   final int seed;
+  final bool isFemale;
   final double size;
 
   static final Future<ui.Image> _portraitAtlas = _loadPortraitAtlas();
@@ -3119,7 +3121,8 @@ class _AnimePortrait extends StatelessWidget {
           return CustomPaint(
             painter: _PortraitAtlasPainter(
               image: snapshot.data!,
-              portraitIndex: seed % 24,
+              portraitIndex: seed,
+              isFemale: isFemale,
             ),
             child: const SizedBox.expand(),
           );
@@ -3133,10 +3136,12 @@ class _PortraitAtlasPainter extends CustomPainter {
   const _PortraitAtlasPainter({
     required this.image,
     required this.portraitIndex,
+    required this.isFemale,
   });
 
   final ui.Image image;
   final int portraitIndex;
+  final bool isFemale;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -3147,8 +3152,16 @@ class _PortraitAtlasPainter extends CustomPainter {
     const rows = 4;
     final cellWidth = image.width / columns;
     final cellHeight = image.height / rows;
-    final column = portraitIndex % columns;
-    final row = (portraitIndex ~/ columns) % rows;
+    // The supplied 24-character sheet contains four female characters
+    // (Wonder Woman, Spider-Gwen, Gamora and Mystique). Keep them assigned
+    // only to female player names; male names use the remaining portraits.
+    const femalePortraits = [10, 17, 20, 21];
+    const malePortraits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 18, 19, 22, 23];
+    final portrait = isFemale
+        ? femalePortraits[portraitIndex % femalePortraits.length]
+        : malePortraits[portraitIndex % malePortraits.length];
+    final column = portrait % columns;
+    final row = (portrait ~/ columns) % rows;
     final cropSize = cellWidth < cellHeight ? cellWidth : cellHeight;
     final source = Rect.fromLTWH(
       column * cellWidth,
@@ -3166,7 +3179,9 @@ class _PortraitAtlasPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PortraitAtlasPainter oldDelegate) =>
-      oldDelegate.image != image || oldDelegate.portraitIndex != portraitIndex;
+      oldDelegate.image != image ||
+      oldDelegate.portraitIndex != portraitIndex ||
+      oldDelegate.isFemale != isFemale;
 }
 
 class _LorisJokerArt extends StatelessWidget {
