@@ -158,13 +158,17 @@ class TrickEngine {
       return lorisPlay.playerIndex;
     }
 
+    final currentLedSuit = ledSuit;
+
     if (trumpSuit == null) {
-      // Joker mode: the Joker itself is unbeatable; otherwise compare
-      // every card played, regardless of suit.
-      return _highestRankPlay(plays).playerIndex;
+      // LORIS/Joker is the only trump in Joker mode. If it was not
+      // played, the highest card of the led suit wins; cards from
+      // other suits cannot take the trick.
+      final ledSuitPlays =
+          plays.where((p) => p.card.suit == currentLedSuit).toList();
+      return _highestRankPlay(ledSuitPlays).playerIndex;
     }
 
-    final currentLedSuit = ledSuit;
     final trumpPlays =
         plays.where((p) => p.card.suit == trumpSuit).toList();
     if (trumpPlays.isNotEmpty) {
