@@ -2518,9 +2518,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         children: [
           Row(
             children: [
-              Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore)),
+              Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore, const Color(0xFF2877D4))),
               Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
-              Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore)),
+              Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore, const Color(0xFFD64B55))),
             ],
           ),
           if (activeRound != null) ...[
@@ -2589,12 +2589,31 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _compactScore(String label, int value) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: LorisApp.gold, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
-        Text('$value', style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900)),
-      ],
+  Widget _compactScore(String label, int value, Color teamColor) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            teamColor.withValues(alpha: .88),
+            teamColor.withValues(alpha: .48),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: teamColor.withValues(alpha: .95), width: 1.1),
+        boxShadow: [
+          BoxShadow(color: teamColor.withValues(alpha: .28), blurRadius: 5, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          Text('$value', style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900)),
+        ],
+      ),
     );
   }
 
