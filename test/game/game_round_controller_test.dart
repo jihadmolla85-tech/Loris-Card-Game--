@@ -191,6 +191,27 @@ void main() {
       );
     });
 
+    test('Successful 8 bid scores +16 when bidding team wins all 8 tricks', () {
+      controller = GameRoundController(
+        hands: createHands(),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 8,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(controller.isRoundEnded, isTrue);
+      expect(controller.isRoundScored, isTrue);
+      expect(matchScore.teamAScore, 16);
+      expect(matchScore.teamBScore, -16);
+    });
+
     test('Handles an 8 bid without enabling 16 Call', () {
       final hands = List.generate(4, (player) {
         return List.generate(8, (i) {
