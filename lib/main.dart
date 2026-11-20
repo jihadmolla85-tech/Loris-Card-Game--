@@ -1080,6 +1080,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     final round = _matchController.currentRound;
 
+    if (round.trickEngine.isComplete || _trickCompletionInProgress) return;
     if (round.nextPlayerIndex != 0) return;
 
     setState(() {
