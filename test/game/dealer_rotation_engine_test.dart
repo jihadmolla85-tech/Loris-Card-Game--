@@ -26,7 +26,7 @@ void main() {
       expect(result, 1);
     });
 
-    test('Moves dealer to the right in four-player game', () {
+    test('Moves dealer counterclockwise in four-player game', () {
       final result = DealerRotationEngine.nextDealerIndex(
         currentDealerIndex: 1,
         playerCount: 4,
@@ -37,7 +37,7 @@ void main() {
       expect(result, 2);
     });
 
-    test('Moves dealer to the right in six-player game', () {
+    test('Moves dealer counterclockwise in six-player game', () {
       final result = DealerRotationEngine.nextDealerIndex(
         currentDealerIndex: 4,
         playerCount: 6,
@@ -45,7 +45,7 @@ void main() {
         isRedeal: false,
       );
 
-      expect(result, 5);
+      expect(result, 3);
     });
 
     test('Wraps dealer index to zero', () {
