@@ -42,9 +42,9 @@ class BidScoringEngine {
         ? tricksWonByBiddingTeam == 8
         : tricksWonByBiddingTeam >= bidAmount;
 
-    // Every successful bid scores exactly the bid amount, regardless of
-    // how many additional tricks the bidding team wins. A failed bid
-    // awards the opposing team twice the bid amount.
+    // A successful special 8 bid scores 16. Successful bids from 4 to 7
+    // score exactly the bid amount, even if more tricks are won. A failed
+    // bid awards the opposing team twice the bid amount.
     final points = success ? (bidAmount == 8 ? 16 : bidAmount) : bidAmount * 2;
 
     final biddingPoints = success ? points : -points;
