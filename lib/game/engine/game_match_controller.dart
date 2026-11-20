@@ -299,6 +299,7 @@ class GameMatchController {
           .map((hand) => List<Card>.from(hand))
           .toList(),
       trumpSuit: round?.trickEngine.trumpSuit,
+      lorisTrump: round?.trickEngine.lorisTrump ?? false,
       biddingTeam: round?.biddingTeam,
       bidAmount: round?.bidAmount,
       // A completed trick has already been scored. Do not serialize its
@@ -404,6 +405,7 @@ class GameMatchController {
           .toList(),
       dealerIndex: snapshot.dealerIndex,
       trumpSuit: snapshot.trumpSuit!,
+      lorisTrump: snapshot.lorisTrump,
       biddingTeam: snapshot.biddingTeam!,
       bidAmount: snapshot.bidAmount!,
       matchScoreEngine: matchScoreEngine,
