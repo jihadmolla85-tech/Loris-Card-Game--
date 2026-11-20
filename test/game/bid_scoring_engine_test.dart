@@ -29,14 +29,27 @@ void main() {
       expect(engine.teamBScore, 7);
     });
 
-    test('Successful bid 8 gives +8 and -8', () {
+    test('Successful special bid 8 gives +16 and -16', () {
       engine.calculateAndApply(
         biddingTeam: 0,
         bidAmount: 8,
         tricksWonByBiddingTeam: 8,
       );
-      expect(engine.teamAScore, 8);
-      expect(engine.teamBScore, -8);
+      expect(engine.teamAScore, 16);
+      expect(engine.teamBScore, -16);
+    });
+
+    test('Bids 4 to 7 do not earn 16 for winning all 8 tricks', () {
+      for (var bid = 4; bid <= 7; bid++) {
+        final freshEngine = BidScoringEngine();
+        freshEngine.calculateAndApply(
+          biddingTeam: 0,
+          bidAmount: bid,
+          tricksWonByBiddingTeam: 8,
+        );
+        expect(freshEngine.teamAScore, bid);
+        expect(freshEngine.teamBScore, -bid);
+      }
     });
 
     test('Failed bid 5 gives -10 and +10', () {
