@@ -44,7 +44,7 @@ class TrickEngine {
     }
 
     _firstPlayerIndex =
-        restoredFirstPlayerIndex ?? (dealerIndex + 1) % playerCount;
+        restoredFirstPlayerIndex ?? (dealerIndex - 1 + playerCount) % playerCount;
 
     if (_firstPlayerIndex < 0 || _firstPlayerIndex >= playerCount) {
       throw ArgumentError('Invalid first player index.');
@@ -59,7 +59,7 @@ class TrickEngine {
     for (var i = 0; i < initialPlays.length; i++) {
       final play = initialPlays[i];
       final expectedPlayer =
-          (_firstPlayerIndex + i) % playerCount;
+          (_firstPlayerIndex - i + playerCount) % playerCount;
 
       if (play.playerIndex != expectedPlayer) {
         throw ArgumentError('Invalid restored trick play order.');
@@ -85,7 +85,7 @@ class TrickEngine {
   int get firstPlayerIndex => _firstPlayerIndex;
 
   int get currentPlayerIndex =>
-      (_firstPlayerIndex + plays.length) % playerCount;
+      (_firstPlayerIndex - plays.length + playerCount) % playerCount;
 
   bool get isComplete => plays.length == playerCount;
 
