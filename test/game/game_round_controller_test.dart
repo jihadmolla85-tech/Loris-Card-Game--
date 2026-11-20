@@ -65,6 +65,29 @@ void main() {
       expect(controller.nextPlayerIndex, 0);
     });
 
+    test('Blocks 16 Call when bidding team already has 16 points', () {
+      matchScore.teamAScore = 16;
+      controller = GameRoundController(
+        hands: createHands(),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        playOneTrick(resolve16Decision: false);
+      }
+
+      expect(controller.sixteenCallEngine!.canCall, isFalse);
+      expect(
+        () => controller.call16(callerPlayerIndex: 0),
+        throwsStateError,
+      );
+    });
+
     test('Scores the round after eight tricks', () {
       for (var i = 0; i < 8; i++) {
         playOneTrick();
