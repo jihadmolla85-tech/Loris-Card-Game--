@@ -1391,7 +1391,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       setState(() {
         _status = 'Trick $_trickNumber won by ${_playerNames[winner]}.';
         _finished = round.isRoundEnded;
-        // Keep this completed trick on the table until the next trick starts.
+        // The collection animation has reached the winner's seat. Clear the
+        // table now, before the next trick can begin; keep the separate
+        // last-trick snapshot available for the LAST TRICK view.
+        _revealedTrickPlays = [];
         _collectingTrickWinner = null;
         _winCelebration = 'TRICK WON • ${_playerNames[winner]}';
       });
@@ -2638,9 +2641,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       final radiusY = tableHeight * .17;
                       final cardX = constraints.maxWidth / 2 + cos(angle) * radiusX - cardWidth / 2;
                       final cardY = tableHeight * .51 + sin(angle) * radiusY - cardHeight / 2;
-                      return Positioned(
-                        left: cardX.clamp(0.0, constraints.maxWidth - cardWidth),
-                        top: cardY.clamp(0.0, tableHeight - cardHeight),
+                      final winnerAlignment = seatAlignments[_collectingTrickWinner ?? play.playerIndex];
+                      final collecting = _collectingTrickWinner != null;
+                      final targetX = (winnerAlignment.x + 1) * .5 * constraints.maxWidth - cardWidth / 2;
+                      final targetY = (winnerAlignment.y + 1) * .5 * tableHeight - cardHeight / 2;
+                      return AnimatedPositioned(
+                        duration: const Duration(milliseconds: 900),
+                        curve: Curves.easeInOutCubic,
+                        left: (collecting ? targetX : cardX).clamp(0.0, constraints.maxWidth - cardWidth),
+                        top: (collecting ? targetY : cardY).clamp(0.0, tableHeight - cardHeight),
                         child: IgnorePointer(child: Column(mainAxisSize: MainAxisSize.min, children: [
                           Container(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2), decoration: BoxDecoration(color: const Color(0xEE17243B), borderRadius: BorderRadius.circular(5), border: Border.all(color: const Color(0xFFFFD978), width: .7)), child: Text(_playerNames[play.playerIndex], style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900))),
                           const SizedBox(height: 2),
