@@ -153,37 +153,44 @@ class TrickEngine {
     }
 
     final lorisPlay = plays.where((p) => p.card.isLoris).firstOrNull;
+    final lorisLedAsOrdinarySpades =
+        completedTricks == 7 && plays.first.card.isLoris;
 
-    if (lorisPlay != null) {
+    // LORIS is normally unbeatable. The sole exception is when it is
+    // led on the eighth (final) trick: it then behaves as its replaced
+    // low Spades card, and can be beaten by a higher Spade or a trump.
+    if (lorisPlay != null && !lorisLedAsOrdinarySpades) {
       return lorisPlay.playerIndex;
     }
 
     final currentLedSuit = ledSuit;
 
     if (trumpSuit == null) {
-      // LORIS/Joker is the only trump in Joker mode. If it was not
-      // played, the highest card of the led suit wins; cards from
-      // other suits cannot take the trick.
+      // Without a selected trump suit, only the led suit can win.
       final ledSuitPlays =
-          plays.where((p) => p.card.suit == currentLedSuit).toList();
+          plays.where((p) => _effectiveSuit(p) == currentLedSuit).toList();
       return _highestRankPlay(ledSuitPlays).playerIndex;
     }
 
     final trumpPlays =
-        plays.where((p) => p.card.suit == trumpSuit).toList();
+        plays.where((p) => _effectiveSuit(p) == trumpSuit).toList();
     if (trumpPlays.isNotEmpty) {
       return _highestRankPlay(trumpPlays).playerIndex;
     }
     final ledSuitPlays =
-        plays.where((p) => p.card.suit == currentLedSuit).toList();
+        plays.where((p) => _effectiveSuit(p) == currentLedSuit).toList();
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }
 
+  Suit? _effectiveSuit(TrickPlay play) =>
+      play.card.isLoris ? Suit.spades : play.card.suit;
+
+  int _effectiveRank(TrickPlay play) =>
+      play.card.isLoris ? (play.card.replacesRank ?? 0) : (play.card.rank ?? 0);
+
   TrickPlay _highestRankPlay(List<TrickPlay> candidates) {
     return candidates.reduce((a, b) {
-      final aRank = a.card.rank ?? 0;
-      final bRank = b.card.rank ?? 0;
-      return bRank > aRank ? b : a;
+      return _effectiveRank(b) > _effectiveRank(a) ? b : a;
     });
   }
 
