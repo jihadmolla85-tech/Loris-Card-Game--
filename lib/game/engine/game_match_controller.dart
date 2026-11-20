@@ -98,6 +98,7 @@ class GameMatchController {
   void startRound({
     required List<List<Card>> hands,
     required Suit trumpSuit,
+    bool lorisTrump = false,
     required int biddingTeam,
     required int bidAmount,
   }) {
@@ -122,6 +123,7 @@ class GameMatchController {
       hands: hands,
       dealerIndex: dealerIndex,
       trumpSuit: trumpSuit,
+      lorisTrump: lorisTrump,
       biddingTeam: biddingTeam,
       bidAmount: bidAmount,
       matchScoreEngine: matchScoreEngine,
