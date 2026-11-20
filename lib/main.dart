@@ -237,11 +237,10 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 ),
                 _RuleSection(
                   title: 'SCORING',
-                  body: 'A successful normal bid scores the bid amount; a failed '
-                      'bid gives the opposing team twice the bid. A successful '
-                      '8 bid requires all 8 tricks and scores +16, while the '
-                      'opponents score -16. A failed 8 bid scores -16 and the '
-                      'opponents score +16.',
+                  body: 'A successful bid scores exactly the bid amount, even '
+                      'if the team wins more tricks than it bid. If the team '
+                      'wins fewer tricks than its bid, the opposing team gets '
+                      'twice the bid amount.',
                 ),
                 _RuleSection(
                   title: 'CALL 16',
