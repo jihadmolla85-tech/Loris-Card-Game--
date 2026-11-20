@@ -975,7 +975,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
       if (selectedBid == null || selectedBidder == null) {
         setState(() {
-          _error = 'Trump or bidding information is missing.';
+          _error = 'Bidding information is missing.';
         });
         return;
       }
