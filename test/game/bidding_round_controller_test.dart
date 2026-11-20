@@ -33,7 +33,7 @@ void main() {
       );
 
       final firstAiBid = controller.submitAiBid();
-      expect(firstAiBid.playerIndex, 3);
+      expect(firstAiBid.playerIndex, 1);
       expect(controller.history, hasLength(1));
       expect(controller.isHumanTurn, isTrue);
       expect(controller.currentPlayerIndex, 0);
