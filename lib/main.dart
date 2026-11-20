@@ -1556,7 +1556,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         );
                       },
                     )
-                  : const Icon(Icons.style, size: 76, color: LorisApp.gold),
+                  : const _LorisLogoMark(width: 176, height: 108, showTitle: true),
             ),
             if (_isShuffling) ...[
               const SizedBox(height: 4),
@@ -2762,7 +2762,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           Align(alignment: Alignment.bottomRight, child: corner(upsideDown: true)),
           Center(
             child: card.isLoris
-                ? Image.asset('assets/images/loris_logo.jpg', width: tableCard ? 40 : compact ? 30 : 42, height: tableCard ? 48 : compact ? 36 : 52, fit: BoxFit.contain)
+                ? _LorisLogoMark(width: tableCard ? 40 : compact ? 30 : 42, height: tableCard ? 48 : compact ? 36 : 52)
                 : card.rank != null && card.rank! >= 11 && card.rank! <= 13
                     ? _CourtCardArt(
                         rank: card.rank!,
@@ -2785,6 +2785,124 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
 }
+class _LorisLogoMark extends StatelessWidget {
+  const _LorisLogoMark({
+    this.width = 180,
+    this.height = 112,
+    this.showTitle = false,
+  });
+
+  final double width;
+  final double height;
+  final bool showTitle;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!showTitle) {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: CustomPaint(painter: _LorisLogoPainter()),
+      );
+    }
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(child: CustomPaint(painter: _LorisLogoPainter())),
+          const Text(
+            'LORIS',
+            style: TextStyle(
+              color: Color(0xFFFFD978),
+              fontSize: 21,
+              height: 1,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 3,
+              shadows: [Shadow(color: Color(0xAA000000), blurRadius: 5, offset: Offset(0, 2))],
+            ),
+          ),
+          const Text(
+            'ULTIMATE CARD GAME',
+            style: TextStyle(
+              color: Color(0xFFE7C477),
+              fontSize: 7,
+              height: 1.3,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LorisLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final bounds = Rect.fromLTWH(w * .08, h * .04, w * .84, h * .90);
+    final gold = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFFFFF0B8), Color(0xFFD9A63E), Color(0xFF8D5B1D)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ).createShader(bounds)
+      ..style = PaintingStyle.fill;
+    final outline = Paint()
+      ..color = const Color(0xFFFFE6A0)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (w * .018).clamp(.7, 2.2);
+
+    final letter = Path()
+      ..moveTo(w * .15, h * .08)
+      ..lineTo(w * .76, h * .08)
+      ..quadraticBezierTo(w * .82, h * .08, w * .82, h * .15)
+      ..lineTo(w * .82, h * .29)
+      ..lineTo(w * .42, h * .29)
+      ..lineTo(w * .42, h * .73)
+      ..lineTo(w * .88, h * .73)
+      ..lineTo(w * .88, h * .88)
+      ..lineTo(w * .13, h * .88)
+      ..lineTo(w * .13, h * .78)
+      ..quadraticBezierTo(w * .24, h * .73, w * .24, h * .62)
+      ..lineTo(w * .24, h * .23)
+      ..quadraticBezierTo(w * .24, h * .14, w * .15, h * .13)
+      ..close();
+
+    canvas.drawShadow(letter, const Color(0xCC000000), 5, true);
+    canvas.drawPath(letter, gold);
+    canvas.drawPath(letter, outline);
+
+    void suit(String glyph, Offset center, double fontSize, Color color) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: glyph,
+          style: TextStyle(
+            color: color,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            shadows: const [Shadow(color: Color(0x99000000), blurRadius: 2, offset: Offset(1, 1))],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
+    }
+
+    suit('♥', Offset(w * .52, h * .20), h * .22, const Color(0xFFC92C4B));
+    suit('♣', Offset(w * .68, h * .39), h * .19, const Color(0xFFD8B46A));
+    suit('♠', Offset(w * .68, h * .57), h * .20, const Color(0xFFE9E8E2));
+    suit('♦', Offset(w * .31, h * .76), h * .20, const Color(0xFF49B9F2));
+  }
+
+  @override
+  bool shouldRepaint(covariant _LorisLogoPainter oldDelegate) => false;
+}
+
 class _AnimePortrait extends StatelessWidget {
   const _AnimePortrait({
     required this.seed,
