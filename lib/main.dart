@@ -1148,6 +1148,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       );
 
       setState(() {
+        // The bidding controller is the source of truth for the player who
+        // actually won the auction. Keep the visible trump badge tied to that
+        // player, not to the teammate whose card may have supplied the suit.
+        _trumpBidderIndex = selectedBidder;
         _started = true;
         _finished = false;
         _trickNumber = 0;
@@ -2543,6 +2547,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     int dealerDrawStartPlayer = 0,
     bool dealerDrawActive = false,
   }) {
+    final displayedTrumpBidderIndex =
+        _biddingController?.highestBidder ?? _trumpBidderIndex;
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
             Alignment(0, .82),
@@ -2762,7 +2768,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                                 ),
                               ),
-                              if (_trumpBidderIndex == index) ...[
+                              if (displayedTrumpBidderIndex == index) ...[
                                 const SizedBox(width: 4),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
