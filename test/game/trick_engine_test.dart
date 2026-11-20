@@ -132,7 +132,7 @@ void main() {
       expect(game.winnerIndex, 2);
     });
 
-    test('Joker mode compares the rank of every suit', () {
+    test('LORIS trump mode keeps the led suit highest when LORIS is absent', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -147,7 +147,7 @@ void main() {
       game.playCard(3, card(Suit.diamonds, 13));
       game.playCard(0, card(Suit.clubs, 10));
 
-      expect(game.winnerIndex, 3);
+      expect(game.winnerIndex, 1);
     });
 
     test('Joker beats every card in Joker mode', () {
