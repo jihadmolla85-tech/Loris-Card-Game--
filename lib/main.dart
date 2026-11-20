@@ -2322,7 +2322,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                 seatAlignments[drawingPlayer],
                                 progress,
                               )!,
-                              child: child,
+                              child: Transform.translate(
+                                // Place each revealed Jack-draw card in front
+                                // of its player's portrait/banner, toward table center.
+                                offset: Offset(
+                                  -seatAlignments[drawingPlayer].x * 28,
+                                  -seatAlignments[drawingPlayer].y * 28,
+                                ),
+                                child: child,
+                              ),
                             );
                           },
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
