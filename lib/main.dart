@@ -2770,51 +2770,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               ),
                             ],
                           ),
-                          if (displayedTrumpBidderIndex == index)
-                            Container(
-                              width: 42,
-                              height: 54,
-                              margin: const EdgeInsets.only(top: 4, bottom: 3),
-                              padding: const EdgeInsets.all(3),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [Color(0xFFFFF8E8), Color(0xFFE8D9B8)],
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: LorisApp.gold, width: 1.5),
-                                boxShadow: const [
-                                  BoxShadow(color: Colors.black54, blurRadius: 5, offset: Offset(1, 2)),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text('TRUMP', style: TextStyle(color: Color(0xFF5B351F), fontSize: 6, fontWeight: FontWeight.w900, letterSpacing: .5)),
-                                  Expanded(
-                                    child: Center(
-                                      child: _trumpSuit != null
-                                          ? Text(
-                                              _suitSymbol(_trumpSuit),
-                                              style: TextStyle(
-                                                color: _isRedSuit(_trumpSuit) ? const Color(0xFFB51F32) : const Color(0xFF17202B),
-                                                fontSize: 28,
-                                                fontWeight: FontWeight.w900,
-                                              ),
-                                            )
-                                          : const _LorisJokerArt(width: 25, height: 31),
-                                    ),
-                                  ),
-                                  Text(
-                                    _trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!).toUpperCase(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.clip,
-                                    style: const TextStyle(color: Color(0xFF5B351F), fontSize: 5.5, fontWeight: FontWeight.w900),
-                                  ),
-                                ],
-                              ),
-                            ),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -2857,6 +2812,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               ),
                             ),
                           ),
+                          if (displayedTrumpBidderIndex == index)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Text('BIDDER', style: TextStyle(color: LorisApp.gold, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .5)),
+                            ),
                           if (_dealerIndex == index)
                             const Padding(
                               padding: EdgeInsets.only(top: 2),
