@@ -188,6 +188,35 @@ class GameRoundController {
     engine.pass16(callerPlayerIndex: callerPlayerIndex);
   }
 
+  /// Whether the ordinary bid result is already mathematically decided
+  /// and no 16-call decision or attempt can still change the result.
+  bool get canSkipRemainingTricks {
+    if (isRoundEnded) return false;
+    final sixteen = sixteenCallEngine;
+    if (sixteen?.status == SixteenCallStatus.inProgress ||
+        sixteen?.canCall == true) {
+      return false;
+    }
+
+    final opposingTeamTricks = completedTricks - biddingTeamTricks;
+    if (bidAmount == 8) {
+      // An 8 bid fails as soon as the bidding team loses any trick.
+      return opposingTeamTricks > 0;
+    }
+
+    final opposingTarget = 8 - bidAmount + 1;
+    return biddingTeamTricks >= bidAmount ||
+        opposingTeamTricks >= opposingTarget;
+  }
+
+  /// Ends the round early only after its ordinary bid outcome is certain.
+  void skipRemainingTricks() {
+    if (!canSkipRemainingTricks) {
+      throw StateError('The remaining tricks cannot be skipped yet.');
+    }
+    _applyRoundScore();
+  }
+
   void _applyRoundScore() {
     if (isRoundScored) return;
 
