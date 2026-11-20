@@ -11,6 +11,7 @@ class SixteenCallEngine {
     required this.playerCount,
     required this.biddingTeam,
     required this.bidAmount,
+    this.biddingTeamScore = 0,
   }) {
     if (playerCount != 4 && playerCount != 6) {
       throw ArgumentError('Player count must be 4 or 6.');
@@ -26,6 +27,7 @@ class SixteenCallEngine {
   final int playerCount;
   final int biddingTeam;
   final int bidAmount;
+  final int biddingTeamScore;
 
   int completedTricks = 0;
   int biddingTeamTricks = 0;
@@ -45,6 +47,7 @@ class SixteenCallEngine {
   // have won every one of them, this only opens after a consecutive streak.
   bool get canCall =>
       status == SixteenCallStatus.notCalled &&
+      biddingTeamScore < 16 &&
       completedTricks == bidAmount &&
       completedTricks < 8 &&
       biddingTeamTricks == bidAmount &&
