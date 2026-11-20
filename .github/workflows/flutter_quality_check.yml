@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/show-trump-bidder
   pull_request:
     branches:
       - main
