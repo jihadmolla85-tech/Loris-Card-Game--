@@ -1176,17 +1176,20 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       final lorisPlay = trick.where((play) => play.card.isLoris);
       if (lorisPlay.isNotEmpty) return lorisPlay.first.playerIndex;
 
-      if (engine.trumpSuit == null) {
-        final allCards = List<TrickPlay>.from(trick)
-          ..sort((a, b) =>
-              (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
-        return allCards.first.playerIndex;
-      }
-
       final firstCard = trick.first.card;
       final ledSuit = firstCard.isLoris
           ? loris.Suit.spades
           : firstCard.suit;
+
+      // In LORIS/Joker trump mode, LORIS wins if played; otherwise
+      // only the highest card of the led suit can win the trick.
+      if (engine.trumpSuit == null) {
+        final ledSuitPlays =
+            trick.where((play) => play.card.suit == ledSuit).toList()
+              ..sort((a, b) =>
+                  (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
+        return ledSuitPlays.first.playerIndex;
+      }
       final trumpPlays = trick
           .where((play) => !play.card.isLoris &&
               play.card.suit == engine.trumpSuit)
@@ -1245,11 +1248,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _playHumanCard(loris.Card card) async {
-    if (!_started || _finished || _busy) return;
+    if (!_started || _finished || _busy || _trickCompletionInProgress) return;
 
     final round = _matchController.currentRound;
 
-    if (round.nextPlayerIndex != 0) return;
+    // Ignore stale card taps while the completed trick is being collected.
+    if (round.trickEngine.isComplete || round.nextPlayerIndex != 0) return;
 
     setState(() {
       _busy = true;
@@ -1801,8 +1805,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final bidding = _biddingController;
     final currentPlayer = round?.nextPlayerIndex;
     final plays = round?.trickEngine.plays ?? const <TrickPlay>[];
-    final legalHumanCards = _started && !_finished && currentPlayer == 0
-        ? round!.trickEngine.legalCardsFor(0)
+    final legalHumanCards = _started &&
+            !_finished &&
+            currentPlayer == 0 &&
+            !round!.trickEngine.isComplete &&
+            !_trickCompletionInProgress
+        ? round.trickEngine.legalCardsFor(0)
         : const <loris.Card>[];
 
     // Bidding remains scrollable; the live match itself is a fixed,
