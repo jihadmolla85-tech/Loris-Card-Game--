@@ -16,6 +16,9 @@ class TrickEngine {
   final int playerCount;
   final int dealerIndex;
   final Suit trumpSuit;
+  /// When true, the special LORIS card is the selected trump option;
+  /// ordinary suits do not trump one another in this mode.
+  final bool lorisTrump;
 
   final List<TrickPlay> plays = [];
 
@@ -27,6 +30,7 @@ class TrickEngine {
     required this.hands,
     required this.dealerIndex,
     required this.trumpSuit,
+    this.lorisTrump = false,
     this.completedTricks = 0,
     List<TrickPlay> initialPlays = const [],
     int? restoredFirstPlayerIndex,
@@ -117,7 +121,7 @@ class TrickEngine {
     final lorisCards = hand.where((card) => card.isLoris).toList();
     final currentLedSuit = ledSuit;
 
-    if (currentLedSuit == null) {
+    if (currentLedSuit == null || lorisTrump) {
       return List.unmodifiable(hand);
     }
 
@@ -235,8 +239,15 @@ class TrickEngine {
 
     final firstCard = trickPlays.first.card;
     final currentLedSuit = firstCard.isLoris ? Suit.spades : firstCard.suit;
-    final trumpPlays =
-        trickPlays.where((play) => play.card.suit == trumpSuit).toList();
+    final trumpPlays = lorisTrump
+        ? <TrickPlay>[]
+        : trickPlays.where((play) => play.card.suit == trumpSuit).toList();
+
+    if (lorisTrump) {
+      // With LORIS selected as trump, no ordinary suit has trump privilege.
+      // After the LORIS card itself, highest rank wins regardless of suit.
+      return _highestRankPlay(trickPlays).playerIndex;
+    }
 
     if (trumpPlays.isNotEmpty) {
       return _highestRankPlay(trumpPlays).playerIndex;
