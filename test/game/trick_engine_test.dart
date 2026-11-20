@@ -30,7 +30,7 @@ void main() {
           card(Suit.spades, 14),
           card(Suit.clubs, 14),
           card(Suit.diamonds, 14),
-        ],,
+        ],
         [
           card(Suit.hearts, 14),
           card(Suit.spades, 11),
