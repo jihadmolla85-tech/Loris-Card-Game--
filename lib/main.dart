@@ -669,7 +669,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _hands = _matchController.currentRound.trickEngine.hands;
 
       _dealerIndex = snapshot.dealerIndex;
-      _trumpSuit = snapshot.trumpSuit;
+      // LORIS has no fixed trump suit; old saves are normalized to no-trump.
+      _trumpSuit = null;
       _trumpCard = _trumpSuit == null
           ? _hands!.expand((hand) => hand).where((card) => card.isLoris).firstOrNull
           : null;
@@ -939,11 +940,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       return;
     }
 
-    if (bidder == 0) {
-      await _chooseHumanTrump(bidder);
-    } else {
-      await _chooseAiTrump(bidder);
-    }
+    // No trump-suit selection: LORIS is the only unbeatable card.
+    await _validateAndContinue(
+      everyonePassed: false,
+      bidderHasTrump: true,
+    );
   }
 
   // ----------------------------------------------------------
@@ -1126,9 +1127,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       final selectedBid = bidding.highestBid;
       final selectedBidder = bidding.highestBidder;
 
-      if ((selectedTrump == null && _trumpCard?.isLoris != true) ||
-          selectedBid == null ||
-          selectedBidder == null) {
+      if (selectedBid == null || selectedBidder == null) {
         setState(() {
           _error = 'Trump or bidding information is missing.';
         });
@@ -1146,9 +1145,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _finished = false;
         _trickNumber = 0;
 
-        _status = selectedTrump == null
-            ? 'Round started. LORIS JOKER mode — highest card wins.'
-            : 'Round started. ${_suitName(selectedTrump)} is trump.';
+        _trumpSuit = null;
+        _trumpCard = null;
+        _status = 'Round started. LORIS is highest; otherwise highest led-suit card wins.';
       });
 
       await _runAiTurns();
@@ -1176,24 +1175,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       final lorisPlay = trick.where((play) => play.card.isLoris);
       if (lorisPlay.isNotEmpty) return lorisPlay.first.playerIndex;
 
-      if (engine.trumpSuit == null) {
-        final allCards = List<TrickPlay>.from(trick)
-          ..sort((a, b) =>
-              (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
-        return allCards.first.playerIndex;
-      }
-
       final firstCard = trick.first.card;
-      final ledSuit = firstCard.isLoris
-          ? loris.Suit.spades
-          : firstCard.suit;
-      final trumpPlays = trick
-          .where((play) => !play.card.isLoris &&
-              play.card.suit == engine.trumpSuit)
+      if (firstCard.isLoris) return trick.first.playerIndex;
+      final ledSuit = firstCard.suit;
+      final candidates = trick
+          .where((play) => !play.card.isLoris && play.card.suit == ledSuit)
           .toList();
-      final candidates = trumpPlays.isNotEmpty
-          ? trumpPlays
-          : trick.where((play) => play.card.suit == ledSuit).toList();
 
       candidates.sort((a, b) =>
           (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
@@ -1801,8 +1788,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final bidding = _biddingController;
     final currentPlayer = round?.nextPlayerIndex;
     final plays = round?.trickEngine.plays ?? const <TrickPlay>[];
-    final legalHumanCards = _started && !_finished && currentPlayer == 0
-        ? round!.trickEngine.legalCardsFor(0)
+    // The final card completes the trick before its collection animation.
+    // Do not query legal moves during that completed-trick window.
+    final legalHumanCards = _started && !_finished && currentPlayer == 0 &&
+            !round!.trickEngine.isComplete && !_trickCompletionInProgress
+        ? round.trickEngine.legalCardsFor(0)
         : const <loris.Card>[];
 
     // Bidding remains scrollable; the live match itself is a fixed,
@@ -2501,6 +2491,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // PLAYING TABLE
   // ----------------------------------------------------------
 
+  bool _isFemalePlayerName(String name) => const {
+        'Jannat', 'Ayesha', 'Shima', 'Roma', 'Mitu', 'Tania',
+        'Nusrat', 'Mim', 'Sumi', 'Rima', 'Nila', 'Faria',
+        'Sumaiya', 'Tisha', 'Anika', 'Maliha',
+      }.contains(name);
+
   void _showLastTrick() {
     if (_lastTrickPlays.isEmpty) return;
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
@@ -2565,34 +2561,34 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ),
                 // Flat screen play surface; no 3D avatar renderer.
                 if (dealerDrawCards != null && dealerDrawVisibleCount > 0)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: TweenAnimationBuilder<double>(
-                        key: ValueKey('dealer-reveal-$dealerDrawVisibleCount'),
-                        tween: Tween(begin: 0, end: 1),
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, progress, child) {
-                          final drawingPlayer =
-                              (dealerDrawStartPlayer + dealerDrawVisibleCount - 1) %
-                                  widget.playerCount;
-                          return Align(
-                            alignment: Alignment.lerp(
-                              Alignment.center,
-                              seatAlignments[drawingPlayer],
-                              progress,
-                            )!,
-                            child: child,
-                          );
-                        },
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          const Text('JACK DRAW', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 5),
-                          _buildCard(dealerDrawCards[dealerDrawVisibleCount - 1], compact: true),
-                        ]),
+                  for (var revealIndex = 0; revealIndex < dealerDrawVisibleCount; revealIndex++)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: TweenAnimationBuilder<double>(
+                          key: ValueKey('dealer-reveal-$revealIndex'),
+                          tween: Tween(begin: 0, end: 1),
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, progress, child) {
+                            final drawingPlayer =
+                                (dealerDrawStartPlayer + revealIndex) % widget.playerCount;
+                            return Align(
+                              alignment: Alignment.lerp(
+                                Alignment.center,
+                                seatAlignments[drawingPlayer],
+                                progress,
+                              )!,
+                              child: child,
+                            );
+                          },
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            const Text('JACK DRAW', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 5),
+                            _buildCard(dealerDrawCards[revealIndex], compact: true),
+                          ]),
+                        ),
                       ),
                     ),
-                  ),
                 if (_isDealingCards && _dealingToPlayerIndex != null)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -2725,7 +2721,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              _AnimePortrait(seed: index, size: 42),
+                              _AnimePortrait(
+                                seed: index,
+                                isFemale: _isFemalePlayerName(_playerNames[index]),
+                                size: 42,
+                              ),
                               if (_bidThinkingPlayer == index)
                                 Positioned(
                                   right: -34,
@@ -2752,9 +2752,28 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                           ),
-                          Text(
-                            'TEAM ${index.isEven ? "A" : "B"}',
-                            style: const TextStyle(color: Color(0xFFFFD978), fontSize: 9, fontWeight: FontWeight.bold),
+                          Container(
+                            margin: const EdgeInsets.only(top: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: index.isEven
+                                    ? const [Color(0xFFFFD978), Color(0xFFB77A2D)]
+                                    : const [Color(0xFF75C8FF), Color(0xFF245A9A)],
+                              ),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.white.withValues(alpha: .65), width: .6),
+                              boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 3, offset: Offset(0, 1))],
+                            ),
+                            child: Text(
+                              'TEAM ${index.isEven ? "A" : "B"}',
+                              style: TextStyle(
+                                color: index.isEven ? const Color(0xFF40240C) : Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: .6,
+                              ),
+                            ),
                           ),
                           if (_dealerIndex == index)
                             const Padding(
