@@ -2644,7 +2644,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       final winnerAlignment = seatAlignments[_collectingTrickWinner ?? play.playerIndex];
                       final collecting = _collectingTrickWinner != null;
                       final targetX = (winnerAlignment.x + 1) * .5 * constraints.maxWidth - cardWidth / 2;
-                      final targetY = (winnerAlignment.y + 1) * .5 * tableHeight - cardHeight / 2;
+                      // Bias the collection target toward the player's name below the portrait.
+                      final targetY = (winnerAlignment.y + 1) * .5 * tableHeight - cardHeight / 2 + 18;
                       return AnimatedPositioned(
                         duration: const Duration(milliseconds: 900),
                         curve: Curves.easeInOutCubic,
