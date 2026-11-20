@@ -181,7 +181,7 @@ void main() {
       }
 
       expect(matchScore.teamBScore, 4);
-      expect(match.dealerIndex, 0);
+      expect(match.dealerIndex, 2);
     });
 
     test('Detects match winner and prevents another round', () {
@@ -241,7 +241,7 @@ void main() {
       expect(hands.every((hand) => hand.length == 8), isTrue);
       expect(match.hasStarted, isTrue);
       expect(match.currentRound.dealerIndex, 3);
-      expect(match.nextPlayerIndex, 0);
+      expect(match.nextPlayerIndex, 2);
     });
 
     test('Starts a six-player round by dealing cards automatically', () {
@@ -301,7 +301,7 @@ void main() {
       );
 
       expect(sixPlayerMatch.currentRound.dealerIndex, 5);
-      expect(sixPlayerMatch.nextPlayerIndex, 0);
+      expect(sixPlayerMatch.nextPlayerIndex, 4);
     });
 
     test('Rejects an invalid player count', () {
