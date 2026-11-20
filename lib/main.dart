@@ -2912,14 +2912,42 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             ),
                           ),
                           if (displayedTrumpBidderIndex == index)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 2),
-                              child: Text('BIDDER', style: TextStyle(color: LorisApp.gold, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .5)),
+                            Container(
+                              margin: const EdgeInsets.only(top: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF087F8C), Color(0xFF064B59)],
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFF8DF3F0), width: 1.2),
+                                boxShadow: const [
+                                  BoxShadow(color: Color(0x9900D9D0), blurRadius: 7, spreadRadius: 1),
+                                ],
+                              ),
+                              child: const Text(
+                                '★ BIDDER',
+                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .7),
+                              ),
                             ),
                           if (_dealerIndex == index)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 2),
-                              child: Text('DEALER', style: TextStyle(color: LorisApp.gold, fontSize: 9, fontWeight: FontWeight.w900)),
+                            Container(
+                              margin: const EdgeInsets.only(top: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFFFC857), Color(0xFFB86B13)],
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFFFE6A1), width: 1.2),
+                                boxShadow: const [
+                                  BoxShadow(color: Color(0x99FFB52E), blurRadius: 7, spreadRadius: 1),
+                                ],
+                              ),
+                              child: const Text(
+                                '♛ DEALER',
+                                style: TextStyle(color: Color(0xFF40220A), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .6),
+                              ),
                             ),
                           if (currentPlayer == index)
                             const Padding(
