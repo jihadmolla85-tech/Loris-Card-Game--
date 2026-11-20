@@ -955,8 +955,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // ----------------------------------------------------------
 
   Future<void> _chooseHumanTrump(int bidder) async {
+    final bidding = _biddingController;
     final hands = _hands;
-    if (hands == null) return;
+    // Trump selection is available only after every player has submitted
+    // a bid/pass, and only to the final auction winner.
+    if (bidding == null ||
+        !bidding.isComplete ||
+        bidding.highestBidder != bidder ||
+        hands == null) return;
     final choices = <MapEntry<int, loris.Card>>[];
 
     // One symbol-only option for each suit in the bidder's own eight cards.
@@ -996,9 +1002,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _chooseAiTrump(int bidder) async {
+    final bidding = _biddingController;
     final hands = _hands;
 
-    if (hands == null) return;
+    // AI follows the same completed-auction gate as the human bidder.
+    if (bidding == null ||
+        !bidding.isComplete ||
+        bidding.highestBidder != bidder ||
+        hands == null) return;
 
     final joker = hands[bidder].where((card) => card.isLoris).firstOrNull;
     if (joker != null) {
