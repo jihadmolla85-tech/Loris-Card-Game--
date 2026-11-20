@@ -3193,8 +3193,8 @@ class _PortraitAtlasPainter extends CustomPainter {
     final row = (portraitIndex ~/ columns) % rows;
     final cropSize = cellWidth < cellHeight ? cellWidth : cellHeight;
     final source = Rect.fromLTWH(
-      column * cellWidth,
-      row * cellHeight + (cellHeight - cropSize) * .08,
+      column * cellWidth + (cellWidth - cropSize) * .5,
+      row * cellHeight + (cellHeight - cropSize) * .15,
       cropSize,
       cropSize,
     );
