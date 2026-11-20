@@ -237,16 +237,18 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 ),
                 _RuleSection(
                   title: 'SCORING',
-                  body: 'A successful bid scores exactly the bid amount, even '
-                      'if the team wins more tricks than it bid. If the team '
-                      'wins fewer tricks than its bid, the opposing team gets '
-                      'twice the bid amount.',
+                  body: 'A successful bid from 4 to 7 scores exactly the bid amount, even '
+                      'if the team wins more tricks than it bid. A successful '
+                      'special 8 bid (all 8 tricks) scores +16. If any bid fails, '
+                      'the opposing team gets twice the bid amount.',
                 ),
                 _RuleSection(
                   title: 'CALL 16',
                   body: 'A CALL 16 opportunity appears immediately when the '
                       'bidding team reaches its bid and wins that trick, but only '
-                      'if the opponents have won zero tricks in the round. The '
+                      'if the opponents have won zero tricks and the bidding '
+                      'team score is below 16. A team at 16 or more points cannot '
+                      'CALL 16. The '
                       'last-trick winner on the bidding team may CALL 16 or PASS. '
                       'The choice is available only once per round. After CALL 16, '
                       'the team must win every remaining trick; losing even one '
