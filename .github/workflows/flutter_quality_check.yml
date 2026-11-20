@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feature/run-379-requested-updates
   pull_request:
     branches:
       - main
