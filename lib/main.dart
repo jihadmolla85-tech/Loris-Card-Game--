@@ -938,7 +938,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Future<void> _validateAndContinue({
     required bool everyonePassed,
     required bool bidderHasTrump,
-    loris.Suit? trump,
   }) async {
     final bidding = _biddingController;
 
@@ -971,7 +970,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         return;
       }
 
-      final selectedTrump = trump;
       final selectedBid = bidding.highestBid;
       final selectedBidder = bidding.highestBidder;
 
@@ -983,7 +981,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       }
 
       _matchController.startRoundWithCurrentDeal(
-        trumpSuit: selectedTrump,
+        trumpSuit: null,
         biddingTeam: selectedBidder % 2,
         bidAmount: selectedBid,
       );
@@ -1664,7 +1662,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     dealerDrawActive: _dealerDrawActive,
                   ),
                 ),
-
+                if (!_isDealingCards && bidding != null &&
+                    bidding.isHumanTurn && !bidding.isComplete)
                   _buildBiddingControls(bidding),
                 SizedBox(
                   height: constraints.maxHeight < 650 ? 104 : 118,
