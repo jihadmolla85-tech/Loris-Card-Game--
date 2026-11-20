@@ -2647,6 +2647,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       // Bias the collection target toward the player's name below the portrait.
                       final targetY = (winnerAlignment.y + 1) * .5 * tableHeight - cardHeight / 2 + 18;
                       return AnimatedPositioned(
+                        key: ValueKey('trick-card-${play.playerIndex}'),
                         duration: const Duration(milliseconds: 900),
                         curve: Curves.easeInOutCubic,
                         left: (collecting ? targetX : cardX).clamp(0.0, constraints.maxWidth - cardWidth),
