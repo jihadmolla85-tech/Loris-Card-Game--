@@ -1535,6 +1535,50 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
+  bool get _humanCanSkipRemainingTricks {
+    if (!_started || _finished) return false;
+    return _matchController.currentRound.canSkipRemainingTricks;
+  }
+
+  Future<void> _skipRemainingTricks() async {
+    if (!_humanCanSkipRemainingTricks || _busy) return;
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    try {
+      _matchController.skipRemainingTricks();
+      final score = _matchController.matchScoreEngine;
+      setState(() {
+        _finished = true;
+        _status =
+            'Round completed early. Team A: ${score.teamAScore}  '
+            'Team B: ${score.teamBScore}';
+        _winCelebration = 'BID RESULT CONFIRMED';
+      });
+      await _playSound('round_win');
+      await _safeFeedback(HapticFeedback.heavyImpact);
+      Future<void>.microtask(_autoSaveGame);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+
+    if (mounted && _finished && !_matchController.isMatchOver) {
+      Future<void>.delayed(const Duration(milliseconds: 450), () async {
+        while (mounted && _busy) {
+          await Future<void>.delayed(const Duration(milliseconds: 80));
+        }
+        if (mounted && _finished && !_matchController.isMatchOver) {
+          await _nextRound();
+        }
+      });
+    }
+  }
+
   Future<void> _pass16() async {
     if (!_humanCanCall16 || _busy) return;
 
@@ -1602,28 +1646,51 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         random: _random,
       );
 
+      await _playSound('shuffle');
+      final roundDealer = _matchController.dealerIndex;
       final newHands = _dealController.deal(
         deck: deck,
         playerCount: widget.playerCount,
-        dealerIndex: _matchController.dealerIndex,
+        dealerIndex: roundDealer,
       );
 
       setState(() {
         _hands = newHands;
-        _dealerIndex = _matchController.dealerIndex;
-
+        _dealerIndex = roundDealer;
         _biddingController = null;
-
         _started = false;
         _finished = false;
-
         _trumpSuit = null;
         _trumpCard = null;
         _trumpBidderIndex = null;
-
         _trickNumber = 0;
+        _isDealingCards = true;
+        _dealtCardCount = 0;
+        _dealingToPlayerIndex = null;
+        _dealingPacket = 0;
+        _status = '${_playerNames[roundDealer]} is dealing two packets of four cards';
+      });
 
-        _status = 'Next round dealt. Bidding begins.';
+      // Repeat the first-round animation: two packets of four cards,
+      // travelling one player at a time in the current play direction.
+      for (var packet = 0; packet < 2; packet++) {
+        for (var offset = 0; offset < widget.playerCount; offset++) {
+          final receivingPlayer =
+              (roundDealer - 1 - offset + widget.playerCount) % widget.playerCount;
+          if (!mounted) return;
+          setState(() {
+            _dealingToPlayerIndex = receivingPlayer;
+            _dealingPacket = packet + 1;
+            _dealtCardCount += 4;
+          });
+          await Future<void>.delayed(const Duration(milliseconds: 500));
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _dealingToPlayerIndex = null;
+        _isDealingCards = false;
+        _status = 'Cards dealt. Bidding begins.';
       });
 
       _startBidding();
@@ -1938,6 +2005,24 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         ),
                       ),
                     ],
+                  ),
+                ),
+              if (_humanCanSkipRemainingTricks)
+                SizedBox(
+                  height: 42,
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _busy ? null : _skipRemainingTricks,
+                    icon: const Icon(Icons.fast_forward_rounded, size: 18),
+                    label: const Text(
+                      'SKIP REMAINING TRICKS',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: LorisApp.gold,
+                      side: const BorderSide(color: LorisApp.gold, width: 1.5),
+                      padding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
               if (_finished)
