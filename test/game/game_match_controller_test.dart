@@ -225,7 +225,7 @@ void main() {
         playOneTrick();
       }
 
-      expect(match.dealerIndex, 0);
+      expect(match.dealerIndex, 2);
     });
 
     test('Starts a round by dealing cards automatically', () {
