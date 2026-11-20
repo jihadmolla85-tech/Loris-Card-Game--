@@ -136,7 +136,7 @@ void main() {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
-        trumpSuit: null,
+        trumpSuit: Suit.spades,
       );
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
       hands[3].removeWhere((c) => c.suit == Suit.hearts);
