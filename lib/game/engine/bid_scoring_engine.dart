@@ -42,11 +42,10 @@ class BidScoringEngine {
         ? tricksWonByBiddingTeam == 8
         : tricksWonByBiddingTeam >= bidAmount;
 
-    // A successful 8-call scores 16; other successful bids score their bid.
-    // Any failed bid awards the opponents double the bid.
-    final points = success
-        ? (bidAmount == 8 ? 16 : bidAmount)
-        : bidAmount * 2;
+    // A successful special 8 bid scores 16. Successful bids from 4 to 7
+    // score exactly the bid amount, even if more tricks are won. A failed
+    // bid awards the opposing team twice the bid amount.
+    final points = success ? (bidAmount == 8 ? 16 : bidAmount) : bidAmount * 2;
 
     final biddingPoints = success ? points : -points;
 

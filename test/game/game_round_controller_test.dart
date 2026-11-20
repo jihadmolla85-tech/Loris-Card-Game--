@@ -65,6 +65,29 @@ void main() {
       expect(controller.nextPlayerIndex, 0);
     });
 
+    test('Blocks 16 Call when bidding team already has 16 points', () {
+      matchScore.teamAScore = 16;
+      controller = GameRoundController(
+        hands: createHands(),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        playOneTrick(resolve16Decision: false);
+      }
+
+      expect(controller.sixteenCallEngine!.canCall, isFalse);
+      expect(
+        () => controller.call16(callerPlayerIndex: 0),
+        throwsStateError,
+      );
+    });
+
     test('Scores the round after eight tricks', () {
       for (var i = 0; i < 8; i++) {
         playOneTrick();
@@ -166,6 +189,27 @@ void main() {
         controller.getNextDealerIndex(isRedeal: true),
         3,
       );
+    });
+
+    test('Successful 8 bid scores +16 when bidding team wins all 8 tricks', () {
+      controller = GameRoundController(
+        hands: createHands(),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 8,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(controller.isRoundEnded, isTrue);
+      expect(controller.isRoundScored, isTrue);
+      expect(matchScore.teamAScore, 16);
+      expect(matchScore.teamBScore, -16);
     });
 
     test('Handles an 8 bid without enabling 16 Call', () {
