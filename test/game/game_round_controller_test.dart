@@ -61,8 +61,8 @@ void main() {
       }
     }
 
-    test('Starts with the dealer right player', () {
-      expect(controller.nextPlayerIndex, 0);
+    test('Starts with the dealer left player', () {
+      expect(controller.nextPlayerIndex, 2);
     });
 
     test('Blocks 16 Call when bidding team already has 16 points', () {
