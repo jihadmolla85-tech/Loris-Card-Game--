@@ -88,6 +88,62 @@ void main() {
       );
     });
 
+    test('Allows skipping after the bid target is reached and 16 is passed', () {
+      for (var i = 0; i < 4; i++) {
+        playOneTrick();
+      }
+
+      expect(controller.sixteenCallEngine!.status, SixteenCallStatus.passed);
+      expect(controller.canSkipRemainingTricks, isTrue);
+
+      controller.skipRemainingTricks();
+
+      expect(controller.isRoundEnded, isTrue);
+      expect(controller.isRoundScored, isTrue);
+      expect(matchScore.teamAScore, 4);
+      expect(matchScore.teamBScore, -4);
+    });
+
+    test('Does not allow skipping while 16 call is still available', () {
+      for (var i = 0; i < 3; i++) {
+        playOneTrick();
+      }
+      playOneTrick(resolve16Decision: false);
+
+      expect(controller.sixteenCallEngine!.canCall, isTrue);
+      expect(controller.canSkipRemainingTricks, isFalse);
+      expect(
+        controller.skipRemainingTricks,
+        throwsStateError,
+      );
+    });
+
+    test('Allows skipping an 8 bid after the first lost trick', () {
+      final hands = List.generate(4, (player) {
+        return List.generate(8, (i) => Card.normal(
+          suit: Suit.clubs,
+          rank: (player == 1 || player == 3) ? 14 - i : 7 + i,
+        ));
+      });
+      controller = GameRoundController(
+        hands: hands,
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 8,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+
+      playOneTrick();
+
+      expect(controller.canSkipRemainingTricks, isTrue);
+      controller.skipRemainingTricks();
+      expect(controller.isRoundEnded, isTrue);
+      expect(matchScore.teamAScore, -16);
+      expect(matchScore.teamBScore, 16);
+    });
+
     test('Scores the round after eight tricks', () {
       for (var i = 0; i < 8; i++) {
         playOneTrick();
