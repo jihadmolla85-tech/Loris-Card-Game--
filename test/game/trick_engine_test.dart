@@ -132,11 +132,11 @@ void main() {
       expect(game.winnerIndex, 2);
     });
 
-    test('Joker mode compares the rank of every suit', () {
+    test('highest led-suit card wins even when a trump suit was supplied', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
-        trumpSuit: null,
+        trumpSuit: Suit.spades,
       );
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
       hands[3].removeWhere((c) => c.suit == Suit.hearts);
@@ -147,7 +147,7 @@ void main() {
       game.playCard(3, card(Suit.diamonds, 13));
       game.playCard(0, card(Suit.clubs, 10));
 
-      expect(game.winnerIndex, 3);
+      expect(game.winnerIndex, 1);
     });
 
     test('Joker beats every card in Joker mode', () {
@@ -167,7 +167,7 @@ void main() {
       expect(game.winnerIndex, 2);
     });
 
-    test('highest trump wins when trump is played', () {
+    test('a non-led suit cannot beat the highest led-suit card', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -187,7 +187,7 @@ void main() {
       game.playCard(3, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.spades, 8));
 
-      expect(game.winnerIndex, 2);
+      expect(game.winnerIndex, 3);
     });
 
     test('highest led suit wins without trump', () {
@@ -205,7 +205,7 @@ void main() {
       expect(game.winnerIndex, 2);
     });
 
-    test('LORIS first means Spades is led', () {
+    test('LORIS first does not establish a led suit', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -217,10 +217,10 @@ void main() {
 
       game.playCard(1, loris);
 
-      expect(game.ledSuit, Suit.spades);
+      expect(game.ledSuit, isNull);
     });
 
-    test('Spades must be followed after first LORIS', () {
+    test('any suit may be played after LORIS leads', () {
       final game = TrickEngine(
         hands: hands,
         dealerIndex: 0,
@@ -232,10 +232,8 @@ void main() {
 
       game.playCard(1, loris);
 
-      expect(
-        () => game.playCard(2, card(Suit.hearts, 14)),
-        throwsArgumentError,
-      );
+      game.playCard(2, card(Suit.hearts, 14));
+      expect(game.plays.length, 2);
     });
 
     test('LORIS wins even when it leads the trick', () {

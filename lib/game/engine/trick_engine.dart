@@ -94,8 +94,9 @@ class TrickEngine {
 
     final firstCard = plays.first.card;
 
-    // In a suit-trump round, a leading LORIS follows the legacy Spades lead.
-    return firstCard.isLoris ? Suit.spades : firstCard.suit;
+    // LORIS is a special unbeatable card, not a suit. If it leads,
+    // there is no suit to follow for this trick.
+    return firstCard.isLoris ? null : firstCard.suit;
   }
 
   /// Returns every card the player is allowed to play on this turn.
@@ -126,13 +127,11 @@ class TrickEngine {
         .toList();
 
     if (ledSuitCards.isNotEmpty) {
-      // Following the led suit remains mandatory, but players are never
-      // forced to overtrump: any card of the led suit (or LORIS) is legal.
+      // Following the led suit is mandatory; LORIS remains playable at any time.
       return List.unmodifiable([...ledSuitCards, ...lorisCards]);
     }
 
     // If void in the led suit, the player may discard any card.
-    // Trumping and overtrumping are optional in every suit-trump round.
     return List.unmodifiable(hand);
   }
 
@@ -158,20 +157,15 @@ class TrickEngine {
       return lorisPlay.playerIndex;
     }
 
-    if (trumpSuit == null) {
-      // Joker mode: the Joker itself is unbeatable; otherwise compare
-      // every card played, regardless of suit.
+    // There is no trump suit in LORIS. Once the special LORIS card is
+    // accounted for above, the highest card of the led suit wins.
+    final currentLedSuit = ledSuit;
+    if (currentLedSuit == null) {
       return _highestRankPlay(plays).playerIndex;
     }
-
-    final currentLedSuit = ledSuit;
-    final trumpPlays =
-        plays.where((p) => p.card.suit == trumpSuit).toList();
-    if (trumpPlays.isNotEmpty) {
-      return _highestRankPlay(trumpPlays).playerIndex;
-    }
-    final ledSuitPlays =
-        plays.where((p) => p.card.suit == currentLedSuit).toList();
+    final ledSuitPlays = plays
+        .where((p) => !p.card.isLoris && p.card.suit == currentLedSuit)
+        .toList();
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }
 
