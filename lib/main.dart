@@ -2590,7 +2590,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                       : 'BID • ${_playerNames[currentPlayer]}'
                                   : currentPlayer == null
                                       ? 'ROUND COMPLETE'
-                                      : 'TURN • ${_playerNames[currentPlayer!]}',
+                                      : 'TURN • ${_playerNames[currentPlayer]}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: .35),
