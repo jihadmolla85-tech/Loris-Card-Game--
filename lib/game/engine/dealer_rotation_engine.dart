@@ -26,7 +26,7 @@ class DealerRotationEngine {
       return currentDealerIndex;
     }
 
-    // New round: move to the player on the dealer's right.
-    return (currentDealerIndex + 1) % playerCount;
+    // New round: rotate in the same counterclockwise direction as play.
+    return (currentDealerIndex - 1 + playerCount) % playerCount;
   }
 }
