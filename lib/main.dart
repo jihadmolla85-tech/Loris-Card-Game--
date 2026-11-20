@@ -2564,58 +2564,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 ),
               ),
                 // Flat screen play surface; no 3D avatar renderer.
-                if (dealerDrawCards != null && dealerDrawVisibleCount > 0)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          for (var revealIndex = 0;
-                              revealIndex < dealerDrawVisibleCount;
-                              revealIndex++)
-                            TweenAnimationBuilder<double>(
-                              key: ValueKey('dealer-reveal-card-$revealIndex'),
-                              tween: Tween(begin: 0, end: 1),
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeOutCubic,
-                              builder: (context, progress, child) {
-                                final drawingPlayer =
-                                    (dealerDrawStartPlayer + revealIndex) %
-                                        widget.playerCount;
-                                return Align(
-                                  alignment: Alignment.lerp(
-                                    Alignment.center,
-                                    seatAlignments[drawingPlayer],
-                                    progress,
-                                  )!,
-                                  child: child,
-                                );
-                              },
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (revealIndex == dealerDrawVisibleCount - 1)
-                                    const Text(
-                                      'JACK DRAW',
-                                      style: TextStyle(
-                                        color: Color(0xFFFFE39A),
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  if (revealIndex == dealerDrawVisibleCount - 1)
-                                    const SizedBox(height: 5),
-                                  _buildCard(
-                                    dealerDrawCards[revealIndex],
-                                    compact: true,
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
                 if (_isDealingCards && _dealingToPlayerIndex != null)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -2853,6 +2801,65 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             ),
                           if (_collectingTrickWinner == index)
                             const Text('TRICK WON', style: TextStyle(color: Color(0xFFFFE7A0), fontSize: 9, fontWeight: FontWeight.w900)),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (dealerDrawCards != null && dealerDrawVisibleCount > 0)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          for (var revealIndex = 0;
+                              revealIndex < dealerDrawVisibleCount;
+                              revealIndex++)
+                            TweenAnimationBuilder<double>(
+                              key: ValueKey('dealer-reveal-card-$revealIndex'),
+                              tween: Tween(begin: 0, end: 1),
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, progress, child) {
+                                final drawingPlayer =
+                                    (dealerDrawStartPlayer + revealIndex) %
+                                        widget.playerCount;
+                                final seat = seatAlignments[drawingPlayer];
+                                // Stop just inside the player's panel so the
+                                // revealed card is visibly in front of its banner.
+                                final revealTarget = Alignment(
+                                  seat.x * .78,
+                                  seat.y * .78,
+                                );
+                                return Align(
+                                  alignment: Alignment.lerp(
+                                    Alignment.center,
+                                    revealTarget,
+                                    progress,
+                                  )!,
+                                  child: child,
+                                );
+                              },
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (revealIndex == dealerDrawVisibleCount - 1)
+                                    const Text(
+                                      'JACK DRAW',
+                                      style: TextStyle(
+                                        color: Color(0xFFFFE39A),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  if (revealIndex == dealerDrawVisibleCount - 1)
+                                    const SizedBox(height: 5),
+                                  _buildCard(
+                                    dealerDrawCards[revealIndex],
+                                    compact: true,
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
