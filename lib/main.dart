@@ -2768,23 +2768,53 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                                 ),
                               ),
-                              if (displayedTrumpBidderIndex == index) ...[
-                                const SizedBox(width: 4),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFFD978),
-                                    borderRadius: BorderRadius.circular(5),
-                                    border: Border.all(color: const Color(0xFFFFF1C2), width: .7),
-                                  ),
-                                  child: Text(
-                                    _trumpSuit == null ? 'LORIS' : '${_suitSymbol(_trumpSuit)} ${_suitName(_trumpSuit!)}',
-                                    style: const TextStyle(color: Color(0xFF4A1720), fontSize: 7, fontWeight: FontWeight.w900),
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
+                          if (displayedTrumpBidderIndex == index)
+                            Container(
+                              width: 42,
+                              height: 54,
+                              margin: const EdgeInsets.only(top: 4, bottom: 3),
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [Color(0xFFFFF8E8), Color(0xFFE8D9B8)],
+                                ),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: LorisApp.gold, width: 1.5),
+                                boxShadow: const [
+                                  BoxShadow(color: Colors.black54, blurRadius: 5, offset: Offset(1, 2)),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text('TRUMP', style: TextStyle(color: Color(0xFF5B351F), fontSize: 6, fontWeight: FontWeight.w900, letterSpacing: .5)),
+                                  Expanded(
+                                    child: Center(
+                                      child: _trumpSuit != null
+                                          ? Text(
+                                              _suitSymbol(_trumpSuit),
+                                              style: TextStyle(
+                                                color: _isRedSuit(_trumpSuit) ? const Color(0xFFB51F32) : const Color(0xFF17202B),
+                                                fontSize: 28,
+                                                fontWeight: FontWeight.w900,
+                                              ),
+                                            )
+                                          : const _LorisJokerArt(width: 25, height: 31),
+                                    ),
+                                  ),
+                                  Text(
+                                    _trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!).toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.clip,
+                                    style: const TextStyle(color: Color(0xFF5B351F), fontSize: 5.5, fontWeight: FontWeight.w900),
+                                  ),
+                                ],
+                              ),
+                            ),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -3067,43 +3097,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                if (_trumpSuit != null || _trumpCard?.isLoris == true)
-                  Positioned(
-                    right: 10,
-                    top: tableHeight * .34,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-                        const SizedBox(height: 3),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xEE17243B),
-                            borderRadius: BorderRadius.circular(11),
-                            border: Border.all(color: LorisApp.gold, width: 1.5),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(1, 3)),
-                            ],
-                          ),
-                          child: _trumpSuit != null
-                              ? Text(
-                                  _suitSymbol(_trumpSuit),
-                                  style: TextStyle(
-                                    color: _isRedSuit(_trumpSuit)
-                                        ? const Color(0xFFFF6575)
-                                        : Colors.white,
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                )
-                              : const _LorisJokerArt(width: 30, height: 36),
-                        ),
-                      ],
                     ),
                   ),
               ],
