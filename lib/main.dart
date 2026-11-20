@@ -3142,29 +3142,49 @@ class _PortraitAtlasPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // The supplied sheet is a 6-column by 4-row portrait atlas.
-    // Derive cell dimensions from the decoded image instead of assuming
-    // 40px cells (which cropped blank margins on the original sheet).
-    const columns = 6;
-    const rows = 4;
-    final cellWidth = image.width / columns;
-    final cellHeight = image.height / rows;
-    // The supplied 24-character sheet contains four female characters
-    // (Wonder Woman, Spider-Gwen, Gamora and Mystique). Keep them assigned
-    // only to female player names; male names use the remaining portraits.
+    // Hand-cropped source bounds for each character in the supplied
+    // 1536px collage. Each square focuses on the face/upper body, rather
+    // than slicing the collage into equal-width cells that cut characters.
+    const portraitBounds = <Rect>[
+      Rect.fromLTWH(32, 24, 301, 301),
+      Rect.fromLTWH(354, 23, 179, 179),
+      Rect.fromLTWH(564, 37, 224, 224),
+      Rect.fromLTWH(798, 30, 228, 228),
+      Rect.fromLTWH(1071, 25, 163, 163),
+      Rect.fromLTWH(1264, 38, 266, 266),
+      Rect.fromLTWH(3, 444, 293, 293),
+      Rect.fromLTWH(303, 454, 204, 204),
+      Rect.fromLTWH(508, 448, 307, 307),
+      Rect.fromLTWH(824, 442, 190, 190),
+      Rect.fromLTWH(1047, 440, 214, 214),
+      Rect.fromLTWH(1277, 458, 236, 236),
+      Rect.fromLTWH(48, 826, 268, 268),
+      Rect.fromLTWH(356, 799, 252, 252),
+      Rect.fromLTWH(607, 800, 221, 221),
+      Rect.fromLTWH(842, 797, 259, 259),
+      Rect.fromLTWH(1133, 811, 187, 187),
+      Rect.fromLTWH(1347, 812, 185, 185),
+      Rect.fromLTWH(8, 1200, 287, 287),
+      Rect.fromLTWH(303, 1213, 234, 234),
+      Rect.fromLTWH(546, 1216, 283, 283),
+      Rect.fromLTWH(846, 1208, 146, 146),
+      Rect.fromLTWH(1017, 1214, 226, 226),
+      Rect.fromLTWH(1261, 1214, 213, 213),
+    ];
+    // Four female characters: Wonder Woman, Spider-Gwen, Gamora, Mystique.
     const femalePortraits = [10, 17, 20, 21];
     const malePortraits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 18, 19, 22, 23];
     final portrait = isFemale
         ? femalePortraits[portraitIndex % femalePortraits.length]
         : malePortraits[portraitIndex % malePortraits.length];
-    final column = portrait % columns;
-    final row = (portrait ~/ columns) % rows;
-    final cropSize = cellWidth < cellHeight ? cellWidth : cellHeight;
+    final bounds = portraitBounds[portrait];
+    final scaleX = image.width / 1536.0;
+    final scaleY = image.height / 1536.0;
     final source = Rect.fromLTWH(
-      column * cellWidth,
-      row * cellHeight + (cellHeight - cropSize) * .08,
-      cropSize,
-      cropSize,
+      bounds.left * scaleX,
+      bounds.top * scaleY,
+      bounds.width * scaleX,
+      bounds.height * scaleY,
     );
     canvas.drawImageRect(
       image,
