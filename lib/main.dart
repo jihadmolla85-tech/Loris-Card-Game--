@@ -217,7 +217,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                       'is replaced by the special LORIS card.',
                 ),
                 _RuleSection(
-                  title: 'BIDDING & TRUMP',
+                  title: 'BIDDING & NO-TRUMP PLAY',
                   body: 'Bidding starts with the player to the dealer’s right. '
                       'Players may pass. A bid must be higher than the current '
                       'highest bid. No player selects a trump suit. The LORIS '
