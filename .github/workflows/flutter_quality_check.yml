@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - ci/run-379-validation
   workflow_dispatch:
 
 permissions:
