@@ -231,8 +231,9 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   body: 'You must follow the suit led if you have a card of that suit. '
                       'If you are void in the led suit, you may play any card. '
                       'Trumping and overtrumping are optional. The LORIS card '
-                      'is the Joker and beats every card. In Joker mode there is '
-                      'no trump suit; the highest rank wins across all suits.',
+                      'is the Joker and beats every card. If LORIS is selected '
+                      'as trump, no ordinary suit is trump; when LORIS is not '
+                      'played, the highest card of the led suit wins.',
                 ),
                 _RuleSection(
                   title: 'SCORING',
