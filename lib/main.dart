@@ -2447,7 +2447,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ],
             ),
           ],
-          if (_trumpSuit != null || _trumpCard?.isLoris == true)
+          if (_started && (_trumpSuit != null || _trumpCard?.isLoris == true))
             Padding(
               padding: const EdgeInsets.only(top: 5, bottom: 2),
               child: Row(
@@ -2547,8 +2547,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     int dealerDrawStartPlayer = 0,
     bool dealerDrawActive = false,
   }) {
-    final displayedTrumpBidderIndex =
-        _biddingController?.highestBidder ?? _trumpBidderIndex;
+    final displayedTrumpBidderIndex = _started ? _trumpBidderIndex : null;
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
             Alignment(0, .82),
