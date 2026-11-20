@@ -6,6 +6,7 @@ class TrumpSelectionResult {
   final Card selectedCard;
   final bool revealedToEveryone;
   final bool bidderHasTrumpSuit;
+  final bool lorisTrump;
 
   const TrumpSelectionResult({
     required this.trumpSuit,
@@ -13,6 +14,7 @@ class TrumpSelectionResult {
     required this.selectedCard,
     required this.revealedToEveryone,
     required this.bidderHasTrumpSuit,
+    this.lorisTrump = false,
   });
 }
 
@@ -51,13 +53,10 @@ class TrumpSelectionEngine {
       throw ArgumentError('Selected card is not in the owner hand.');
     }
 
-    if (selectedCard.isLoris || selectedCard.suit == null) {
-      throw ArgumentError('LORIS cannot be used to select trump.');
-    }
+    final lorisTrump = selectedCard.isLoris;
+    final trumpSuit = selectedCard.suit ?? Suit.spades;
 
-    final trumpSuit = selectedCard.suit!;
-
-    final bidderHasTrumpSuit = hands[bidderIndex].any(
+    final bidderHasTrumpSuit = !lorisTrump && hands[bidderIndex].any(
       (card) => !card.isLoris && card.suit == trumpSuit,
     );
 
@@ -67,6 +66,7 @@ class TrumpSelectionEngine {
       selectedCard: selectedCard,
       revealedToEveryone: cardOwnerIndex != bidderIndex,
       bidderHasTrumpSuit: bidderHasTrumpSuit,
+      lorisTrump: lorisTrump,
     );
   }
 }
