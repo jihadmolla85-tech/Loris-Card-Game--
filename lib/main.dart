@@ -1011,7 +1011,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     if (bidding == null ||
         !bidding.isComplete ||
         bidding.highestBidder != bidder ||
-        hands == null) return;
+        hands == null) {
+      return;
+    }
 
     final joker = hands[bidder].where((card) => card.isLoris).firstOrNull;
     if (joker != null) {
