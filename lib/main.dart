@@ -218,7 +218,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 ),
                 _RuleSection(
                   title: 'BIDDING & TRUMP',
-                  body: 'Bidding starts with the player to the dealer’s right. '
+                  body: 'Bidding starts with the player to the dealer’s left. '
                       'Players may pass. A bid must be higher than the current '
                       'highest bid. The winning bidder selects a trump suit '
                       'present in their own eight-card hand, or draw one random '
@@ -723,7 +723,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         random: _random,
       );
       _dealerFirstPlayerIndex =
-          (dealerSelection.dealerIndex - (dealerSelection.drawnCards.length - 1)) %
+          (dealerSelection.dealerIndex + (dealerSelection.drawnCards.length - 1)) %
               widget.playerCount;
       setState(() {
         _dealerDrawnCards = dealerSelection.drawnCards;
@@ -763,11 +763,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _dealtCardCount = 0;
         _status = '${_playerNames[dealerSelection.dealerIndex]} is dealing two packets of four cards';
       });
-      // Two clockwise packets of four, starting with the player left of dealer.
+      // Two counterclockwise packets of four, starting with the player before the dealer.
       for (var packet = 0; packet < 2; packet++) {
         for (var offset = 0; offset < widget.playerCount; offset++) {
           final receivingPlayer =
-              (dealerSelection.dealerIndex + 1 + offset) % widget.playerCount;
+              (dealerSelection.dealerIndex - 1 - offset + widget.playerCount) % widget.playerCount;
           if (!mounted) return;
           setState(() {
             _dealingToPlayerIndex = receivingPlayer;
@@ -2137,7 +2137,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           const SizedBox(height: 3),
           Text(
             bidding.history.isEmpty
-                ? 'Bidding begins to the dealer’s right'
+                ? 'Bidding begins to the dealer’s left'
                 : bidding.history.map((record) =>
                     '${_playerNames[record.playerIndex]}: ${record.amount ?? "PASS"}').join('   •   '),
             maxLines: 2,
