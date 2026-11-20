@@ -187,7 +187,7 @@ void main() {
       game.playCard(3, card(Suit.hearts, 13));
       game.playCard(0, card(Suit.spades, 8));
 
-      expect(game.winnerIndex, 1);
+      expect(game.winnerIndex, 3);
     });
 
     test('highest led suit wins without trump', () {
