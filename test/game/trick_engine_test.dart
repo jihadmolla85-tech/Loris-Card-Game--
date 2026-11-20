@@ -372,7 +372,7 @@ void main() {
       hands[1].removeWhere((c) => c.suit == Suit.hearts);
       hands[1].add(card(Suit.spades, 8));
 
-      expect(game.legalCardsFor(3), contains(card(Suit.spades, 8)));
+      expect(game.legalCardsFor(1), contains(card(Suit.spades, 8)));
       game.playCard(1, card(Suit.spades, 8));
       expect(game.plays.last.card, card(Suit.spades, 8));
     });
@@ -390,7 +390,7 @@ void main() {
 
       hands[1].removeWhere((c) => c.suit == Suit.hearts);
       expect(
-        game.legalCardsFor(3).any((c) => c.suit == Suit.spades),
+        game.legalCardsFor(1).any((c) => c.suit == Suit.spades),
         isTrue,
       );
       game.playCard(1, card(Suit.spades, 13));
