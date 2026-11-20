@@ -33,7 +33,7 @@ void main() {
       for (var player = 0; player < 4; player++) {
         expect(hands[player].length, 8);
 
-        final offset = (player - 2 + 4) % 4;
+        final offset = (2 - player + 4) % 4;
 
         expect(
           hands[player],
@@ -58,7 +58,7 @@ void main() {
       expect(hands.expand((hand) => hand).length, 48);
 
       for (var player = 0; player < 6; player++) {
-        final offset = (player - 4 + 6) % 6;
+        final offset = (4 - player + 6) % 6;
 
         expect(
           hands[player],
