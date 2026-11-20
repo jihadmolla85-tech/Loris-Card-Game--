@@ -2855,7 +2855,7 @@ class _LorisLogoPainter extends CustomPainter {
     final outline = Paint()
       ..color = const Color(0xFFFFE6A0)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = (w * .018).clamp(.7, 2.2);
+      ..strokeWidth = (w * .018).clamp(.7, 2.2).toDouble();
 
     final letter = Path()
       ..moveTo(w * .15, h * .08)
