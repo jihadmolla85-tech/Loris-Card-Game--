@@ -2567,29 +2567,52 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 if (dealerDrawCards != null && dealerDrawVisibleCount > 0)
                   Positioned.fill(
                     child: IgnorePointer(
-                      child: TweenAnimationBuilder<double>(
-                        key: ValueKey('dealer-reveal-$dealerDrawVisibleCount'),
-                        tween: Tween(begin: 0, end: 1),
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, progress, child) {
-                          final drawingPlayer =
-                              (dealerDrawStartPlayer + dealerDrawVisibleCount - 1) %
-                                  widget.playerCount;
-                          return Align(
-                            alignment: Alignment.lerp(
-                              Alignment.center,
-                              seatAlignments[drawingPlayer],
-                              progress,
-                            )!,
-                            child: child,
-                          );
-                        },
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          const Text('JACK DRAW', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900)),
-                          const SizedBox(height: 5),
-                          _buildCard(dealerDrawCards[dealerDrawVisibleCount - 1], compact: true),
-                        ]),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          for (var revealIndex = 0;
+                              revealIndex < dealerDrawVisibleCount;
+                              revealIndex++)
+                            TweenAnimationBuilder<double>(
+                              key: ValueKey('dealer-reveal-card-$revealIndex'),
+                              tween: Tween(begin: 0, end: 1),
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeOutCubic,
+                              builder: (context, progress, child) {
+                                final drawingPlayer =
+                                    (dealerDrawStartPlayer + revealIndex) %
+                                        widget.playerCount;
+                                return Align(
+                                  alignment: Alignment.lerp(
+                                    Alignment.center,
+                                    seatAlignments[drawingPlayer],
+                                    progress,
+                                  )!,
+                                  child: child,
+                                );
+                              },
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (revealIndex == dealerDrawVisibleCount - 1)
+                                    const Text(
+                                      'JACK DRAW',
+                                      style: TextStyle(
+                                        color: Color(0xFFFFE39A),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  if (revealIndex == dealerDrawVisibleCount - 1)
+                                    const SizedBox(height: 5),
+                                  _buildCard(
+                                    dealerDrawCards[revealIndex],
+                                    compact: true,
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -2752,9 +2775,47 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
                           ),
-                          Text(
-                            'TEAM ${index.isEven ? "A" : "B"}',
-                            style: const TextStyle(color: Color(0xFFFFD978), fontSize: 9, fontWeight: FontWeight.bold),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: index.isEven
+                                    ? const [
+                                        Color(0xFF2877D4),
+                                        Color(0xFF123D78),
+                                      ]
+                                    : const [
+                                        Color(0xFFD64B55),
+                                        Color(0xFF7C1728),
+                                      ],
+                              ),
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(
+                                color: index.isEven
+                                    ? const Color(0xFF9CCBFF)
+                                    : const Color(0xFFFFB0B6),
+                                width: .8,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black45,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              'TEAM ${index.isEven ? "A" : "B"}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: .8,
+                              ),
+                            ),
                           ),
                           if (_dealerIndex == index)
                             const Padding(
