@@ -2147,9 +2147,23 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         children: [
           Row(
             children: [
-              Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore)),
-              Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
-              Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore)),
+              Expanded(
+                child: _compactScore(
+                  'TEAM A',
+                  _matchController.matchScoreEngine.teamAScore,
+                  accent: const Color(0xFFFFC857),
+                  banner: const Color(0xFF713A19),
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: _compactScore(
+                  'TEAM B',
+                  _matchController.matchScoreEngine.teamBScore,
+                  accent: const Color(0xFFB8D9FF),
+                  banner: const Color(0xFF174B78),
+                ),
+              ),
             ],
           ),
           if (activeRound != null) ...[
@@ -2201,12 +2215,39 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _compactScore(String label, int value) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: LorisApp.gold, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
-        Text('$value', style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900)),
-      ],
+  Widget _compactScore(
+    String label,
+    int value, {
+    required Color accent,
+    required Color banner,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [banner, banner.withValues(alpha: .58)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: accent.withValues(alpha: .85), width: 1),
+        boxShadow: [
+          BoxShadow(color: banner.withValues(alpha: .35), blurRadius: 5, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.1),
+          ),
+          Text(
+            '$value',
+            style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
     );
   }
 
