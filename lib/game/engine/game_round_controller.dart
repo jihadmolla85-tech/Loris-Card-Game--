@@ -11,6 +11,7 @@ class GameRoundController {
     required List<List<Card>> hands,
     required this.dealerIndex,
     required Suit trumpSuit,
+    this.lorisTrump = false,
     required this.biddingTeam,
     required this.bidAmount,
     required this.matchScoreEngine,
@@ -59,6 +60,7 @@ class GameRoundController {
       hands: hands,
       dealerIndex: dealerIndex,
       trumpSuit: trumpSuit,
+      lorisTrump: lorisTrump,
       completedTricks: restoredCompletedTricks,
       initialPlays: initialTrickPlays,
       restoredFirstPlayerIndex: restoredFirstPlayerIndex,
@@ -95,6 +97,7 @@ class GameRoundController {
   }
 
   final int dealerIndex;
+  final bool lorisTrump;
   final int biddingTeam;
   final int bidAmount;
   final MatchScoreEngine matchScoreEngine;
