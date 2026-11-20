@@ -89,7 +89,10 @@ void main() {
         match.playCard(player, card);
       }
 
-      match.completeTrick();
+      final winner = match.completeTrick();
+      if (match.currentRound.sixteenCallEngine?.canCall == true) {
+        match.pass16(callerPlayerIndex: winner);
+      }
     }
 
     test('Starts with the initial dealer', () {
@@ -143,6 +146,26 @@ void main() {
       }
 
       expect(match.dealerIndex, 3);
+    });
+
+    test('Rotates dealer when cumulative score stays +1 or more after this round loses points', () {
+      // Team B owns dealer seat 3 and already has a positive match total.
+      // Rotation depends on the cumulative total, not this round's delta.
+      matchScore.teamBScore = 6;
+      matchScore.teamAScore = -6;
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(matchScore.teamBScore, 2);
+      expect(match.dealerIndex, 0);
     });
 
     test('Rotates dealer when dealer team reaches at least 1 point', () {

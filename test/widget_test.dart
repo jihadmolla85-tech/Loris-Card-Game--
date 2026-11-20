@@ -1,9 +1,15 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:loris_card_game/main.dart';
 
 void main() {
+  testWidgets('supplied player portrait atlas is bundled', (WidgetTester tester) async {
+    final image = await rootBundle.load('assets/images/loris_portrait_atlas.jpg');
+    expect(image.lengthInBytes, greaterThan(1000));
+  });
+
   testWidgets('audio preferences persist after reopening the app', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LorisApp());
@@ -37,7 +43,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LorisApp());
 
-    expect(find.text('LORIS'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName == 'assets/images/loris_logo.jpg',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('NEW GAME'), findsOneWidget);
     expect(find.text('RESUME GAME'), findsOneWidget);
     expect(find.text('SETTINGS'), findsOneWidget);
