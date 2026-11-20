@@ -68,6 +68,9 @@ class GameRoundController {
             playerCount: hands.length,
             biddingTeam: biddingTeam,
             bidAmount: bidAmount,
+            biddingTeamScore: biddingTeam == 0
+                ? matchScoreEngine.teamAScore
+                : matchScoreEngine.teamBScore,
           )
         : null;
 
