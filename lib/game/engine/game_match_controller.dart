@@ -137,6 +137,7 @@ class GameMatchController {
     required List<Card> deck,
     required int playerCount,
     required Suit trumpSuit,
+    bool lorisTrump = false,
     required int biddingTeam,
     required int bidAmount,
   }) {
@@ -172,6 +173,7 @@ class GameMatchController {
     startRound(
       hands: hands,
       trumpSuit: trumpSuit,
+      lorisTrump: lorisTrump,
       biddingTeam: biddingTeam,
       bidAmount: bidAmount,
     );
