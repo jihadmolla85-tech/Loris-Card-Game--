@@ -1993,7 +1993,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'YOUR HAND  •  REVIEW BEFORE BIDDING',
           style: TextStyle(
             color: LorisApp.gold,
