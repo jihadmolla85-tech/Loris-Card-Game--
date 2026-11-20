@@ -256,6 +256,51 @@ void main() {
       expect(game.winnerIndex, 1);
     });
 
+    test('LORIS led on the final trick is only its replaced Spades rank', () {
+      final finalHands = [
+        [card(Suit.spades, 8)],
+        [Card.loris(replacesRank: 7)],
+        [card(Suit.spades, 11)],
+        [card(Suit.clubs, 13)],
+      ];
+      final game = TrickEngine(
+        hands: finalHands,
+        dealerIndex: 0,
+        trumpSuit: Suit.diamonds,
+        completedTricks: 7,
+      );
+
+      game.playCard(1, finalHands[1].single);
+      game.playCard(2, finalHands[2].single);
+      game.playCard(3, finalHands[3].single);
+      game.playCard(0, finalHands[0].single);
+
+      expect(game.ledSuit, Suit.spades);
+      expect(game.winnerIndex, 2);
+    });
+
+    test('LORIS played after the first card on the final trick still wins', () {
+      final finalHands = [
+        [card(Suit.hearts, 8)],
+        [card(Suit.spades, 8)],
+        [Card.loris(replacesRank: 7)],
+        [card(Suit.clubs, 13)],
+      ];
+      final game = TrickEngine(
+        hands: finalHands,
+        dealerIndex: 0,
+        trumpSuit: Suit.diamonds,
+        completedTricks: 7,
+      );
+
+      game.playCard(1, finalHands[1].single);
+      game.playCard(2, finalHands[2].single);
+      game.playCard(3, finalHands[3].single);
+      game.playCard(0, finalHands[0].single);
+
+      expect(game.winnerIndex, 2);
+    });
+
     test('cards are removed after being played', () {
       final playedCard = card(Suit.hearts, 12);
 
