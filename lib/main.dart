@@ -20,7 +20,6 @@ import 'game/engine/redeal_validation_engine.dart';
 import 'game/engine/game_save_service.dart';
 import 'game/engine/game_state_snapshot.dart';
 import 'game/engine/bidding_round_controller.dart';
-import 'game/engine/trump_selection_engine.dart';
 import 'game/engine/trick_engine.dart';
 
 void main() {
@@ -496,8 +495,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   BiddingRoundController? _biddingController;
 
-  loris.Suit? _trumpSuit;
-  loris.Card? _trumpCard;
 
   bool _started = false;
   bool _finished = false;
@@ -516,9 +513,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   int? _dealingToPlayerIndex;
   int _dealingPacket = 0;
   int _dealtCardCount = 0;
-  bool _awaitingTrumpSelection = false;
-  int? _pendingTrumpBidder;
-  List<MapEntry<int, loris.Card>> _pendingTrumpChoices = [];
   late final AnimationController _shuffleController;
 
   String _status = 'Press START MATCH to begin.';
@@ -666,11 +660,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       _hands = _matchController.currentRound.trickEngine.hands;
 
       _dealerIndex = snapshot.dealerIndex;
-      // LORIS has no fixed trump suit; old saves are normalized to no-trump.
-      _trumpSuit = null;
-      _trumpCard = _trumpSuit == null
-          ? _hands!.expand((hand) => hand).where((card) => card.isLoris).firstOrNull
-          : null;
 
       _started = true;
       _finished = _matchController.currentRound.isRoundEnded;
@@ -814,9 +803,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       setState(() {
         _biddingController = controller;
         _started = false;
-        _trumpSuit = null;
-        _trumpCard = null;
-
+  
         _status = controller.isHumanTurn
             ? 'Your turn to bid.'
             : 'AI players are bidding.';
@@ -945,140 +932,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   // ----------------------------------------------------------
-  // TRUMP SELECTION
-  // ----------------------------------------------------------
-
-  Future<void> _chooseHumanTrump(int bidder) async {
-    final hands = _hands;
-    if (hands == null) return;
-    final choices = <MapEntry<int, loris.Card>>[];
-
-    // One symbol-only option for each suit in the bidder's own eight cards.
-    // The selected card remains internal and is never revealed in the UI.
-    for (final suit in loris.Suit.values) {
-      final heldCard = hands[bidder]
-          .where((card) => !card.isLoris && card.suit == suit)
-          .firstOrNull;
-      if (heldCard != null) choices.add(MapEntry(bidder, heldCard));
-    }
-
-    // One shared teammate option. In six-player games either partner may
-    // contribute the random card; the actual owner and face remain private.
-    final teammateIndexes = List.generate(hands.length, (index) => index)
-        .where((index) => index != bidder && index % 2 == bidder % 2)
-        .toList();
-    final firstEligibleTeammate = teammateIndexes.cast<int?>().firstWhere(
-      (index) => index != null &&
-          hands[index].any((card) => !card.isLoris),
-      orElse: () => null,
-    );
-    if (firstEligibleTeammate != null) {
-      final placeholder = hands[firstEligibleTeammate]
-          .firstWhere((card) => !card.isLoris);
-      choices.add(MapEntry(firstEligibleTeammate, placeholder));
-    }
-
-    // Joker mode is available only when the bidder personally holds LORIS.
-    final heldJoker = hands[bidder].where((card) => card.isLoris).firstOrNull;
-    if (heldJoker != null) choices.add(MapEntry(bidder, heldJoker));
-    setState(() {
-      _pendingTrumpBidder = bidder;
-      _pendingTrumpChoices = choices;
-      _awaitingTrumpSelection = true;
-      _status = 'Choose a trump suit from your hand or your teammate’s hand.';
-    });
-  }
-
-  Future<void> _chooseAiTrump(int bidder) async {
-    final hands = _hands;
-
-    if (hands == null) return;
-
-    final joker = hands[bidder].where((card) => card.isLoris).firstOrNull;
-    if (joker != null) {
-      await _applyTrump(bidder, bidder, joker);
-      return;
-    }
-
-    loris.Suit? bestSuit;
-    var bestCount = -1;
-
-    // AI selects only from the eight cards dealt to the winning bidder.
-    for (final suit in loris.Suit.values) {
-      final count = hands[bidder]
-          .where((card) => !card.isLoris && card.suit == suit)
-          .length;
-      if (count > bestCount) {
-        bestCount = count;
-        bestSuit = suit;
-      }
-    }
-
-    if (bestSuit == null || bestCount <= 0) {
-      setState(() => _error = 'AI could not select trump.');
-      return;
-    }
-
-    final selectedCard = hands[bidder].firstWhere(
-      (card) => !card.isLoris && card.suit == bestSuit,
-    );
-
-    await _applyTrump(bidder, bidder, selectedCard);
-  }
-
-  Future<void> _selectRandomTeammateTrump(int bidder) async {
-    final hands = _hands;
-    if (hands == null) return;
-    try {
-      final selection = TrumpSelectionEngine.selectRandomTeammateCard(
-        hands: hands,
-        bidderIndex: bidder,
-        random: _random,
-      );
-      await _applyTrump(bidder, selection.key, selection.value);
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Teammate trump selection failed: $e');
-    }
-  }
-
-  Future<void> _applyTrump(
-    int bidder,
-    int cardOwner,
-    loris.Card selectedCard,
-  ) async {
-    final hands = _hands;
-    final bidding = _biddingController;
-
-    if (hands == null || bidding == null) return;
-
-    try {
-      setState(() {
-        _awaitingTrumpSelection = false;
-        _pendingTrumpBidder = null;
-        _pendingTrumpChoices = [];
-      });
-      final result = TrumpSelectionEngine.select(
-        hands: hands,
-        bidderIndex: bidder,
-        highestBidderIndex: bidding.highestBidder!,
-        cardOwnerIndex: cardOwner,
-        selectedCard: selectedCard,
-      );
-
-      _trumpSuit = result.trumpSuit;
-      _trumpCard = selectedCard;
-
-      await _validateAndContinue(
-        everyonePassed: false,
-        bidderHasTrump: result.bidderHasTrumpSuit,
-        trump: result.trumpSuit,
-      );
-    } catch (e) {
-      setState(() => _error = e.toString());
-    }
-  }
-
-  // ----------------------------------------------------------
   // REDEAL VALIDATION
   // ----------------------------------------------------------
 
@@ -1109,9 +962,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (redealRequired) {
         setState(() {
           _hands = newHands;
-          _trumpSuit = null;
-          _trumpCard = null;
-          _started = false;
+                _started = false;
 
           _status = 'Redeal required. Same dealer remains.';
         });
@@ -1142,9 +993,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _finished = false;
         _trickNumber = 0;
 
-        _trumpSuit = null;
-        _trumpCard = null;
-        _status = 'Round started. LORIS is highest; otherwise highest led-suit card wins.';
+          _status = 'Round started. LORIS is highest; otherwise highest led-suit card wins.';
       });
 
       await _runAiTurns();
@@ -1573,8 +1422,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _started = false;
         _finished = false;
 
-        _trumpSuit = null;
-
+  
         _trickNumber = 0;
 
         _status = 'Next round dealt. Bidding begins.';
@@ -1593,19 +1441,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // ----------------------------------------------------------
   // HELPERS
   // ----------------------------------------------------------
-
-  String _suitName(loris.Suit suit) {
-    switch (suit) {
-      case loris.Suit.clubs:
-        return 'Clubs';
-      case loris.Suit.diamonds:
-        return 'Diamonds';
-      case loris.Suit.hearts:
-        return 'Hearts';
-      case loris.Suit.spades:
-        return 'Spades';
-    }
-  }
 
   String _suitSymbol(loris.Suit? suit) {
     switch (suit) {
@@ -1829,10 +1664,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                     dealerDrawActive: _dealerDrawActive,
                   ),
                 ),
-                if (!_isDealingCards && _awaitingTrumpSelection)
-                  _buildTrumpSelectionControls(),
-                if (!_isDealingCards && !_awaitingTrumpSelection &&
-                    bidding != null && bidding.isHumanTurn && !bidding.isComplete)
+
                   _buildBiddingControls(bidding),
                 SizedBox(
                   height: constraints.maxHeight < 650 ? 104 : 118,
@@ -2138,71 +1970,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildTrumpSelectionControls() {
-    final bidder = _pendingTrumpBidder;
-    if (bidder == null) return const SizedBox.shrink();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF4B1821),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: LorisApp.gold),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'SELECT TRUMP',
-            style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, fontSize: 12),
-          ),
-          const SizedBox(height: 5),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 6,
-            runSpacing: 5,
-            children: _pendingTrumpChoices.map((choice) {
-              final isJoker = choice.value.isLoris;
-              final suit = choice.value.suit;
-              final accent = isJoker
-                  ? LorisApp.gold
-                  : _isRedSuit(suit)
-                      ? const Color(0xFFFF6A79)
-                      : Colors.white;
-              return OutlinedButton(
-                onPressed: _busy
-                    ? null
-                    : () => choice.key == bidder
-                        ? _applyTrump(bidder, bidder, choice.value)
-                        : _selectRandomTeammateTrump(bidder),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: accent,
-                  disabledForegroundColor: Colors.white30,
-                  side: BorderSide(color: accent.withValues(alpha: .8)),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (choice.key != bidder) ...[
-                      const Icon(Icons.groups_rounded, color: LorisApp.gold, size: 24),
-                      const SizedBox(width: 6),
-                      const Flexible(child: Text('TEAMMATE’S HAND', maxLines: 2, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10))),
-                    ] else ...[
-                      if (isJoker) const _LorisJokerArt(width: 22, height: 29)
-                      else Text(_suitSymbol(suit), style: TextStyle(color: accent, fontSize: 25, fontWeight: FontWeight.w900)),
-                      const SizedBox(width: 6),
-                      Text(isJoker ? 'L' : _suitName(suit!), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
-                    ],
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
   List<loris.Card> _sortedHand(List<loris.Card> cards) {
     const suitOrder = {
       loris.Suit.clubs: 0,
@@ -2227,10 +1994,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _awaitingTrumpSelection
-              ? 'YOUR HAND  •  SELECT TRUMP FROM THESE 8 CARDS'
-              : 'YOUR HAND  •  REVIEW BEFORE BIDDING',
+        const Text(
+          'YOUR HAND  •  REVIEW BEFORE BIDDING',
           style: const TextStyle(
             color: LorisApp.gold,
             fontWeight: FontWeight.w900,
@@ -2411,23 +2176,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
               ],
             ),
           ],
-          if (_trumpSuit != null || _trumpCard?.isLoris == true)
-            Padding(
-              padding: const EdgeInsets.only(top: 5, bottom: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
-                  const SizedBox(width: 8),
-                  if (_trumpSuit != null)
-                    Text(_suitSymbol(_trumpSuit), style: TextStyle(color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF6575) : Colors.white, fontSize: 25, fontWeight: FontWeight.w900))
-                  else
-                    const _LorisJokerArt(width: 22, height: 27),
-                  const SizedBox(width: 6),
-                  Text(_trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                ],
-              ),
-            ),
           const SizedBox(height: 4),
           Row(
             children: [
@@ -2829,11 +2577,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                               : _isDealingCards
                                   ? 'DEALING  $_dealtCardCount/${widget.playerCount * 8}'
                                   : !_started
-                                      ? _awaitingTrumpSelection
-                                          ? 'CHOOSE TRUMP'
-                                          : currentPlayer == null
-                                              ? 'BIDDING'
-                                              : 'BID • ${_playerNames[currentPlayer]}'
+
                                       : currentPlayer == null
                                           ? 'ROUND COMPLETE'
                                           : 'TURN • ${_playerNames[currentPlayer]}',
@@ -2953,43 +2697,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                if (_trumpSuit != null || _trumpCard?.isLoris == true)
-                  Positioned(
-                    right: 10,
-                    top: tableHeight * .34,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-                        const SizedBox(height: 3),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xEE17243B),
-                            borderRadius: BorderRadius.circular(11),
-                            border: Border.all(color: LorisApp.gold, width: 1.5),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black45, blurRadius: 8, offset: Offset(1, 3)),
-                            ],
-                          ),
-                          child: _trumpSuit != null
-                              ? Text(
-                                  _suitSymbol(_trumpSuit),
-                                  style: TextStyle(
-                                    color: _isRedSuit(_trumpSuit)
-                                        ? const Color(0xFFFF6575)
-                                        : Colors.white,
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                )
-                              : const _LorisJokerArt(width: 30, height: 36),
-                        ),
-                      ],
                     ),
                   ),
               ],
