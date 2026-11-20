@@ -503,6 +503,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   loris.Suit? _trumpSuit;
   loris.Card? _trumpCard;
+  int? _trumpBidderIndex;
 
   bool _started = false;
   bool _finished = false;
@@ -820,6 +821,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _started = false;
         _trumpSuit = null;
         _trumpCard = null;
+        _trumpBidderIndex = null;
 
         _status = controller.isHumanTurn
             ? 'Your turn to bid.'
@@ -1071,6 +1073,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
       _trumpSuit = result.trumpSuit;
       _trumpCard = selectedCard;
+      _trumpBidderIndex = bidder;
 
       await _validateAndContinue(
         everyonePassed: false,
@@ -1115,6 +1118,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           _hands = newHands;
           _trumpSuit = null;
           _trumpCard = null;
+          _trumpBidderIndex = null;
           _started = false;
 
           _status = 'Redeal required. Same dealer remains.';
@@ -1596,6 +1600,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _finished = false;
 
         _trumpSuit = null;
+        _trumpCard = null;
+        _trumpBidderIndex = null;
 
         _trickNumber = 0;
 
@@ -2733,11 +2739,34 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             ],
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            _playerNames[index],
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _playerNames[index],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                                ),
+                              ),
+                              if (_trumpBidderIndex == index) ...[
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFD978),
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(color: const Color(0xFFFFF1C2), width: .7),
+                                  ),
+                                  child: Text(
+                                    _trumpSuit == null ? 'LORIS' : '${_suitSymbol(_trumpSuit)} ${_suitName(_trumpSuit!)}',
+                                    style: const TextStyle(color: Color(0xFF4A1720), fontSize: 7, fontWeight: FontWeight.w900),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
