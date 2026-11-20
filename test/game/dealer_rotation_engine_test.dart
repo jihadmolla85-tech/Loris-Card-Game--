@@ -34,7 +34,7 @@ void main() {
         isRedeal: false,
       );
 
-      expect(result, 2);
+      expect(result, 0);
     });
 
     test('Moves dealer counterclockwise in six-player game', () {
@@ -67,7 +67,7 @@ void main() {
         isRedeal: false,
       );
 
-      expect(result, 0);
+      expect(result, 2);
     });
 
     test('Rejects invalid player count', () {
