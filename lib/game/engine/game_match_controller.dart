@@ -249,6 +249,15 @@ class GameMatchController {
     currentRound.pass16(callerPlayerIndex: callerPlayerIndex);
   }
 
+  void skipRemainingTricks() {
+    final round = currentRound;
+    round.skipRemainingTricks();
+    if (round.isRoundEnded && !_dealerAdvanced) {
+      dealerIndex = round.getNextDealerIndex();
+      _dealerAdvanced = true;
+    }
+  }
+
   int completeTrick() {
     final round = currentRound;
     final winnerIndex = round.completeTrick();
