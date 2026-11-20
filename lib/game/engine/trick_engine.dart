@@ -127,13 +127,11 @@ class TrickEngine {
         .toList();
 
     if (ledSuitCards.isNotEmpty) {
-      // Following the led suit remains mandatory, but players are never
-      // forced to overtrump: any card of the led suit (or LORIS) is legal.
+      // Following the led suit is mandatory; LORIS remains playable at any time.
       return List.unmodifiable([...ledSuitCards, ...lorisCards]);
     }
 
     // If void in the led suit, the player may discard any card.
-    // Trumping and overtrumping are optional in every suit-trump round.
     return List.unmodifiable(hand);
   }
 
