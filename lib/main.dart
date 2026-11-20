@@ -2683,15 +2683,21 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                           end: Alignment.bottomRight,
                           colors: _collectingTrickWinner == index
                               ? const [Color(0xFFFFE7A0), Color(0xFFB77A2D), Color(0xFF63351C)]
-                              : currentPlayer == index
-                                  ? const [Color(0xFF314F70), Color(0xFF152A45)]
-                                  : const [Color(0xFF263B55), Color(0xFF0A1729)],
+                              : index.isEven
+                                  ? (currentPlayer == index
+                                      ? const [Color(0xFF2877D4), Color(0xFF123D78), Color(0xFF0B2852)]
+                                      : const [Color(0xFF205DA8), Color(0xFF123D78), Color(0xFF0A2347)])
+                                  : (currentPlayer == index
+                                      ? const [Color(0xFFD64B55), Color(0xFF7C1728), Color(0xFF4A101D)]
+                                      : const [Color(0xFFB93443), Color(0xFF7C1728), Color(0xFF430D19)]),
                         ),
                         border: Border.all(
-                          color: _collectingTrickWinner == index || currentPlayer == index
+                          color: _collectingTrickWinner == index
                               ? const Color(0xFFFFE6A0)
-                              : const Color(0xFF9B855C),
-                          width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.6 : .8,
+                              : currentPlayer == index
+                                  ? (index.isEven ? const Color(0xFFB9DCFF) : const Color(0xFFFFB9C0))
+                                  : (index.isEven ? const Color(0xFF78B7F5) : const Color(0xFFE77B86)),
+                          width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.8 : 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: 8, offset: const Offset(0, 4)),
