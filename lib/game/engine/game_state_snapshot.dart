@@ -13,6 +13,7 @@ class GameStateSnapshot {
     this.originalDeck = const [],
     this.hands = const [],
     this.trumpSuit,
+    this.lorisTrump = false,
     this.biddingTeam,
     this.bidAmount,
     this.trickPlays = const [],
@@ -43,6 +44,7 @@ class GameStateSnapshot {
   final List<List<Card>> hands;
 
   final Suit? trumpSuit;
+  final bool lorisTrump;
   final int? biddingTeam;
   final int? bidAmount;
   final List<SnapshotTrickPlay> trickPlays;
@@ -76,6 +78,7 @@ class GameStateSnapshot {
             .map((hand) => hand.map(_cardToJson).toList())
             .toList(),
         'trumpSuit': trumpSuit?.name,
+        'lorisTrump': lorisTrump,
         'biddingTeam': biddingTeam,
         'bidAmount': bidAmount,
         'trickPlays': trickPlays.map((play) => play.toJson()).toList(),
@@ -125,6 +128,7 @@ class GameStateSnapshot {
               .toList())
           .toList(),
       trumpSuit: _suitFromName(json['trumpSuit'] as String?),
+      lorisTrump: _boolValue(json, 'lorisTrump'),
       biddingTeam: json['biddingTeam'] as int?,
       bidAmount: json['bidAmount'] as int?,
       trickPlays: rawPlays
