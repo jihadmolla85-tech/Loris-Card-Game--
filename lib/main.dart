@@ -105,7 +105,7 @@ class _LorisLaunchScreenState extends State<LorisLaunchScreen> {
       body: SizedBox.expand(
         child: Image.asset(
           'assets/Splash Screen and back page of card.jpg',
-          fit: BoxFit.contain,
+          fit: BoxFit.cover,
         ),
       ),
     );
@@ -3192,7 +3192,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     };
     final assetPath = card.isLoris
         ? 'assets/Spades_Joker_Blue.png'
-        : 'assets/${card.suit!.name}_${rankName}.png';
+        : 'assets/${card.suit!.name}_$rankName.png';
 
     return Container(
       width: width,
@@ -3491,131 +3491,4 @@ class _AnimePortrait extends StatelessWidget {
       },
     );
   }
-}
-
-class _CourtCardArt extends StatelessWidget {
-  const _CourtCardArt({
-    required this.rank,
-    required this.ink,
-    required this.size,
-  });
-
-  final int rank;
-  final Color ink;
-  final Size size;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    size: size,
-    painter: _CourtCardPainter(rank, ink),
-  );
-}
-
-class _CourtCardPainter extends CustomPainter {
-  const _CourtCardPainter(this.rank, this.ink);
-
-  final int rank;
-  final Color ink;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final gold = Paint()..color = const Color(0xFFC49A45);
-    final dark = Paint()..color = const Color(0xFF29232A);
-    final face = Paint()..color = const Color(0xFFE7B995);
-    final cloth = Paint()..color = ink.withValues(alpha: .88);
-    final white = Paint()..color = const Color(0xFFFFF8E9);
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * .08, h * .04, w * .84, h * .92),
-        Radius.circular(w * .12),
-      ),
-      Paint()
-        ..color = const Color(0xFFE6D7B7)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.1,
-    );
-
-    // Mirrored court-card shoulders and clothing.
-    for (final flip in [false, true]) {
-      canvas.save();
-      if (flip) {
-        canvas.translate(w, h);
-        canvas.rotate(pi);
-      }
-      canvas.drawOval(Rect.fromLTWH(w * .13, h * .55, w * .74, h * .43), cloth);
-      canvas.drawOval(Rect.fromLTWH(w * .29, h * .22, w * .42, h * .43), face);
-      canvas.drawArc(
-        Rect.fromLTWH(w * .25, h * .13, w * .50, h * .34),
-        pi, pi, false,
-        Paint()
-          ..color = dark.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = w * .10,
-      );
-      // Eyes, nose and beard/makeup details.
-      for (final x in [w * .40, w * .60]) {
-        canvas.drawCircle(Offset(x, h * .42), w * .035, dark);
-        canvas.drawCircle(Offset(x - w * .01, h * .41), w * .012, white);
-      }
-      canvas.drawLine(
-        Offset(w * .50, h * .44),
-        Offset(w * .48, h * .53),
-        Paint()..color = const Color(0xFF9B624D)..strokeWidth = w * .025,
-      );
-      if (rank == 13) {
-        final beard = Path()
-          ..moveTo(w * .31, h * .53)
-          ..quadraticBezierTo(w * .50, h * .83, w * .69, h * .53)
-          ..lineTo(w * .61, h * .62)
-          ..lineTo(w * .50, h * .72)
-          ..lineTo(w * .39, h * .62)
-          ..close();
-        canvas.drawPath(beard, dark);
-      } else {
-        canvas.drawArc(
-          Rect.fromLTWH(w * .39, h * .53, w * .22, h * .12),
-          0, pi, false,
-          Paint()
-            ..color = const Color(0xFF9B624D)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = w * .025,
-        );
-      }
-      // Jacks wear a plume; queens and kings wear a crown.
-      final crown = Path()
-        ..moveTo(w * .28, h * .25)
-        ..lineTo(w * .32, h * .10)
-        ..lineTo(w * .43, h * .20)
-        ..lineTo(w * .50, h * .07)
-        ..lineTo(w * .57, h * .20)
-        ..lineTo(w * .68, h * .10)
-        ..lineTo(w * .72, h * .25)
-        ..close();
-      canvas.drawPath(crown, rank == 11 ? cloth : gold);
-      canvas.restore();
-    }
-
-    // Rank-specific centre ornament.
-    final emblem = rank == 11 ? 'J' : rank == 12 ? 'Q' : 'K';
-    final painter = TextPainter(
-      text: TextSpan(
-        text: emblem,
-        style: TextStyle(
-          color: ink,
-          fontSize: w * .20,
-          fontWeight: FontWeight.w900,
-          shadows: const [Shadow(color: Colors.white70, blurRadius: 1)],
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(canvas, Offset((w - painter.width) / 2, h * .76));
-  }
-
-  @override
-  bool shouldRepaint(covariant _CourtCardPainter oldDelegate) =>
-      oldDelegate.rank != rank || oldDelegate.ink != ink;
 }
