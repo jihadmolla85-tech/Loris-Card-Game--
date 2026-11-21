@@ -493,6 +493,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   ];
   // Human character portraits only; no animal or object avatars.
   late final List<String> _playerNames;
+  late final List<int> _portraitSeeds;
+  late final List<bool> _portraitGenders;
 
   late final DealController _dealController;
   late final GameMatchController _matchController;
@@ -553,6 +555,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       'YOU',
       ...shuffledNames.take(widget.playerCount - 1),
     ];
+    // Randomize portraits on each new match rather than tying them to seat numbers.
+    _portraitSeeds = List<int>.generate(
+      widget.playerCount,
+      (_) => _random.nextInt(100000),
+    );
+    _portraitGenders = List<bool>.generate(
+      widget.playerCount,
+      (_) => _random.nextBool(),
+    );
 
     _dealController = DealController(
       shuffleEngine: DeckShuffleEngine(random: _random),
@@ -2850,7 +2861,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         ],
                       ),
                       child: _AnimePortrait(
-                        seed: index,
+                        seed: _portraitSeeds[index],
+                        female: _portraitGenders[index],
                         playerName: _playerNames[index],
                         teamName: index.isEven ? 'TEAM A' : 'TEAM B',
                         isDealer: _dealerIndex == index,
@@ -3152,6 +3164,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 class _AnimePortrait extends StatelessWidget {
   const _AnimePortrait({
     required this.seed,
+    required this.female,
     required this.playerName,
     required this.teamName,
     required this.isDealer,
@@ -3163,6 +3176,7 @@ class _AnimePortrait extends StatelessWidget {
   });
 
   final int seed;
+  final bool female;
   final String playerName;
   final String teamName;
   final bool isDealer;
@@ -3244,7 +3258,6 @@ class _AnimePortrait extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Keep the original male/female portrait collections separate.
-    final female = seed.isOdd;
     return FutureBuilder<List<String>>(
       future: _portraitAssets(female),
       builder: (context, assetsSnapshot) {
