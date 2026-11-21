@@ -40,7 +40,8 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Burgundy play surface and 3D table scene are present.
 - [x] Player seats show names, team identity, and turn/dealer/winner emphasis.
 - [x] Card play, dealing, trick and round feedback systems exist in the project.
-- [x] Add visible center-to-seat Jack reveal and dealer-to-player four-card packet animations.\n- [x] Move the AI bidding THINKING label from the scoreboard to the active player's portrait.\n- [x] Enlarge and label the in-game trump indicator.\n- [ ] Continue improving card clarity, spacing, directional card orientation, and last-trick visibility.
+- [x] Add visible center-to-seat Jack reveal and dealer-to-player four-card packet animations.\n- [x] Move the AI bidding THINKING label from the scoreboard to the active player's portrait.\n- [x] Enlarge and label the in-game trump indicator.\n- [ ] Continue improving card clarity, spacing, and directional card orientation.
+- [x] Improve last-trick visibility with an ordered player/card grid and a highlighted trick winner.
 - [ ] Review the quality and consistency of card, trump, LORIS, trick-win, round-win and match-win effects.
 - [ ] Check responsive layout with the bottom hand, dialogs, and ad-safe area on different phone sizes.
 - [ ] Verify sound effects and haptics never block the AI/game progression.
@@ -69,3 +70,9 @@ This file is the continuity checklist for future development. Update it whenever
 - Corrected the dealer rule to use the dealer team's cumulative match total: the dealer changes only when that team's total score is +1 or higher. A round's individual win/loss does not override this total-score threshold.
 - Added a regression test confirming the dealer rotates when the cumulative total remains +2 even though the team loses 4 points in the current round.
 - CI verification pending.
+
+
+### 2026-11-21 — Last-trick review panel
+- Replaced the loose card wrap with an ordered 2-column (4-player) / 3-column (6-player) review grid.
+- Each card now shows play order, player name, team, and a distinct winner highlight.
+- CI verification pending; small-screen visual QA still requires an Android device.

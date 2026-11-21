@@ -2742,17 +2742,121 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   void _showLastTrick() {
     if (_lastTrickPlays.isEmpty) return;
-    showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
-      backgroundColor: const Color(0xFF35101A),
-      title: Text('LAST TRICK • ${_lastTrickWinner == null ? "UNKNOWN" : _playerNames[_lastTrickWinner!]} WON', style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 14, fontWeight: FontWeight.w900)),
-      content: Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 10, children: [
-        for (final play in _lastTrickPlays) Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(_playerNames[play.playerIndex], style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4), _buildCard(play.card, compact: true),
-        ]),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('CLOSE', style: TextStyle(color: Color(0xFFFFD978))))],
-    ));
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF35101A),
+        title: Text(
+          'LAST TRICK • ${_lastTrickWinner == null ? "UNKNOWN" : _playerNames[_lastTrickWinner!]} WON',
+          style: const TextStyle(
+            color: Color(0xFFFFE39A),
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.count(
+            crossAxisCount: widget.playerCount == 6 ? 3 : 2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              for (var index = 0; index < _lastTrickPlays.length; index++)
+                Builder(
+                  builder: (context) {
+                    final play = _lastTrickPlays[index];
+                    final isWinner = play.playerIndex == _lastTrickWinner;
+                    final teamName =
+                        play.playerIndex.isEven ? 'TEAM A' : 'TEAM B';
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: isWinner
+                            ? const Color(0xFF60451C).withValues(alpha: .48)
+                            : const Color(0xFF211019),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isWinner
+                              ? const Color(0xFFFFD978)
+                              : const Color(0x665E3C49),
+                          width: isWinner ? 1.8 : .8,
+                        ),
+                        boxShadow: isWinner
+                            ? const [
+                                BoxShadow(
+                                  color: Color(0x44FFD978),
+                                  blurRadius: 10,
+                                ),
+                              ]
+                            : const [],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${index + 1}. ${_playerNames[play.playerIndex]}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              teamName,
+                              style: TextStyle(
+                                color: play.playerIndex.isEven
+                                    ? const Color(0xFF8FC5FF)
+                                    : const Color(0xFFFFA0A8),
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _buildCard(play.card, compact: true),
+                            if (isWinner) ...[
+                              const SizedBox(height: 3),
+                              const Text(
+                                'TRICK WINNER',
+                                style: TextStyle(
+                                  color: Color(0xFFFFE39A),
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: .5,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text(
+              'CLOSE',
+              style: TextStyle(color: Color(0xFFFFD978)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
   Widget _buildTableSurface(
     List<TrickPlay> plays,
