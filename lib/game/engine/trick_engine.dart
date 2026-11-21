@@ -121,7 +121,7 @@ class TrickEngine {
     final lorisCards = hand.where((card) => card.isLoris).toList();
     final currentLedSuit = ledSuit;
 
-    if (currentLedSuit == null || lorisTrump) {
+    if (currentLedSuit == null) {
       return List.unmodifiable(hand);
     }
 
@@ -131,7 +131,7 @@ class TrickEngine {
 
     if (ledSuitCards.isNotEmpty) {
       // When trump was led, follow suit and overtrump if possible.
-      if (currentLedSuit == trumpSuit) {
+      if (!lorisTrump && currentLedSuit == trumpSuit) {
         final highestTrump = _highestTrumpRankAlreadyPlayed();
         if (highestTrump != null && !plays.any((play) => play.card.isLoris)) {
           final higher = ledSuitCards
@@ -143,6 +143,12 @@ class TrickEngine {
         }
       }
       return List.unmodifiable([...ledSuitCards, ...lorisCards]);
+    }
+
+    // LORIS mode has no ordinary trump suit. A player who is void in the
+    // led suit may discard any card (or play the always-legal LORIS card).
+    if (lorisTrump) {
+      return List.unmodifiable(hand);
     }
 
     // The player is void in the led suit. Trump is compulsory when held.
