@@ -2865,6 +2865,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         female: _portraitGenders[index],
                         playerName: _playerNames[index],
                         teamName: index.isEven ? 'TEAM A' : 'TEAM B',
+                        teamColor: index.isEven
+                            ? const Color(0xFF1559A4)
+                            : const Color(0xFF9F2434),
                         isDealer: _dealerIndex == index,
                         isBidder: displayedTrumpBidderIndex == index,
                         isCurrentPlayer: currentPlayer == index,
@@ -3167,6 +3170,7 @@ class _AnimePortrait extends StatelessWidget {
     required this.female,
     required this.playerName,
     required this.teamName,
+    required this.teamColor,
     required this.isDealer,
     required this.isBidder,
     required this.isCurrentPlayer,
@@ -3179,6 +3183,7 @@ class _AnimePortrait extends StatelessWidget {
   final bool female;
   final String playerName;
   final String teamName;
+  final Color teamColor;
   final bool isDealer;
   final bool isBidder;
   final bool isCurrentPlayer;
@@ -3317,9 +3322,7 @@ class _AnimePortrait extends StatelessWidget {
                       left: 5,
                       child: _tag(
                         teamName,
-                        background: seed.isEven
-                            ? const Color(0xFF1559A4)
-                            : const Color(0xFF9F2434),
+                        background: teamColor,
                       ),
                     ),
                     if (isThinking)
