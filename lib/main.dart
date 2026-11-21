@@ -2565,19 +2565,54 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           ],
           if (_started && (_trumpSuit != null || _trumpCard?.isLoris == true))
             Padding(
-              padding: const EdgeInsets.only(top: 5, bottom: 2),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.4)),
-                  const SizedBox(width: 8),
-                  if (_trumpSuit != null)
-                    Text(_suitSymbol(_trumpSuit), style: TextStyle(color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF6575) : Colors.white, fontSize: 25, fontWeight: FontWeight.w900))
-                  else
-                    Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: 22, height: 27, fit: BoxFit.contain),
-                  const SizedBox(width: 6),
-                  Text(_trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-                ],
+              padding: const EdgeInsets.only(top: 7, bottom: 4),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF173B65), Color(0xFF0A2442), Color(0xFF173B65)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFFFD36A), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: const Color(0xFFFFC857).withValues(alpha: .28), blurRadius: 12, spreadRadius: 1),
+                      const BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(0, 3)),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFD36A),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Text('TRUMP', style: TextStyle(color: Color(0xFF17243B), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                      ),
+                      const SizedBox(width: 11),
+                      if (_trumpSuit != null)
+                        Text(
+                          _suitSymbol(_trumpSuit),
+                          style: TextStyle(
+                            color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF6678) : Colors.white,
+                            fontSize: 31,
+                            height: 1,
+                            fontWeight: FontWeight.w900,
+                            shadows: const [Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(1, 2))],
+                          ),
+                        )
+                      else
+                        Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: 29, height: 34, fit: BoxFit.contain),
+                      const SizedBox(width: 8),
+                      Text(
+                        _trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!).toUpperCase(),
+                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900, letterSpacing: 1.0, shadows: [Shadow(color: Colors.black54, blurRadius: 3)]),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           const SizedBox(height: 4),
