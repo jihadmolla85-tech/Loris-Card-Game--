@@ -47,7 +47,7 @@ void main() {
       find.byWidgetPredicate(
         (widget) => widget is Image &&
             widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName == 'assets/images/loris_logo.jpg',
+            (widget.image as AssetImage).assetName == 'assets/images/file_00000000f9f882119c70821c3044291b.png',
       ),
       findsOneWidget,
     );
