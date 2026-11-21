@@ -47,7 +47,7 @@ This file is the continuity checklist for future development. Update it whenever
 
 ## Quality gates
 
-- [ ] Latest Flutter analyze, all tests, and Android APK build must pass on the current PR head.
+- [x] Flutter analyze, all tests, and Android APK build passed on commit `0770f0b0` (CI Run #578); the newer LORIS effect polish commit is awaiting its own CI run.
 - [ ] Test both 4-player and 6-player gameplay end-to-end.
 - [ ] Confirm save/resume does not duplicate or skip a trick.
 - [ ] Test on a physical Android device; CI alone is not device QA.
@@ -106,3 +106,8 @@ This file is the continuity checklist for future development. Update it whenever
 - Added an elastic entrance, layered purple gradient, gold rim, and stronger glow to the LORIS play announcement.
 - Existing card-flight timing, sound, haptic timeout protection, and gameplay state transitions remain unchanged.
 - CI verification pending; effect timing and readability still need physical-device review.
+
+
+### 2026-11-21 — CI Run #578 passed
+- Flutter Analyze, the full existing test suite, Android APK build, and artifact upload all completed successfully for commit `0770f0b0b7a19d931d3eadb45ce151ae2a20f42b`.
+- The subsequent LORIS play-effect polish commit `214cda73` is not covered by Run #578 and requires a fresh CI result.
