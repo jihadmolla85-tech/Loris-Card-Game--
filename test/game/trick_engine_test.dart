@@ -122,6 +122,7 @@ void main() {
       );
       final loris = Card.loris(replacesRank: 7);
       hands[1].add(loris);
+      hands[0].add(card(Suit.spades, 14));
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
       hands[0].removeWhere((c) => c.suit == Suit.hearts);
 
@@ -160,6 +161,7 @@ void main() {
       hands[2].removeWhere((c) => c.suit == Suit.hearts);
       hands[1].removeWhere((c) => c.suit == Suit.hearts);
       hands[0].removeWhere((c) => c.suit == Suit.hearts);
+      hands[1].add(card(Suit.diamonds, 13));
 
       game.playCard(3, card(Suit.hearts, 12));
       game.playCard(2, card(Suit.spades, 11));
@@ -269,7 +271,7 @@ void main() {
 
       game.playCard(3, loris);
       game.playCard(2, card(Suit.spades, 11));
-      game.playCard(1, card(Suit.spades, 13));
+      game.playCard(1, card(Suit.spades, 10));
       game.playCard(0, card(Suit.spades, 8));
 
       expect(game.winnerIndex, 3);
@@ -367,7 +369,7 @@ void main() {
         game.legalCardsFor(1).any((c) => c.suit == Suit.spades),
         isTrue,
       );
-      game.playCard(1, card(Suit.spades, 13));
+      game.playCard(1, card(Suit.spades, 10));
       expect(game.plays.length, 3);
     });
 

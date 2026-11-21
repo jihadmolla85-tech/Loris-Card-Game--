@@ -41,7 +41,7 @@ void main() {
       controller.submitHumanBid(null);
       expect(controller.history, hasLength(2));
       expect(controller.isAiTurn, isTrue);
-      expect(controller.currentPlayerIndex, 1);
+      expect(controller.currentPlayerIndex, 3);
 
       final nextAiBid = controller.submitAiBid();
       expect(nextAiBid.playerIndex, 3);

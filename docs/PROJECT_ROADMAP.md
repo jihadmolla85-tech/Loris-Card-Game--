@@ -93,3 +93,10 @@ This file is the continuity checklist for future development. Update it whenever
 - Corrected trick-test hands to match the actual right-to-left seat sequence and fixed a malformed six-player dealer-rotation test.
 - Updated bidding, round, and match controller test expectations for dealer-right first action, right-to-left progression, and dealer rotation.
 - Re-running CI on the latest branch head; Android build and device verification remain unconfirmed.
+
+
+### 2026-11-21 — Repair outdated trick and bidding test fixtures
+- Corrected trick-engine test cards so every played card is actually in that player's hand; the previous fixtures attempted to play absent ranks and failed at the legal-card guard.
+- Corrected the animated bidding test's expected next seat to match dealer-right, right-to-left progression.
+- No game rules or runtime engine behavior changed in this repair.
+- CI verification pending.
