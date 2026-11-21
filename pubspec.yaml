@@ -51,6 +51,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -102,3 +104,21 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Generate the launcher icon and native opening screen from the uploaded LORIS PNG.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/file_00000000f9f882119c70821c3044291b.png
+  adaptive_icon_background: "#07366B"
+  adaptive_icon_foreground: assets/images/file_00000000f9f882119c70821c3044291b.png
+
+flutter_native_splash:
+  color: "#07366B"
+  image: assets/images/file_00000000f9f882119c70821c3044291b.png
+  android: true
+  ios: true
+  android_12:
+    color: "#07366B"
+    image: assets/images/file_00000000f9f882119c70821c3044291b.png
+    icon_background_color: "#07366B"
