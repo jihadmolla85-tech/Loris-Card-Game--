@@ -2821,19 +2821,63 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   Positioned(
                     top: tableHeight * .34,
                     child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: _playEffect == 'LORIS!'
-                              ? const Color(0xFF6C3BC1).withValues(alpha: .94)
-                              : const Color(0xFFD6B15E).withValues(alpha: .96),
-                          borderRadius: BorderRadius.circular(18),
-                          boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 14, spreadRadius: 2)],
+                      child: TweenAnimationBuilder<double>(
+                        key: ValueKey('play-effect-$_playEffect'),
+                        tween: Tween(begin: .62, end: 1),
+                        duration: const Duration(milliseconds: 520),
+                        curve: Curves.elasticOut,
+                        builder: (context, scale, child) => Transform.scale(
+                          scale: scale,
+                          child: child,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 22,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFF9B6BDF),
+                                Color(0xFF542A9C),
+                                Color(0xFF29134D),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: const Color(0xFFFFE39A),
+                              width: 1.6,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0xAA8C55E8),
+                                blurRadius: 24,
+                                spreadRadius: 3,
+                              ),
+                              BoxShadow(
+                                color: Colors.black87,
+                                blurRadius: 14,
+                                offset: Offset(0, 5),
+                              ),
+                            ],
+                          ),
                           child: Text(
                             _playEffect!,
-                            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900, letterSpacing: 2),
+                            style: const TextStyle(
+                              color: Color(0xFFFFF4D6),
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2.4,
+                              shadows: [
+                                Shadow(
+                                  color: Color(0xCC16082B),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

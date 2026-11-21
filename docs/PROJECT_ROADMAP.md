@@ -100,3 +100,9 @@ This file is the continuity checklist for future development. Update it whenever
 - Corrected the animated bidding test's expected next seat to match dealer-right, right-to-left progression.
 - No game rules or runtime engine behavior changed in this repair.
 - CI verification pending.
+
+
+### 2026-11-21 — LORIS card play effect polish
+- Added an elastic entrance, layered purple gradient, gold rim, and stronger glow to the LORIS play announcement.
+- Existing card-flight timing, sound, haptic timeout protection, and gameplay state transitions remain unchanged.
+- CI verification pending; effect timing and readability still need physical-device review.
