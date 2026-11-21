@@ -14,8 +14,13 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Joker/LORIS trump option is available only when the bidder personally holds LORIS.
 - [x] LORIS card is labelled L and has custom Joker artwork.
 - [x] CALL 16 eligibility, one-time pass/call choice, and success/failure scoring are covered by engine tests.
-- [x] Trick completion has a UI re-entry guard; AI loop stops when a trick is already complete.\n- [x] AI turn progression allows the same player to lead consecutive tricks after winning; stall checks verify committed cards instead of banning repeated player indexes.
-- [x] Detach per-card autosave from the AI turn loop so slow storage cannot hold the next AI action.\n- [x] Add spoken Bangla bid announcements with English fallback.\n- [x] Add persistent trump label and suit name in the compact header.\n- [x] Slow the four-card dealing packet animation to 500 ms per player.\n- [ ] Verify the trick-completion fix in a full 4-player and 6-player match on a physical Android device.
+- [x] Trick completion has a UI re-entry guard; AI loop stops when a trick is already complete.
+- [x] AI turn progression allows the same player to lead consecutive tricks after winning; stall checks verify committed cards instead of banning repeated player indexes.
+- [x] Detach per-card autosave from the AI turn loop so slow storage cannot hold the next AI action.
+- [x] Add spoken Bangla bid announcements with English fallback.
+- [x] Add persistent trump label and suit name in the compact header.
+- [x] Slow the four-card dealing packet animation to 500 ms per player.
+- [ ] Verify the trick-completion fix in a full 4-player and 6-player match on a physical Android device.
 - [ ] Continue regression testing for AI turn stalls, saved-match resume, redeals, and all CALL 16 edge cases.
 
 ## Privacy and trump selection
@@ -24,7 +29,8 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Trump indicator shows only the trump suit symbol or LORIS Joker art.
 - [x] Human bidder's own eight-card hand remains visible while choosing.
 - [ ] Confirm the random teammate card is selected from the correct partner seat in both 4-player and 6-player modes.
-- [x] Add engine tests for private random teammate-card selection in four- and six-player modes.\n- [ ] Add automated UI tests for trump-choice privacy and teammate random-card selection.
+- [x] Add engine tests for private random teammate-card selection in four- and six-player modes.
+- [ ] Add automated UI tests for trump-choice privacy and teammate random-card selection.
 
 ## Player portraits and branding
 
@@ -32,7 +38,8 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Six distinct portraits are integrated into player seats with circular gold frames.
 - [x] Existing LORIS logo assets are retained for the home screen and app branding.
 - [ ] Integrate the remaining supplied portrait choices as a larger selectable/random portrait pool.
-- [x] Correct the supplied 6×4 portrait atlas crop to use dynamic cell dimensions.\n- [ ] Review portrait crop quality and visibility on small Android screens.
+- [x] Correct the supplied 6×4 portrait atlas crop to use dynamic cell dimensions.
+- [ ] Review portrait crop quality and visibility on small Android screens.
 - [ ] Keep Android, iOS, web and desktop app icons/splash assets consistent with the approved LORIS logo.
 
 ## Visual/gameplay experience
@@ -40,14 +47,17 @@ This file is the continuity checklist for future development. Update it whenever
 - [x] Burgundy play surface and 3D table scene are present.
 - [x] Player seats show names, team identity, and turn/dealer/winner emphasis.
 - [x] Card play, dealing, trick and round feedback systems exist in the project.
-- [x] Add visible center-to-seat Jack reveal and dealer-to-player four-card packet animations.\n- [x] Move the AI bidding THINKING label from the scoreboard to the active player's portrait.\n- [x] Enlarge and label the in-game trump indicator.\n- [ ] Continue improving card clarity, spacing, directional card orientation, and last-trick visibility.
+- [x] Add visible center-to-seat Jack reveal and dealer-to-player four-card packet animations.
+- [x] Move the AI bidding THINKING label from the scoreboard to the active player's portrait.
+- [x] Enlarge and label the in-game trump indicator.
+- [ ] Continue improving card clarity, spacing, directional card orientation, and last-trick visibility.
 - [ ] Review the quality and consistency of card, trump, LORIS, trick-win, round-win and match-win effects.
 - [ ] Check responsive layout with the bottom hand, dialogs, and ad-safe area on different phone sizes.
 - [ ] Verify sound effects and haptics never block the AI/game progression.
 
 ## Quality gates
 
-- [x] Flutter analyze, all tests, Android APK build, and artifact upload passed on commit `cfb0c77f` (CI Run #581).
+- [x] Flutter analyze, all tests, Android APK build, and artifact upload passed on commit `a741fa48` (CI Run #583).
 - [ ] Test both 4-player and 6-player gameplay end-to-end.
 - [ ] Confirm save/resume does not duplicate or skip a trick.
 - [ ] Test on a physical Android device; CI alone is not device QA.
@@ -121,5 +131,10 @@ This file is the continuity checklist for future development. Update it whenever
 
 ### 2026-11-21 — Six-player CALL 16 regression coverage
 - Added six-player engine tests that exercise all three teammate seats during a successful CALL 16 and confirm an opponent trick breaks eligibility.
-- CI Run #581 passed for the previous commit; this new test-only change requires its own CI run.
+- CI Run #583 passed on commit `a741fa48`, including Flutter Analyze, the full test suite, Android APK build, and artifact upload.
 - Physical-device verification remains outstanding.
+
+### 2026-11-21 — CI Run #583 passed
+- Verified the six-player CALL 16 regression-test commit and roadmap update through the complete GitHub Actions workflow.
+- APK artifact `LORIS-debug-apk` was uploaded successfully; artifact expires 2026-11-28.
+- No merge to `main` was performed. Physical-device gameplay verification remains outstanding.
