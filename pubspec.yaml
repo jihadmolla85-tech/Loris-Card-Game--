@@ -111,7 +111,7 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: 'assets/Splash Screen and back page of card.jpg'
+  image_path: assets/images/file_00000000f9f882119c70821c3044291b.png
   adaptive_icon_background: "#07366B"
   adaptive_icon_foreground: assets/images/file_00000000f9f882119c70821c3044291b.png
 
