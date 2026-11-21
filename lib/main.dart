@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
-import 'game/widgets/dealer_reveal_dialog.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
+import 'game/widgets/loris_3d_table.dart';
 import 'game/engine/game_settings_service.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -22,6 +24,8 @@ import 'game/engine/game_state_snapshot.dart';
 import 'game/engine/bidding_round_controller.dart';
 import 'game/engine/trump_selection_engine.dart';
 import 'game/engine/trick_engine.dart';
+import 'game/ai/ai_card_play_strategy.dart';
+import 'game/ai/ai_trump_selection_strategy.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,10 +39,10 @@ void main() {
 class LorisApp extends StatelessWidget {
   const LorisApp({super.key});
 
-  static const Color navy = Color(0xFF07152E);
-  static const Color blue = Color(0xFF102B55);
-  static const Color gold = Color(0xFFD6B15E);
-  static const Color tableGreen = Color(0xFF075239);
+  static const Color navy = Color(0xFF08090D);
+  static const Color blue = Color(0xFF17141C);
+  static const Color gold = Color(0xFFD4AF62);
+  static const Color tableGreen = Color(0xFF501923);
 
   @override
   Widget build(BuildContext context) {
@@ -239,10 +243,13 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                 ),
                 _RuleSection(
                   title: 'CALL 16',
-                  body: 'After winning the number of tricks equal to your bid, '
-                      'a player may call 16 after winning the next trick. Their '
-                      'team must then win every remaining trick. Losing even '
-                      'one remaining trick gives that team -16.',
+                  body: 'CALL 16 is offered immediately when your team reaches '
+                      'exactly its bid, but only if it has won every trick from '
+                      'the start of the round. If opponents win even one trick, '
+                      'the option is gone for the rest of the round. The last-trick '
+                      'winner may CALL 16 or PASS once. After calling, the team '
+                      'must win every remaining trick; losing one ends the round '
+                      'at -16 for that team and +16 for the opponents.',
                 ),
               ],
             ),
@@ -291,7 +298,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                     },
                   ),
                   const Text(
-                    'Audio playback will be connected when the audio assets are added.',
+                    'Sound effects follow this setting during a match. Background music is not connected yet.',
                     style: TextStyle(
                       color: Colors.white54,
                       fontSize: 11,
@@ -487,8 +494,11 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin {
   final GameSaveService _saveService = GameSaveService();
+  final GameSettingsService _settingsService = GameSettingsService();
   final LorisAudioService _audio = LorisAudioService();
   final Random _random = Random();
+  bool _soundEnabled = true;
+  bool _sortHandBySuit = false;
 
   static const List<String> _namePool = [
     // Names requested by the player.
@@ -509,6 +519,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   ];
   late final List<String> _playerNames;
   late final List<String> _playerAvatars;
+  late final List<int> _portraitVariants;
 
   late final DealController _dealController;
   late final GameMatchController _matchController;
@@ -522,7 +533,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   bool _started = false;
   bool _finished = false;
   bool _busy = false;
+  bool _aiTurnsInProgress = false;
+  bool _aiBiddingInProgress = false;
+  int _biddingRunId = 0;
   bool _isShuffling = false;
+  bool _isDealing = false;
+  int? _dealTargetPlayer;
+  int _dealBatch = 0;
+  int _dealCardNumber = 0;
+  List<int> _dealCounts = const [];
   late final AnimationController _shuffleController;
 
   String _status = 'Press START MATCH to begin.';
@@ -536,16 +555,25 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   loris.Card? _flyingCard;
   int? _flyingFromPlayer;
   bool _flightStarted = false;
+  int _cardImpactKey = 0;
   String? _playEffect;
   String? _winCelebration;
+  bool _winCelebrationIsLoss = false;
+  List<loris.Card>? _dealerDrawCards;
+  int _dealerDrawVisible = 0;
+  int? _dealerDrawWinner;
+  int _dealerDrawFirstPlayer = 0;
   
   @override
   void initState() {
     super.initState();
+    _loadAudioSettings();
     _shuffleController = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
 
     final shuffledNames = List<String>.from(_namePool)..shuffle(_random);
     final shuffledAvatars = List<String>.from(_avatarPool)..shuffle(_random);
+    final shuffledPortraits = List<int>.generate(12, (index) => index)..shuffle(_random);
+    _portraitVariants = shuffledPortraits.take(widget.playerCount).toList();
     _playerNames = [
       'YOU',
       ...shuffledNames.take(widget.playerCount - 1),
@@ -577,6 +605,16 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _loadAudioSettings() async {
+    try {
+      final settings = await _settingsService.load();
+      if (!mounted) return;
+      setState(() => _soundEnabled = settings.soundEnabled);
+    } catch (_) {
+      // Keep sound effects enabled if preferences are unavailable.
+    }
+  }
+
   @override
   void dispose() {
     _shuffleController.dispose();
@@ -599,32 +637,48 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     await Future.delayed(const Duration(milliseconds: 35));
     if (!mounted) return;
     setState(() => _flightStarted = true);
-    await Future.delayed(const Duration(milliseconds: 470));
+    await Future.delayed(const Duration(milliseconds: 460));
     if (!mounted) return;
     setState(() {
       _flyingCard = null;
       _flyingFromPlayer = null;
       _flightStarted = false;
       _playEffect = null;
+      _cardImpactKey++;
     });
   }
 
+  // Platform sound/haptic channels must never be able to stall a game turn.
+  // Some Android devices can leave a platform-channel Future pending or throw
+  // while the app is backgrounded; the card/game state must still advance.
+  Future<void> _safeDeviceFeedback(Future<void> Function() feedback) async {
+    try {
+      await feedback().timeout(const Duration(milliseconds: 650));
+    } catch (_) {
+      // Feedback is optional; gameplay is not.
+    }
+  }
+
   Future<void> _playCardFeedback(loris.Card card) async {
+    if (!_soundEnabled) return;
     if (card.isLoris) {
-      await _audio.play('loris');
-      await HapticFeedback.heavyImpact();
+      unawaited(_audio.play('loris'));
+      await _safeDeviceFeedback(HapticFeedback.heavyImpact);
     } else if (card.suit == _trumpSuit) {
-      await _audio.play('trump');
-      await HapticFeedback.mediumImpact();
+      unawaited(_audio.play('trump'));
+      await _safeDeviceFeedback(HapticFeedback.mediumImpact);
     } else {
-      await _audio.play('card_place');
-      await HapticFeedback.lightImpact();
+      // Use the device's short tactile click instead of the drum-like
+      // placeholder recording currently bundled as card_place.wav.
+      await _safeDeviceFeedback(() => SystemSound.play(SystemSoundType.click));
+      await _safeDeviceFeedback(HapticFeedback.lightImpact);
     }
   }
 
   Future<void> _playShuffleSound() async {
-    await _audio.play('shuffle');
-    await HapticFeedback.lightImpact();
+    if (!_soundEnabled) return;
+    unawaited(_audio.play('shuffle'));
+    await _safeDeviceFeedback(HapticFeedback.lightImpact);
   }
 
   // ----------------------------------------------------------
@@ -680,10 +734,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
     try {
       await _playShuffleSound();
-      await Future.delayed(const Duration(milliseconds: 450));
+      await Future.delayed(const Duration(milliseconds: 1050));
       if (!mounted) return;
-      _shuffleController.stop();
-      setState(() => _isShuffling = false);
       final deck = loris_deck.LorisDeck.create(
         widget.playerCount == 4
             ? loris.PlayerCount.four
@@ -696,14 +748,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         playerCount: widget.playerCount,
         random: _random,
       );
-await DealerRevealDialog.show(
-  context,
-  drawnCards: dealerSelection.drawnCards,
-  playerCount: widget.playerCount,
-  dealerIndex: dealerSelection.dealerIndex,
-  dealerName: _playerNames[dealerSelection.dealerIndex],
-  dealerAvatar: _playerAvatars[dealerSelection.dealerIndex],
-);
+await _revealDealerDrawOnTable(
+        dealerSelection.drawnCards,
+        dealerSelection.firstPlayerIndex,
+        dealerSelection.dealerIndex,
+      );
+      _shuffleController.stop();
+      if (mounted) setState(() => _isShuffling = false);
+
       final dealtHands = _dealController.deal(
         deck: dealerSelection.shuffledDeck,
         playerCount: widget.playerCount,
@@ -713,9 +765,18 @@ await DealerRevealDialog.show(
       setState(() {
         _dealerIndex = dealerSelection.dealerIndex;
         _hands = dealtHands;
-        _status = 'Cards dealt. Bidding begins.';
+        _isDealing = true;
+        _dealTargetPlayer = null;
+        _status = 'Dealing cards in two batches of four.';
       });
 
+      await _animateDeal(dealerSelection.dealerIndex);
+      if (!mounted) return;
+      setState(() {
+        _isDealing = false;
+        _dealTargetPlayer = null;
+        _status = 'Cards dealt. Bidding begins.';
+      });
       _startBidding();
     } catch (e) {
       setState(() {
@@ -730,6 +791,118 @@ await DealerRevealDialog.show(
         });
       }
     }
+  }
+
+  Future<void> _revealDealerDrawOnTable(
+    List<loris.Card> drawnCards,
+    int firstPlayerIndex,
+    int dealerIndex,
+  ) async {
+    setState(() {
+      _dealerDrawCards = List<loris.Card>.unmodifiable(drawnCards);
+      _dealerDrawVisible = 0;
+      _dealerDrawWinner = dealerIndex;
+      _dealerDrawFirstPlayer = firstPlayerIndex;
+      _status = 'JACK DRAW • DEALER SELECTION';
+    });
+
+    for (var i = 0; i < drawnCards.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 520));
+      if (!mounted) return;
+      setState(() => _dealerDrawVisible = i + 1);
+      await _safeDeviceFeedback(() => SystemSound.play(SystemSoundType.click));
+      final card = drawnCards[i];
+      if (!card.isLoris && card.rank == 11) {
+        await _safeDeviceFeedback(HapticFeedback.heavyImpact);
+        break;
+      }
+    }
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+    setState(() {
+      _dealerDrawCards = null;
+      _dealerDrawVisible = 0;
+      _status = 'Dealer selected. Preparing the deal.';
+    });
+  }
+
+  Widget _buildDealerDrawTable() {
+    final cards = _dealerDrawCards!;
+    final rows = <Widget>[];
+    for (var player = 0; player < widget.playerCount; player++) {
+      final playerCards = <loris.Card>[];
+      for (var i = 0; i < _dealerDrawVisible; i++) {
+        if ((_dealerDrawFirstPlayer + i) % widget.playerCount == player) {
+          playerCards.add(cards[i]);
+        }
+      }
+      final isDealer = _dealerDrawVisible > 0 &&
+          player == _dealerDrawWinner &&
+          cards.take(_dealerDrawVisible).any((card) =>
+              !card.isLoris && card.rank == 11 &&
+              cards.indexOf(card) == (_dealerDrawVisible - 1));
+      rows.add(Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: isDealer ? const Color(0xFF59451B) : const Color(0xDD17141C),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isDealer ? LorisApp.gold : Colors.white24, width: isDealer ? 2 : 1),
+        ),
+        child: Row(children: [
+          SizedBox(width: 112, child: Row(children: [
+            LorisPortraitAvatar(
+              variant: _portraitVariants[player],
+              size: 30,
+              highlighted: isDealer,
+              expression: isDealer ? 0 : 1,
+            ),
+            const SizedBox(width: 6),
+            Expanded(child: Text(_playerNames[player], maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: isDealer ? LorisApp.gold : Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
+          ])),
+          Expanded(child: SizedBox(height: 53, child: Row(children: playerCards.map((card) {
+            final red = card.suit == loris.Suit.hearts || card.suit == loris.Suit.diamonds;
+            final symbol = card.isLoris ? '★' : switch (card.suit!) {
+              loris.Suit.clubs => '♣', loris.Suit.diamonds => '♦',
+              loris.Suit.hearts => '♥', loris.Suit.spades => '♠',
+            };
+            return Container(width: 37, height: 51, margin: const EdgeInsets.only(right: 4),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(5),
+                border: Border.all(color: !card.isLoris && card.rank == 11 ? LorisApp.gold : Colors.black26, width: 1.5),
+                boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))]),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(card.isLoris ? '★' : card.displayName, style: TextStyle(color: red ? Colors.red.shade700 : Colors.black87, fontWeight: FontWeight.w900, fontSize: 13)),
+                Text(symbol, style: TextStyle(color: red ? Colors.red.shade700 : Colors.black87, fontSize: 14)),
+              ]));
+          }).toList()))),
+          if (isDealer) const Icon(Icons.workspace_premium, color: LorisApp.gold, size: 22),
+        ]),
+      ));
+    }
+    return Container(
+      decoration: const BoxDecoration(gradient: RadialGradient(colors: [Color(0xFF501923), Color(0xFF08090D)])),
+      child: SafeArea(child: Column(children: [
+        const Padding(padding: EdgeInsets.fromLTRB(12, 18, 12, 8), child: Text('LORIS • JACK DRAW',
+          style: TextStyle(color: LorisApp.gold, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2))),
+        const Text('CARDS ARE REVEALED BESIDE EACH PLAYER AT THE TABLE',
+          textAlign: TextAlign.center, style: TextStyle(color: Colors.white70, fontSize: 9, letterSpacing: 1)),
+        Expanded(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 520),
+          child: Padding(padding: const EdgeInsets.all(10), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Expanded(child: Center(child: Loris3DTable(playerCount: widget.playerCount))),
+            ...rows,
+            const SizedBox(height: 8),
+            Text('$_dealerDrawVisible / ${cards.length} CARDS REVEALED',
+              style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 1)),
+            if (_dealerDrawVisible > 0 && _dealerDrawWinner != null &&
+                !cards[_dealerDrawVisible - 1].isLoris && cards[_dealerDrawVisible - 1].rank == 11)
+              Padding(padding: const EdgeInsets.only(top: 8), child: Text(
+                '${_playerNames[_dealerDrawWinner!].toUpperCase()} IS THE DEALER!',
+                style: const TextStyle(color: LorisApp.gold, fontSize: 16, fontWeight: FontWeight.w900))),
+          ]))))),
+      ])),
+    );
   }
 
   // ----------------------------------------------------------
@@ -759,11 +932,53 @@ await DealerRevealDialog.show(
             : 'AI players are bidding.';
       });
 
-      if (controller.isComplete) {
-        _finishBidding();
-      }
+      unawaited(_runAiBiddingTurns());
     } catch (e) {
       setState(() => _error = e.toString());
+    }
+  }
+
+  Future<void> _runAiBiddingTurns() async {
+    if (_aiBiddingInProgress) return;
+    _aiBiddingInProgress = true;
+    final runId = ++_biddingRunId;
+    try {
+      final bidding = _biddingController;
+      if (bidding == null) return;
+
+      while (mounted && bidding.isAiTurn && !bidding.isComplete) {
+        final playerIndex = bidding.engine.currentPlayerIndex;
+        setState(() {
+          _status = '${_playerNames[playerIndex]} is thinking about the bid...';
+        });
+
+        await Future.delayed(Duration(milliseconds: 650 + _random.nextInt(550)));
+        if (!mounted || bidding.isComplete || !bidding.isAiTurn) return;
+
+        final record = bidding.submitNextAiBid();
+        setState(() {
+          _status = record.amount == null
+              ? '${_playerNames[playerIndex]} • PASS'
+              : '${_playerNames[playerIndex]} • BID ${record.amount}';
+        });
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      if (!mounted) return;
+      if (bidding.isComplete) {
+        // Let a redeal start a fresh bidding sequence from inside finishBidding.
+        _aiBiddingInProgress = false;
+        await _finishBidding();
+      } else if (bidding.isHumanTurn) {
+        // Release the animation guard before exposing the human bid button,
+        // so a fast tap cannot race the previous AI-turn future's finally block.
+        _aiBiddingInProgress = false;
+        setState(() => _status = 'Your turn to bid.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Bidding error: $e');
+    } finally {
+      if (runId == _biddingRunId) _aiBiddingInProgress = false;
     }
   }
 
@@ -891,16 +1106,12 @@ await DealerRevealDialog.show(
       );
 
       setState(() {
-        _status = bidding.isComplete
-            ? 'Bidding complete.'
-            : bidding.isHumanTurn
-                ? 'Your turn to bid.'
-                : 'AI players are bidding.';
+        _status = selectedBid == -1
+            ? 'YOU • PASS'
+            : 'YOU • BID $selectedBid';
       });
 
-      if (bidding.isComplete) {
-        await _finishBidding();
-      }
+      await _runAiBiddingTurns();
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -977,21 +1188,62 @@ await DealerRevealDialog.show(
             child: ListView(
               children: [
                 const Text(
-                  'YOUR CARDS',
+                  'CHOOSE A SUIT FROM YOUR HAND',
                   style: TextStyle(
                     color: LorisApp.gold,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
-                ...ownCards.map((card) => ListTile(
-                      title: Text(_cardName(card)),
-                      subtitle: const Text('Select this card as trump'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: loris.Suit.values
+                      .where((suit) => ownCards.any((card) => card.suit == suit))
+                      .map((suit) {
+                    final representative = ownCards.firstWhere(
+                      (card) => card.suit == suit,
+                    );
+                    final red = _isRedSuit(suit);
+                    return InkWell(
                       onTap: () => Navigator.pop(
                         dialogContext,
-                        MapEntry(bidder, card),
+                        MapEntry(bidder, representative),
                       ),
-                    )),
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: 72,
+                        height: 74,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF152A40),
+                          border: Border.all(color: LorisApp.gold, width: 1.5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _suitSymbol(suit),
+                              style: TextStyle(
+                                color: red ? Colors.redAccent : Colors.white,
+                                fontSize: 30,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              _suitName(suit).toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
                 if (teammateCards.isNotEmpty) ...[
                   const Divider(color: Colors.white24),
                   const Text(
@@ -1056,59 +1308,23 @@ await DealerRevealDialog.show(
     );
   }
 
+  final AiTrumpSelectionStrategy _aiTrumpSelectionStrategy =
+      const AiTrumpSelectionStrategy();
+
   Future<void> _chooseAiTrump(int bidder) async {
     final hands = _hands;
-
     if (hands == null) return;
 
-    loris.Suit? bestSuit;
-    var bestCount = -1;
-    var cardOwner = bidder;
-
-    // The bidder may only declare a suit that is also present in their
-    // own hand, even when the revealed card belongs to a teammate.
-    final bidderSuits = hands[bidder]
-        .where((card) => !card.isLoris && card.suit != null)
-        .map((card) => card.suit!)
-        .toSet();
-
-    for (var player = 0; player < hands.length; player++) {
-      if (player % 2 != bidder % 2) continue;
-
-      final counts = <loris.Suit, int>{
-        for (final suit in bidderSuits) suit: 0,
-      };
-
-      for (final card in hands[player]) {
-        if (!card.isLoris && card.suit != null &&
-            bidderSuits.contains(card.suit)) {
-          counts[card.suit!] = counts[card.suit!]! + 1;
-        }
-      }
-
-      for (final entry in counts.entries) {
-        if (entry.value > bestCount) {
-          bestCount = entry.value;
-          bestSuit = entry.key;
-          cardOwner = player;
-        }
-      }
+    try {
+      // Unlike a human bidder, the AI does not inspect a teammate's hidden
+      // hand to optimise trump. It selects from its own hand only.
+      final selectedCard = _aiTrumpSelectionStrategy.chooseCard(
+        bidderHand: hands[bidder],
+      );
+      await _applyTrump(bidder, bidder, selectedCard);
+    } catch (e) {
+      setState(() => _error = 'AI trump selection failed: $e');
     }
-
-    if (bestSuit == null || bestCount <= 0) {
-      setState(() => _error = 'AI could not select trump.');
-      return;
-    }
-
-    final selectedCard = hands[cardOwner].firstWhere(
-      (card) => !card.isLoris && card.suit == bestSuit,
-    );
-
-    await _applyTrump(
-      bidder,
-      cardOwner,
-      selectedCard,
-    );
   }
 
   Future<void> _applyTrump(
@@ -1165,6 +1381,16 @@ await DealerRevealDialog.show(
 
       final redealRequired = validation.shouldRedeal;
 
+      if (redealRequired) {
+        setState(() => _isShuffling = true);
+        _shuffleController.repeat(reverse: true);
+        await _playShuffleSound();
+        await Future.delayed(const Duration(milliseconds: 700));
+        if (!mounted) return;
+        _shuffleController.stop();
+        setState(() => _isShuffling = false);
+      }
+
       final newHands = _matchController.validateAndRedeal(
         everyonePassed: everyonePassed,
         bidderHasTrumpSuit: bidderHasTrump,
@@ -1175,10 +1401,13 @@ await DealerRevealDialog.show(
           _hands = newHands;
           _trumpSuit = null;
           _started = false;
-
+          _isDealing = true;
           _status = 'Redeal required. Same dealer remains.';
         });
 
+        await _animateDeal(_dealerIndex!);
+        if (!mounted) return;
+        setState(() => _isDealing = false);
         _startBidding();
         return;
       }
@@ -1221,72 +1450,14 @@ await DealerRevealDialog.show(
   // CARD PLAY
   // ----------------------------------------------------------
 
+  final AiCardPlayStrategy _aiCardPlayStrategy = const AiCardPlayStrategy();
+
   loris.Card _chooseAiCard(int playerIndex) {
     final engine = _matchController.currentRound.trickEngine;
-    final hand = engine.hands[playerIndex];
-
-    if (hand.isEmpty) {
-      throw StateError('AI player has no cards.');
-    }
-
-    final legalCards = engine.legalCardsFor(playerIndex);
-    if (legalCards.length == 1) return legalCards.first;
-
-    int winningPlayer(List<TrickPlay> trick) {
-      final lorisPlay = trick.where((play) => play.card.isLoris);
-      if (lorisPlay.isNotEmpty) return lorisPlay.first.playerIndex;
-
-      final firstCard = trick.first.card;
-      final ledSuit = firstCard.isLoris
-          ? loris.Suit.spades
-          : firstCard.suit;
-      final trumpPlays = trick
-          .where((play) => !play.card.isLoris &&
-              play.card.suit == engine.trumpSuit)
-          .toList();
-      final candidates = trumpPlays.isNotEmpty
-          ? trumpPlays
-          : trick.where((play) => play.card.suit == ledSuit).toList();
-
-      candidates.sort((a, b) =>
-          (b.card.rank ?? 0).compareTo(a.card.rank ?? 0));
-      return candidates.first.playerIndex;
-    }
-
-    int compareCardCost(loris.Card a, loris.Card b) {
-      if (a.isLoris) return b.isLoris ? 0 : 1;
-      if (b.isLoris) return -1;
-      return (a.rank ?? 0).compareTo(b.rank ?? 0);
-    }
-
-    final nonLoris = legalCards.where((card) => !card.isLoris).toList()
-      ..sort(compareCardCost);
-    final currentPlays = List<TrickPlay>.from(engine.plays);
-
-    // When leading, keep the special card and high cards for later.
-    if (currentPlays.isEmpty) {
-      return nonLoris.isNotEmpty ? nonLoris.first : legalCards.first;
-    }
-
-    final currentWinner = winningPlayer(currentPlays);
-
-    // Do not overtake a teammate who is already winning the trick.
-    if (currentWinner % 2 == playerIndex % 2) {
-      return nonLoris.isNotEmpty ? nonLoris.first : legalCards.first;
-    }
-
-    // If an opponent is winning, use the cheapest card that takes the lead.
-    final winningCards = legalCards.where((card) {
-      final simulated = [
-        ...currentPlays,
-        TrickPlay(playerIndex: playerIndex, card: card),
-      ];
-      return winningPlayer(simulated) == playerIndex;
-    }).toList()
-      ..sort(compareCardCost);
-
-    if (winningCards.isNotEmpty) return winningCards.first;
-    return nonLoris.isNotEmpty ? nonLoris.first : legalCards.first;
+    return _aiCardPlayStrategy.chooseCard(
+      engine: engine,
+      playerIndex: playerIndex,
+    );
   }
 
   Future<void> _playHumanCard(loris.Card card) async {
@@ -1319,35 +1490,56 @@ await DealerRevealDialog.show(
   }
 
   Future<void> _runAiTurns() async {
-    if (!_started || _finished || !mounted) return;
+    if (!_started || _finished || !mounted || _aiTurnsInProgress) return;
 
-    var safetyCounter = 0;
+    _aiTurnsInProgress = true;
+    try {
+      var safetyCounter = 0;
 
-    while (mounted &&
-        !_matchController.currentRound.isRoundEnded &&
-        _matchController.currentRound.nextPlayerIndex != 0 &&
-        safetyCounter < widget.playerCount + 1) {
-      safetyCounter++;
+      // At most playerCount - 1 AI seats can act before play reaches seat 0.
+      // Keep a hard guard so corrupted turn state cannot spin forever.
+      while (mounted &&
+          !_matchController.currentRound.isRoundEnded &&
+          _matchController.currentRound.nextPlayerIndex != 0 &&
+          safetyCounter < widget.playerCount) {
+        safetyCounter++;
 
-      final playerIndex =
-          _matchController.currentRound.nextPlayerIndex!;
+        final playerIndex =
+            _matchController.currentRound.nextPlayerIndex!;
 
-      try {
-        final card = _chooseAiCard(playerIndex);
+        try {
+          final card = _chooseAiCard(playerIndex);
 
-        await _animateCardToTable(playerIndex, card);
-        await _playCardFeedback(card);
-        _matchController.playCard(playerIndex, card);
+          await _animateCardToTable(playerIndex, card);
+          await _playCardFeedback(card);
+          if (!mounted) return;
+          _matchController.playCard(playerIndex, card);
 
-        await _afterCardPlayed();
+          await _afterCardPlayed();
 
-        if (!mounted || _finished) return;
-      } catch (e) {
-        if (mounted) {
-          setState(() => _error = 'AI play error: $e');
+          if (!mounted || _finished) return;
+        } catch (e) {
+          if (mounted) {
+            setState(() {
+              _error = 'AI play error: $e';
+              _status = 'AI turn paused. The current game state is saved.';
+            });
+          }
+          return;
         }
-        return;
       }
+
+      if (mounted &&
+          !_matchController.currentRound.isRoundEnded &&
+          _matchController.currentRound.nextPlayerIndex != 0 &&
+          safetyCounter >= widget.playerCount) {
+        setState(() {
+          _error = 'AI turn safety stop: player order did not advance.';
+          _status = 'AI turn paused. Please resume the match.';
+        });
+      }
+    } finally {
+      _aiTurnsInProgress = false;
     }
   }
 
@@ -1363,18 +1555,20 @@ await DealerRevealDialog.show(
         _collectingTrickWinner = null;
         _status = 'TRICK COMPLETE • ${_playerNames[winnerPreview]} wins the trick';
       });
-      await _audio.play('trick_win');
-      await HapticFeedback.heavyImpact();
+      if (_soundEnabled) unawaited(_audio.play('trick_win'));
+      await _safeDeviceFeedback(HapticFeedback.heavyImpact);
       // Briefly show the completed trick, then animate every card into
       // the winning player's seat before the next trick is dealt.
-      await Future.delayed(const Duration(milliseconds: 550));
+      await Future.delayed(const Duration(milliseconds: 320));
       if (!mounted) return;
       setState(() {
         _collectingTrickWinner = winnerPreview;
       });
-      await Future.delayed(const Duration(milliseconds: 900));
+      await Future.delayed(const Duration(milliseconds: 520));
       if (!mounted) return;
 
+      final scoreBeforeTeamA = _matchController.matchScoreEngine.teamAScore;
+      final scoreBeforeTeamB = _matchController.matchScoreEngine.teamBScore;
       final winner = _matchController.completeTrick();
       _trickNumber = round.completedTricks;
 
@@ -1384,6 +1578,7 @@ await DealerRevealDialog.show(
         _revealedTrickPlays = [];
         _collectingTrickWinner = null;
         _winCelebration = 'TRICK WON • ${_playerNames[winner]}';
+        _winCelebrationIsLoss = false;
       });
 
       // AI automatically makes a valid 16 call when eligible.
@@ -1407,16 +1602,57 @@ await DealerRevealDialog.show(
       }
 
       if (_finished) {
-        if (_matchController.isMatchOver) {
-          await _audio.play('match_win');
-          await HapticFeedback.vibrate();
-          if (mounted) setState(() => _winCelebration = 'MATCH CHAMPION!');
-        } else {
-          await _audio.play('round_win');
-          await HapticFeedback.heavyImpact();
-          if (mounted) setState(() => _winCelebration = 'ROUND WON!');
-        }
         final score = _matchController.matchScoreEngine;
+        final teamAPointsEarned =
+            score.teamAScore - scoreBeforeTeamA;
+        final teamBPointsEarned =
+            score.teamBScore - scoreBeforeTeamB;
+        final humanTeamWonRound =
+            teamAPointsEarned > teamBPointsEarned;
+
+        if (_matchController.isMatchOver) {
+          final matchWinner = _matchController.matchWinner;
+          final humanTeamWonMatch = matchWinner == MatchWinner.teamA;
+          final matchDraw = matchWinner == MatchWinner.draw;
+          if (_soundEnabled && humanTeamWonMatch) {
+            unawaited(_audio.play('match_win'));
+          } else if (_soundEnabled && !humanTeamWonMatch && !matchDraw) {
+            unawaited(_safeDeviceFeedback(() => SystemSound.play(SystemSoundType.alert)));
+          }
+          if (humanTeamWonMatch) {
+            await _safeDeviceFeedback(HapticFeedback.vibrate);
+          } else {
+            await _safeDeviceFeedback(HapticFeedback.heavyImpact);
+          }
+          if (mounted) {
+            setState(() {
+              _winCelebration = matchDraw
+                  ? 'MATCH DRAW!'
+                  : humanTeamWonMatch
+                      ? 'MATCH VICTORY!'
+                      : 'MATCH DEFEAT';
+              _winCelebrationIsLoss = !humanTeamWonMatch && !matchDraw;
+            });
+          }
+        } else {
+          if (_soundEnabled && humanTeamWonRound) {
+            unawaited(_audio.play('round_win'));
+          } else if (_soundEnabled && !humanTeamWonRound) {
+            unawaited(_safeDeviceFeedback(() => SystemSound.play(SystemSoundType.alert)));
+          }
+          if (humanTeamWonRound) {
+            await _safeDeviceFeedback(HapticFeedback.heavyImpact);
+          } else {
+            await _safeDeviceFeedback(HapticFeedback.mediumImpact);
+          }
+          if (mounted) {
+            setState(() {
+              _winCelebration =
+                  humanTeamWonRound ? 'ROUND WON!' : 'ROUND LOST!';
+              _winCelebrationIsLoss = !humanTeamWonRound;
+            });
+          }
+        }
 
         setState(() {
           _status =
@@ -1435,7 +1671,9 @@ await DealerRevealDialog.show(
 
     // Persist after every card so an unexpected app close does not discard
     // the latest turn. Save failures are surfaced without interrupting play.
-    await _autoSaveGame();
+    // Saving is deliberately detached from the turn pipeline: slow local
+    // storage must never leave the table waiting for the next player's turn.
+    unawaited(_autoSaveGame());
     if (mounted && _winCelebration != null) {
       await Future.delayed(const Duration(milliseconds: 1150));
       if (mounted) setState(() => _winCelebration = null);
@@ -1465,6 +1703,20 @@ await DealerRevealDialog.show(
     return engine != null &&
         engine.canCall &&
         engine.lastTrickWinnerIndex == 0;
+  }
+
+  void _pass16() {
+    if (!_humanCanCall16 || _busy) return;
+
+    try {
+      _matchController.pass16(passerPlayerIndex: 0);
+      setState(() {
+        _status = 'You passed the 16 Call. Continue playing normally.';
+      });
+      unawaited(_autoSaveGame());
+    } catch (e) {
+      setState(() => _error = e.toString());
+    }
   }
 
   Future<void> _call16() async {
@@ -1523,6 +1775,14 @@ await DealerRevealDialog.show(
     });
 
     try {
+      setState(() => _isShuffling = true);
+      _shuffleController.repeat(reverse: true);
+      await _playShuffleSound();
+      await Future.delayed(const Duration(milliseconds: 850));
+      if (!mounted) return;
+      _shuffleController.stop();
+      setState(() => _isShuffling = false);
+
       final deck = loris_deck.LorisDeck.create(
         widget.playerCount == 4
             ? loris.PlayerCount.four
@@ -1544,6 +1804,7 @@ await DealerRevealDialog.show(
 
         _started = false;
         _finished = false;
+        _isDealing = true;
 
         _trumpSuit = null;
 
@@ -1552,6 +1813,9 @@ await DealerRevealDialog.show(
         _status = 'Next round dealt. Bidding begins.';
       });
 
+      await _animateDeal(_matchController.dealerIndex);
+      if (!mounted) return;
+      setState(() => _isDealing = false);
       _startBidding();
     } catch (e) {
       setState(() => _error = e.toString());
@@ -1594,12 +1858,6 @@ await DealerRevealDialog.show(
     }
   }
 
-  String _cardName(loris.Card card) {
-    if (card.isLoris) return 'LORIS';
-
-    return '${card.displayName}${_suitSymbol(card.suit)}';
-  }
-
   bool _isRedSuit(loris.Suit? suit) {
     return suit == loris.Suit.hearts ||
         suit == loris.Suit.diamonds;
@@ -1637,7 +1895,7 @@ await DealerRevealDialog.show(
       ),
       body: SafeArea(
         child: hands == null
-            ? _buildStartPanel()
+            ? (_dealerDrawCards != null ? _buildDealerDrawTable() : _buildStartPanel())
             : _buildGamePanel(hands),
       ),
     );
@@ -1763,34 +2021,50 @@ await DealerRevealDialog.show(
     // Bidding remains scrollable; the live match itself is a fixed,
     // screen-fitted layout so the table and all eight cards stay visible.
     if (!_started) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            _buildScoreBoard(),
-            const SizedBox(height: 10),
-            _infoStrip('DEALER', _dealerIndex == null
-                ? '-'
-                : '${_playerAvatars[_dealerIndex!]} ${_playerNames[_dealerIndex!]}'),
-            _infoStrip('STATUS', _status),
-            if (_error != null) _buildErrorBanner(),
-            _buildBiddingTable(bidding),
-            if (bidding != null && bidding.isHumanTurn && !bidding.isComplete)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _busy ? null : _humanBid,
-                  child: const Text('MAKE YOUR BID'),
-                ),
-              ),
-          ],
-        ),
+      return Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              children: [
+                _buildScoreBoard(),
+                const SizedBox(height: 10),
+                _infoStrip('DEALER', _dealerIndex == null
+                    ? '-'
+                    : '${_playerAvatars[_dealerIndex!]} ${_playerNames[_dealerIndex!]}'),
+                _infoStrip('STATUS', _status),
+                if (_error != null) _buildErrorBanner(),
+                _buildBiddingHand(hands[0]),
+                _buildBiddingTable(bidding),
+                if (bidding != null && bidding.isHumanTurn && !bidding.isComplete)
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _busy ? null : _humanBid,
+                      child: const Text('MAKE YOUR BID'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (_isShuffling) Positioned.fill(child: _buildShuffleOverlay()),
+          if (_isDealing) Positioned.fill(child: _buildDealAnimation()),
+        ],
       );
     }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final handCount = hands[0].length;
+        final displayedHand = List<loris.Card>.from(hands[0]);
+        if (_sortHandBySuit) {
+          displayedHand.sort((a, b) {
+            if (a.isLoris) return b.isLoris ? 0 : 1;
+            if (b.isLoris) return -1;
+            final suitOrder = a.suit!.index.compareTo(b.suit!.index);
+            return suitOrder != 0 ? suitOrder : a.rank!.compareTo(b.rank!);
+          });
+        }
+        final handCount = displayedHand.length;
         return Padding(
           padding: const EdgeInsets.fromLTRB(8, 5, 8, 4),
           child: Column(
@@ -1799,24 +2073,54 @@ await DealerRevealDialog.show(
               _buildCompactMatchHeader(),
               if (_error != null) _buildErrorBanner(),
               Expanded(
-                child: _buildTableSurface(
-                  _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,
-                  currentPlayer,
-                  hands.map((hand) => hand.length).toList(),
+                child: DragTarget<loris.Card>(
+                  onWillAcceptWithDetails: (details) => currentPlayer == 0 && !_busy && !_finished && legalHumanCards.contains(details.data),
+                  onAcceptWithDetails: (details) => _playHumanCard(details.data),
+                  builder: (context, candidates, rejected) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(24),
+                      border: candidates.isNotEmpty ? Border.all(color: LorisApp.gold.withValues(alpha: .9), width: 2) : null,
+                      boxShadow: candidates.isNotEmpty ? [BoxShadow(color: LorisApp.gold.withValues(alpha: .18), blurRadius: 18, spreadRadius: 2)] : const [],
+                    ),
+                    child: _buildTableSurface(
+                      _revealedTrickPlays.isNotEmpty ? _revealedTrickPlays : plays,
+                      currentPlayer,
+                      hands.map((hand) => hand.length).toList(),
+                    ),
+                  ),
                 ),
               ),
               if (_humanCanCall16)
                 SizedBox(
                   height: 38,
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _busy ? null : _call16,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: LorisApp.gold,
-                      foregroundColor: LorisApp.navy,
-                      padding: EdgeInsets.zero,
-                    ),
-                    child: const Text('CALL 16', style: TextStyle(fontWeight: FontWeight.w900)),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _busy ? null : _call16,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: LorisApp.gold,
+                            foregroundColor: LorisApp.navy,
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: const Text('CALL 16', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _busy ? null : _pass16,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: const Text('PASS', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               if (_finished)
@@ -1842,7 +2146,7 @@ await DealerRevealDialog.show(
                   ),
                 ),
               SizedBox(
-                height: constraints.maxHeight < 650 ? 112 : 124,
+                height: constraints.maxHeight < 650 ? 132 : 144,
                 child: Column(
                   children: [
                     Row(
@@ -1851,7 +2155,15 @@ await DealerRevealDialog.show(
                           'YOUR HAND',
                           style: TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 2, fontSize: 11),
                         ),
-                        const Spacer(),
+                        IconButton(
+                          tooltip: _sortHandBySuit ? 'Original card order' : 'Sort by suit and rank',
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                          padding: EdgeInsets.zero,
+                          onPressed: () => setState(() => _sortHandBySuit = !_sortHandBySuit),
+                          icon: Icon(_sortHandBySuit ? Icons.sort : Icons.swap_vert, color: LorisApp.gold, size: 18),
+                        ),
+                        const SizedBox(width: 5),
                         Text(
                           '$handCount CARDS',
                           style: const TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1.2, fontWeight: FontWeight.bold),
@@ -1862,19 +2174,23 @@ await DealerRevealDialog.show(
                         ],
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 3),
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, handConstraints) {
                           const cardWidth = 62.0;
+                          // Fit the complete hand to the available screen width.
+                          // Cards overlap like a real hand of playing cards; no
+                          // horizontal scrolling is needed, even with eight cards.
                           final overlap = handCount <= 1
                               ? cardWidth
-                              : ((handConstraints.maxWidth - cardWidth) / (handCount - 1)).clamp(24.0, 43.0);
+                              : (handConstraints.maxWidth - cardWidth) / (handCount - 1);
+                          final middle = (handCount - 1) / 2;
                           return SizedBox(
                             width: handConstraints.maxWidth,
                             child: Stack(
                               alignment: Alignment.bottomLeft,
-                              clipBehavior: Clip.none,
+                              clipBehavior: Clip.hardEdge,
                               children: [
                                 for (var index = 0; index < handCount; index++)
                                   Positioned(
@@ -1882,23 +2198,31 @@ await DealerRevealDialog.show(
                                     bottom: 1,
                                     child: Builder(
                                       builder: (context) {
-                                        final card = hands[0][index];
+                                        final card = displayedHand[index];
                                         final playable = !_finished &&
                                             !_busy &&
                                             currentPlayer == 0 &&
                                             legalHumanCards.contains(card);
-                                        final middle = (handCount - 1) / 2;
-                                        final angle = (index - middle) * .025;
-                                        return GestureDetector(
-                                          onTap: playable ? () => _playHumanCard(card) : null,
-                                          child: AnimatedContainer(
-                                            duration: const Duration(milliseconds: 180),
-                                            curve: Curves.easeOut,
-                                            transform: Matrix4.identity()
-                                              ..translateByDouble(0, playable ? -7 : 0, 0, 1)
-                                              ..rotateZ(angle),
-                                            transformAlignment: Alignment.bottomCenter,
-                                            child: _buildCard(card, enabled: playable),
+                                        // A gentle fan: outer cards turn outward,
+                                        // while the middle cards remain upright.
+                                        final angle = (index - middle) * .052;
+                                        return Draggable<loris.Card>(
+                                          data: card,
+                                          maxSimultaneousDrags: playable ? 1 : 0,
+                                          feedback: Material(color: Colors.transparent, child: _buildCard(card, enabled: true)),
+                                          childWhenDragging: Opacity(opacity: .28, child: _buildCard(card, enabled: false)),
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: playable ? () => _playHumanCard(card) : null,
+                                            child: AnimatedContainer(
+                                              duration: const Duration(milliseconds: 180),
+                                              curve: Curves.easeOutCubic,
+                                              transform: Matrix4.identity()
+                                                ..translateByDouble(0, playable ? -7 : 0, 0, 1)
+                                                ..rotateZ(angle),
+                                              transformAlignment: Alignment.bottomCenter,
+                                              child: _buildCard(card, enabled: playable),
+                                            ),
                                           ),
                                         );
                                       },
@@ -1920,6 +2244,36 @@ await DealerRevealDialog.show(
     );
   }
 
+  Widget _seatRoleBadge(String label, Color foreground, Color background) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: foreground.withValues(alpha: .9), width: .7),
+        boxShadow: [BoxShadow(color: foreground.withValues(alpha: .22), blurRadius: 5)],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 5.5,
+          height: 1,
+          fontWeight: FontWeight.w900,
+          letterSpacing: .35,
+        ),
+      ),
+    );
+  }
+
+  Color _teamColor(int playerIndex) => playerIndex.isEven
+      ? const Color(0xFF35C9FF) // Team A: electric cyan
+      : const Color(0xFFFF795C); // Team B: warm coral
+
+  Color _teamDarkColor(int playerIndex) => playerIndex.isEven
+      ? const Color(0xFF092D43)
+      : const Color(0xFF431B19);
+
   Widget _buildCompactMatchHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -1938,10 +2292,10 @@ await DealerRevealDialog.show(
         children: [
           Row(
             children: [
-              Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore)),
-              Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
-              Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore)),
-              Container(width: 1, height: 30, color: LorisApp.gold.withValues(alpha: .5)),
+              Expanded(child: _compactScore('TEAM A', _matchController.matchScoreEngine.teamAScore, _teamColor(0))),
+              Container(width: 1, height: 30, color: Colors.white24),
+              Expanded(child: _compactScore('TEAM B', _matchController.matchScoreEngine.teamBScore, _teamColor(1))),
+              Container(width: 1, height: 30, color: Colors.white24),
               Column(
                 children: [
                   const Text('TRUMP', style: TextStyle(color: Colors.white54, fontSize: 8, fontWeight: FontWeight.bold)),
@@ -1953,6 +2307,10 @@ await DealerRevealDialog.show(
               ),
             ],
           ),
+          if (_matchController.hasStarted) ...[
+            const SizedBox(height: 7),
+            _buildTrickTargetProgress(),
+          ],
           const SizedBox(height: 4),
           Row(
             children: [
@@ -1973,6 +2331,118 @@ await DealerRevealDialog.show(
                 ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrickTargetProgress() {
+    final round = _matchController.currentRound;
+    final teamATricks = round.biddingTeam == 0
+        ? round.biddingTeamTricks
+        : round.completedTricks - round.biddingTeamTricks;
+    final teamBTricks = round.biddingTeam == 1
+        ? round.biddingTeamTricks
+        : round.completedTricks - round.biddingTeamTricks;
+    final teamATarget = round.biddingTeam == 0
+        ? round.bidAmount
+        : 8 - round.bidAmount;
+    final teamBTarget = round.biddingTeam == 1
+        ? round.bidAmount
+        : 8 - round.bidAmount;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _trickProgressTile(
+            'TEAM A',
+            teamATricks,
+            teamATarget,
+            isBiddingTeam: round.biddingTeam == 0,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _trickProgressTile(
+            'TEAM B',
+            teamBTricks,
+            teamBTarget,
+            isBiddingTeam: round.biddingTeam == 1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _trickProgressTile(
+    String label,
+    int won,
+    int target, {
+    required bool isBiddingTeam,
+  }) {
+    final double progress = target <= 0 ? 1.0 : (won / target).clamp(0.0, 1.0).toDouble();
+    final teamIndex = label == 'TEAM A' ? 0 : 1;
+    final accent = _teamColor(teamIndex);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFF100D12).withValues(alpha: .78),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: accent.withValues(alpha: isBiddingTeam ? .85 : .42),
+          width: isBiddingTeam ? 1.1 : .7,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: accent,
+                  fontSize: 7,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .8,
+                ),
+              ),
+              Text(
+                '$won/$target',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 3,
+              backgroundColor: Colors.white12,
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+          if (isBiddingTeam)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Text(
+                'BIDDING TEAM',
+                style: TextStyle(
+                  color: Color(0xFFFFD477),
+                  fontSize: 5.5,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .6,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -2012,12 +2482,20 @@ await DealerRevealDialog.show(
     );
   }
 
-  Widget _compactScore(String label, int value) {
-    return Column(
-      children: [
-        Text(label, style: const TextStyle(color: LorisApp.gold, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
-        Text('$value', style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900)),
-      ],
+  Widget _compactScore(String label, int value, Color teamColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: teamColor.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: teamColor.withValues(alpha: .65), width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(color: teamColor, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          Text('$value', style: const TextStyle(color: Colors.white, fontSize: 21, height: 1.05, fontWeight: FontWeight.w900)),
+        ],
+      ),
     );
   }
 
@@ -2044,52 +2522,39 @@ await DealerRevealDialog.show(
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        vertical: 14,
-        horizontal: 18,
-      ),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: LorisApp.blue,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: LorisApp.gold.withValues(alpha: .7),
-          width: 1.5,
-        ),
+        border: Border.all(color: Colors.white24, width: 1),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _scoreItem('TEAM A', score.teamAScore),
-          Container(
-            width: 1,
-            height: 40,
-            color: LorisApp.gold,
-          ),
-          _scoreItem('TEAM B', score.teamBScore),
+          Expanded(child: _scoreItem('TEAM A', score.teamAScore, _teamColor(0))),
+          const SizedBox(width: 8),
+          Expanded(child: _scoreItem('TEAM B', score.teamBScore, _teamColor(1))),
         ],
       ),
     );
   }
 
-  Widget _scoreItem(String label, int value) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: LorisApp.gold,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$value',
-          style: const TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
+  Widget _scoreItem(String label, int value, Color teamColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      decoration: BoxDecoration(
+        color: teamColor.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: teamColor.withValues(alpha: .8), width: 1.4),
+        boxShadow: [BoxShadow(color: teamColor.withValues(alpha: .12), blurRadius: 10)],
+      ),
+      child: Column(
+        children: [
+          Text(label, style: TextStyle(color: teamColor, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          const SizedBox(height: 4),
+          Text('$value', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white)),
+        ],
+      ),
     );
   }
 
@@ -2128,6 +2593,201 @@ await DealerRevealDialog.show(
         ],
       ),
     );
+  }
+
+  // ----------------------------------------------------------
+  // BIDDING HAND AND DEAL ANIMATION
+  // ----------------------------------------------------------
+
+  Widget _buildBiddingHand(List<loris.Card> hand) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: LorisApp.navy.withValues(alpha: .82),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: LorisApp.gold, width: 1.4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('YOUR HAND • ${hand.length} CARDS',
+            style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 7,
+            runSpacing: 8,
+            children: hand.map((card) => _buildCard(card, compact: true)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Alignment _dealSeatAlignment(int playerIndex) {
+    final seats = widget.playerCount == 4
+        ? const <Alignment>[
+            Alignment(0, .78),
+            Alignment(-.86, 0),
+            Alignment(0, -.78),
+            Alignment(.86, 0),
+          ]
+        : const <Alignment>[
+            Alignment(0, .82),
+            Alignment(-.86, .48),
+            Alignment(-.86, -.48),
+            Alignment(0, -.82),
+            Alignment(.86, -.48),
+            Alignment(.86, .48),
+          ];
+    return seats[playerIndex];
+  }
+
+  Widget _dealCardBack() {
+    return Container(
+      width: 48,
+      height: 68,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(7),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF315F9A), Color(0xFF102747)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: LorisApp.gold, width: 1.6),
+        boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 10, offset: Offset(2, 5))],
+      ),
+      child: const Center(
+        child: Icon(Icons.auto_awesome, color: LorisApp.gold, size: 22),
+      ),
+    );
+  }
+
+  Widget _buildShuffleOverlay() {
+    return ColoredBox(
+      color: Colors.black.withValues(alpha: .88),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _shuffleController,
+              builder: (context, child) {
+                final phase = _shuffleController.value * 2 * pi;
+                return SizedBox(
+                  width: 170,
+                  height: 112,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      for (var i = 0; i < 5; i++)
+                        Transform.translate(
+                          offset: Offset(sin(phase + i * .85) * 34, cos(phase + i * .85) * 10),
+                          child: Transform.rotate(
+                            angle: sin(phase + i * .85) * .24,
+                            child: _dealCardBack(),
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+            const Text('SHUFFLING THE DECK',
+              style: TextStyle(color: LorisApp.gold, fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 2)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDealAnimation() {
+    final target = _dealTargetPlayer;
+    return ColoredBox(
+      color: Colors.black.withValues(alpha: .88),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 34,
+            left: 12,
+            right: 12,
+            child: Column(
+              children: [
+                const Text('DEALING CARDS',
+                  style: TextStyle(color: LorisApp.gold, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: 2)),
+                const SizedBox(height: 6),
+                Text('BATCH ${_dealBatch + 1} OF 2  •  CARD $_dealCardNumber OF 4',
+                  style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 8,
+            right: 8,
+            bottom: 24,
+            child: Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
+              children: List.generate(widget.playerCount, (index) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LorisPortraitAvatar(variant: _portraitVariants[index], size: 20),
+                  const SizedBox(width: 3),
+                  Text('${_playerNames[index]} ${_dealCounts.length > index ? _dealCounts[index] : 0}/8',
+                    style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                ],
+              )),
+            ),
+          ),
+          AnimatedAlign(
+            alignment: target == null ? Alignment.center : _dealSeatAlignment(target),
+            duration: target == null ? Duration.zero : const Duration(milliseconds: 115),
+            curve: Curves.easeOutCubic,
+            child: _dealCardBack(),
+          ),
+          if (target != null)
+            Positioned(
+              top: 86,
+              left: 12,
+              right: 12,
+              child: Text('TO ${_playerNames[target]}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: LorisApp.gold, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _animateDeal(int dealerIndex) async {
+    setState(() => _dealCounts = List<int>.filled(widget.playerCount, 0));
+    final firstPlayer = (dealerIndex + 1) % widget.playerCount;
+    for (var batch = 0; batch < 2; batch++) {
+      for (var cardNumber = 0; cardNumber < 4; cardNumber++) {
+        for (var offset = 0; offset < widget.playerCount; offset++) {
+          if (!mounted) return;
+          final player = (firstPlayer + offset) % widget.playerCount;
+          setState(() {
+            _dealBatch = batch;
+            _dealCardNumber = cardNumber + 1;
+            _dealTargetPlayer = null;
+          });
+          await Future.delayed(const Duration(milliseconds: 18));
+          if (!mounted) return;
+          setState(() => _dealTargetPlayer = player);
+          await Future.delayed(const Duration(milliseconds: 115));
+          if (!mounted) return;
+          setState(() {
+            _dealCounts[player]++;
+            _dealTargetPlayer = null;
+          });
+          await Future.delayed(const Duration(milliseconds: 22));
+        }
+      }
+    }
   }
 
   // ----------------------------------------------------------
@@ -2180,6 +2840,9 @@ await DealerRevealDialog.show(
                       : '${records.last.amount}';
 
               final isHuman = index == 0;
+              final isCurrent = !bidding.isComplete &&
+                  bidding.engine.currentPlayerIndex == index;
+              final isThinking = isCurrent && bidding.isAiTurn;
 
               final isHighest =
                   bidding.highestBidder == index;
@@ -2187,7 +2850,20 @@ await DealerRevealDialog.show(
               return Expanded(
                 child: Column(
                   children: [
-                    CircleAvatar(
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _teamColor(index).withValues(alpha: isCurrent ? 1 : .9),
+                          width: isCurrent ? 3 : 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(color: _teamColor(index).withValues(alpha: isThinking ? .55 : .18), blurRadius: isThinking ? 12 : 6),
+                        ],
+                      ),
+                      child: CircleAvatar(
                       radius: 19,
                       backgroundColor: isHighest
                           ? LorisApp.gold
@@ -2198,16 +2874,30 @@ await DealerRevealDialog.show(
                           ? LorisApp.navy
                           : Colors.white,
                       child: LorisPortraitAvatar(
-                        variant: index,
+                        variant: _portraitVariants[index],
                         size: 38,
                       ),
                     ),
+                    ),
                     const SizedBox(height: 7),
                     Text(
-                      bidText,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      isThinking ? 'THINKING…' : bidText,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isThinking ? LorisApp.gold : Colors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
+                    ),
+                    Text(
+                      _playerNames[index],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: isCurrent ? LorisApp.gold : Colors.white60,
+                        fontSize: 9,
+                        fontWeight: isCurrent ? FontWeight.w900 : FontWeight.normal,
                       ),
                     ),
                   ],
@@ -2285,8 +2975,8 @@ await DealerRevealDialog.show(
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
-        final avatarSize = widget.playerCount == 6 ? 34.0 : 38.0;
-        final seatWidth = widget.playerCount == 6 ? 68.0 : 76.0;
+        final avatarSize = widget.playerCount == 6 ? 30.0 : 36.0;
+        final seatWidth = widget.playerCount == 6 ? 62.0 : 72.0;
         final centerWidth = (constraints.maxWidth * .46).clamp(126.0, 166.0);
         final centerHeight = (tableHeight * .32).clamp(94.0, 126.0);
 
@@ -2300,7 +2990,7 @@ await DealerRevealDialog.show(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFE9A3), Color(0xFF9A642A), Color(0xFFFFD36A), Color(0xFF57351D)],
+              colors: [Color(0xFFFFE8B0), Color(0xFFB77A36), Color(0xFFE6C078), Color(0xFF49212A)],
             ),
             boxShadow: const [
               BoxShadow(color: Colors.black87, blurRadius: 18, offset: Offset(0, 9)),
@@ -2314,7 +3004,7 @@ await DealerRevealDialog.show(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF0B6048), Color(0xFF064331), Color(0xFF022A22)],
+                colors: [Color(0xFF6A2331), Color(0xFF3A111C), Color(0xFF170B11)],
               ),
               border: Border.all(color: const Color(0xFFFFE6A0), width: 1.5),
             ),
@@ -2323,19 +3013,9 @@ await DealerRevealDialog.show(
               clipBehavior: Clip.none,
               children: [
                 Positioned.fill(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(130),
-                        border: Border.all(color: const Color(0x55E8D09A), width: 1),
-                        gradient: const RadialGradient(
-                          center: Alignment(0, -.25),
-                          radius: 1.15,
-                          colors: [Color(0xFF16795A), Color(0xFF032D25)],
-                        ),
-                      ),
-                    ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(130),
+                    child: Loris3DTable(playerCount: widget.playerCount),
                   ),
                 ),
                 for (var index = 0; index < widget.playerCount; index++)
@@ -2352,16 +3032,16 @@ await DealerRevealDialog.show(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: _collectingTrickWinner == index
-                              ? const [Color(0xFFFFE7A0), Color(0xFFB77A2D), Color(0xFF63351C)]
+                              ? [_teamColor(index), _teamDarkColor(index), _teamDarkColor(index)]
                               : currentPlayer == index
-                                  ? const [Color(0xFF314F70), Color(0xFF152A45)]
-                                  : const [Color(0xFF263B55), Color(0xFF0A1729)],
+                                  ? [_teamColor(index).withValues(alpha: .72), _teamDarkColor(index), const Color(0xFF101827)]
+                                  : [_teamColor(index).withValues(alpha: .30), _teamDarkColor(index), const Color(0xFF101827)],
                         ),
                         border: Border.all(
-                          color: _collectingTrickWinner == index || currentPlayer == index
-                              ? const Color(0xFFFFE6A0)
-                              : const Color(0xFF9B855C),
-                          width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.6 : .8,
+                          color: _teamColor(index).withValues(
+                            alpha: _collectingTrickWinner == index || currentPlayer == index ? 1 : .72,
+                          ),
+                          width: _collectingTrickWinner == index ? 2.8 : currentPlayer == index ? 2.2 : 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: 8, offset: const Offset(0, 4)),
@@ -2376,11 +3056,13 @@ await DealerRevealDialog.show(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(colors: [Color(0xFFFFF4C5), Color(0xFFB4772E), Color(0xFFFFE5A0)]),
-                              boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 5, offset: Offset(0, 2))],
+                              color: _teamDarkColor(index),
+                              border: Border.all(color: _teamColor(index), width: 2.5),
+                              boxShadow: [BoxShadow(color: _teamColor(index).withValues(alpha: .48), blurRadius: 8)],
                             ),
                             child: LorisPortraitAvatar(
                               variant: index,
+                              expression: _avatarExpressionFor(index, currentPlayer),
                               size: avatarSize,
                               highlighted: currentPlayer == index || _collectingTrickWinner == index,
                             ),
@@ -2394,7 +3076,18 @@ await DealerRevealDialog.show(
                           ),
                           Text(
                             'TEAM ${index.isEven ? "A" : "B"}',
-                            style: const TextStyle(color: Color(0xFFFFD978), fontSize: 7, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: _teamColor(index), fontSize: 7, fontWeight: FontWeight.w900, letterSpacing: .5),
+                          ),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 3,
+                            runSpacing: 2,
+                            children: [
+                              if (_dealerIndex == index)
+                                _seatRoleBadge('D', const Color(0xFFFFD76A), const Color(0xFF3B2608)),
+                              if (_biddingController?.highestBidder == index)
+                                _seatRoleBadge('${_biddingController!.highestBid}', const Color(0xFF9BE7FF), const Color(0xFF082B3A)),
+                            ],
                           ),
                           if (currentPlayer == index)
                             Container(
@@ -2463,7 +3156,41 @@ await DealerRevealDialog.show(
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Color(0xFFFFE39A), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: .7),
                       ),
-                      if (plays.isEmpty)
+                      if (_trumpSuit != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFFFD76A).withValues(alpha: .30),
+                                const Color(0xFFFFF0B0).withValues(alpha: .12),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFFFD76A), width: 1.2),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x66FFD76A), blurRadius: 13, spreadRadius: 1),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('TRUMP', style: TextStyle(color: Color(0xFFFFE8A3), fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                              const SizedBox(width: 6),
+                              Text(
+                                _suitSymbol(_trumpSuit),
+                                style: TextStyle(
+                                  color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF737D) : Colors.white,
+                                  fontSize: 19,
+                                  height: 1,
+                                  fontWeight: FontWeight.w900,
+                                  shadows: const [Shadow(color: Color(0xFFFFD76A), blurRadius: 8)],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (plays.isEmpty)
                         const Text('PLAY A CARD', style: TextStyle(color: Colors.white54, fontSize: 9, letterSpacing: 1.5, fontWeight: FontWeight.bold))
                       else
                         const SizedBox(height: 1),
@@ -2483,13 +3210,33 @@ await DealerRevealDialog.show(
                             -.25 + (i ~/ 3) * .50,
                           )
                         : trickCollectionTargets[_collectingTrickWinner!],
-                    duration: Duration(milliseconds: _collectingTrickWinner == null ? 260 : 850),
+                    duration: Duration(milliseconds: _collectingTrickWinner == null ? 220 : 520),
                     curve: _collectingTrickWinner == null ? Curves.easeOutBack : Curves.easeInCubic,
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(begin: .78, end: _collectingTrickWinner == null ? 1 : .42),
-                      duration: Duration(milliseconds: _collectingTrickWinner == null ? 260 : 850),
-                      curve: Curves.easeInOut,
-                      builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+                      duration: Duration(milliseconds: _collectingTrickWinner == null ? 220 : 520),
+                      curve: Curves.easeInOutCubic,
+                      builder: (context, scale, child) {
+                        final collecting = _collectingTrickWinner != null;
+                        final progress = collecting
+                            ? ((1 - scale) / .58).clamp(0.0, 1.0).toDouble()
+                            : 0.0;
+                        final direction = i.isEven ? 1.0 : -1.0;
+                        final transform = Matrix4.identity()
+                          ..setEntry(3, 2, .0012)
+                          ..rotateX(progress * .24)
+                          ..rotateY(progress * direction * .42)
+                          ..rotateZ(progress * direction * .22)
+                          ..scaleByDouble(scale, scale, 1, 1);
+                        return Opacity(
+                          opacity: (1 - progress * .12).clamp(.0, 1.0),
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: transform,
+                            child: child,
+                          ),
+                        );
+                      },
                       child: _buildCard(plays[i].card, compact: true),
                     ),
                   ),
@@ -2498,17 +3245,68 @@ await DealerRevealDialog.show(
                     alignment: _flightStarted
                         ? Alignment.center
                         : seatAlignments[_flyingFromPlayer!],
-                    duration: Duration(milliseconds: _flightStarted ? 470 : 1),
+                    duration: Duration(milliseconds: _flightStarted ? 460 : 1),
                     curve: Curves.easeInOutCubic,
-                    child: Transform.rotate(
-                      angle: _flightStarted ? 0 : -.22,
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: .72, end: _flightStarted ? 1.0 : .72),
-                        duration: const Duration(milliseconds: 470),
-                        curve: Curves.easeOutBack,
-                        builder: (context, scale, child) =>
-                            Transform.scale(scale: scale, child: child),
-                        child: _buildCard(_flyingCard!, compact: true),
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: _flightStarted ? 1.0 : 0.0),
+                      duration: const Duration(milliseconds: 460),
+                      curve: Curves.easeInOutCubic,
+                      builder: (context, progress, child) {
+                        final transform = Matrix4.identity()
+                          ..setEntry(3, 2, 0.0014)
+                          ..rotateX((1 - progress) * .72)
+                          ..rotateY((1 - progress) * -.88)
+                          ..rotateZ((1 - progress) * -.34)
+                          ..scaleByDouble(
+                            .70 + (progress * .30),
+                            .70 + (progress * .30),
+                            1.0,
+                            1.0,
+                          );
+                        return Transform(
+                          alignment: Alignment.center,
+                          transform: transform,
+                          child: child,
+                        );
+                      },
+                      child: _buildCard(_flyingCard!, compact: true),
+                    ),
+                  ),
+                if (_cardImpactKey > 0)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Center(
+                        child: TweenAnimationBuilder<double>(
+                          key: ValueKey('card-impact-$_cardImpactKey'),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 360),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, progress, child) {
+                            final diameter = 24.0 + progress * 76.0;
+                            return Opacity(
+                              opacity: (1.0 - progress).clamp(0.0, 1.0),
+                              child: Container(
+                                width: diameter,
+                                height: diameter,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: const Color(0xFFFFE6A0),
+                                    width: 2.4 - progress * 1.2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFFFD36A)
+                                          .withValues(alpha: .42 * (1 - progress)),
+                                      blurRadius: 16,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -2550,14 +3348,38 @@ await DealerRevealDialog.show(
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 9),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [Color(0xFFFFE9A3), Color(0xFFB77A2D)]),
+                              gradient: LinearGradient(
+                                colors: _winCelebrationIsLoss
+                                    ? const [Color(0xFF7D1725), Color(0xFF350B16)]
+                                    : const [Color(0xFFFFE9A3), Color(0xFFB77A2D)],
+                              ),
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: Colors.white, width: 1),
-                              boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 18, spreadRadius: 2)],
+                              border: Border.all(
+                                color: _winCelebrationIsLoss
+                                    ? const Color(0xFFFFA0A8)
+                                    : Colors.white,
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _winCelebrationIsLoss
+                                      ? const Color(0xFFB51F38).withValues(alpha: .55)
+                                      : Colors.black87,
+                                  blurRadius: 18,
+                                  spreadRadius: 2,
+                                ),
+                              ],
                             ),
                             child: Text(
                               _winCelebration!,
-                              style: const TextStyle(color: Color(0xFF27190B), fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                              style: TextStyle(
+                                color: _winCelebrationIsLoss
+                                    ? Colors.white
+                                    : const Color(0xFF27190B),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
                             ),
                           ),
                         ),
@@ -2592,6 +3414,59 @@ await DealerRevealDialog.show(
   // ----------------------------------------------------------
   // CARD WIDGET
   // ----------------------------------------------------------
+
+  bool _isCourtCard(loris.Card card) =>
+      !card.isLoris && card.rank != null && card.rank! >= 11;
+
+  List<Offset> _pipPositions(int rank) {
+    // Coordinates follow familiar casino-deck pip layouts (0..1 card space).
+    const layouts = <int, List<Offset>>{
+      7: [Offset(.5,.16), Offset(.25,.29), Offset(.75,.29), Offset(.5,.42), Offset(.25,.57), Offset(.75,.57), Offset(.5,.80)],
+      8: [Offset(.5,.13), Offset(.25,.27), Offset(.75,.27), Offset(.5,.40), Offset(.5,.60), Offset(.25,.73), Offset(.75,.73), Offset(.5,.87)],
+      9: [Offset(.25,.15), Offset(.75,.15), Offset(.25,.32), Offset(.75,.32), Offset(.5,.50), Offset(.25,.68), Offset(.75,.68), Offset(.25,.85), Offset(.75,.85)],
+      10: [Offset(.25,.12), Offset(.75,.12), Offset(.5,.25), Offset(.25,.34), Offset(.75,.34), Offset(.25,.66), Offset(.75,.66), Offset(.5,.75), Offset(.25,.88), Offset(.75,.88)],
+    };
+    if (rank == 2) return const [Offset(.5,.28), Offset(.5,.72)];
+    if (rank == 3) return const [Offset(.5,.2), Offset(.5,.5), Offset(.5,.8)];
+    if (rank == 4) return const [Offset(.28,.25), Offset(.72,.25), Offset(.28,.75), Offset(.72,.75)];
+    if (rank == 5) return const [Offset(.28,.22), Offset(.72,.22), Offset(.5,.5), Offset(.28,.78), Offset(.72,.78)];
+    if (rank == 6) return const [Offset(.28,.18), Offset(.72,.18), Offset(.28,.5), Offset(.72,.5), Offset(.28,.82), Offset(.72,.82)];
+    return layouts[rank] ?? const [Offset(.5,.5)];
+  }
+
+  Widget _buildPipFace(loris.Card card, Color ink, bool compact) {
+    final positions = _pipPositions(card.rank!);
+    final pipSize = compact ? 9.5 : 13.5;
+    return LayoutBuilder(
+      builder: (context, constraints) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (final point in positions)
+            Positioned(
+              left: point.dx * constraints.maxWidth - pipSize / 2,
+              top: point.dy * constraints.maxHeight - pipSize / 2,
+              child: Text(
+                _suitSymbol(card.suit),
+                style: TextStyle(
+                  color: ink,
+                  fontSize: pipSize,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  int _avatarExpressionFor(int index, int? currentPlayer) {
+    if (_collectingTrickWinner == index) return 0; // celebrating the trick
+    if (currentPlayer == index) return 1; // concentrating on the decision
+    if (_biddingController?.highestBidder == index) return 3; // confident bidder
+    if (_playEffect != null && index == 0) return 2; // surprised reaction
+    return (_trickNumber + index) % 4 == 0 ? 4 : 1;
+  }
 
   Widget _buildCard(
     loris.Card card, {
@@ -2650,12 +3525,269 @@ await DealerRevealDialog.show(
                       if (!compact) Text('LORIS', style: TextStyle(color: ink, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
                     ],
                   )
-                : Text(_suitSymbol(card.suit),
-                    style: TextStyle(color: ink, fontSize: compact ? 22 : 31, fontWeight: FontWeight.w900, shadows: const [Shadow(color: Color(0x22000000), blurRadius: 1, offset: Offset(1, 1))])),
+                : _isCourtCard(card)
+                    ? CustomPaint(
+                        size: Size(compact ? 34 : 45, compact ? 43 : 61),
+                        painter: _CourtCardPainter(
+                          rank: card.rank!,
+                          suitSymbol: _suitSymbol(card.suit),
+                          ink: ink,
+                          accent: isRed
+                              ? const Color(0xFFB51F32)
+                              : const Color(0xFF173B68),
+                        ),
+                      )
+                    : _buildPipFace(card, ink, compact),
           ),
         ],
       ),
     );
   }
 
+
 }
+
+/// Original illustrated court-card artwork. Each face card has its own
+/// silhouette, costume and ornament rather than a plain suit pip.
+class _CourtCardPainter extends CustomPainter {
+  const _CourtCardPainter({
+    required this.rank,
+    required this.suitSymbol,
+    required this.ink,
+    required this.accent,
+  });
+
+  final int rank;
+  final String suitSymbol;
+  final Color ink;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    final panel = RRect.fromRectAndRadius(
+      bounds.deflate(1),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(
+      panel,
+      Paint()
+        ..color = const Color(0xFFFFFDF5)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawRRect(
+      panel,
+      Paint()
+        ..color = accent.withValues(alpha: .72)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+
+    if (rank == 14) {
+      _paintAce(canvas, size);
+      return;
+    }
+
+    // Two opposing, mirrored royal portraits evoke traditional court cards.
+    canvas.save();
+    _paintPortrait(canvas, size);
+    canvas.translate(size.width, size.height);
+    canvas.rotate(math.pi);
+    _paintPortrait(canvas, size);
+    canvas.restore();
+
+    final divider = Paint()
+      ..color = accent.withValues(alpha: .75)
+      ..strokeWidth = .8;
+    canvas.drawLine(
+      Offset(size.width * .16, size.height * .5),
+      Offset(size.width * .84, size.height * .5),
+      divider,
+    );
+    final center = Offset(size.width * .5, size.height * .5);
+    canvas.drawCircle(center, size.width * .105, Paint()..color = const Color(0xFFFFFDF5));
+    _drawSuit(canvas, center, size.width * .12);
+  }
+
+  void _paintPortrait(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final outfit = Paint()
+      ..color = rank == 11
+          ? const Color(0xFF245C79)
+          : rank == 12
+              ? const Color(0xFF8B3150)
+              : const Color(0xFF263B61);
+    final gold = Paint()..color = const Color(0xFFD4A84F);
+    final dark = Paint()..color = const Color(0xFF382B2B);
+    final skin = Paint()..color = const Color(0xFFE8B98E);
+
+    // Shoulder armour / royal robe.
+    final robe = Path()
+      ..moveTo(w * .12, h * .48)
+      ..quadraticBezierTo(w * .18, h * .34, w * .5, h * .36)
+      ..quadraticBezierTo(w * .82, h * .34, w * .88, h * .48)
+      ..lineTo(w * .92, h * .5)
+      ..lineTo(w * .08, h * .5)
+      ..close();
+    canvas.drawPath(robe, outfit);
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * .5, h * .37)
+        ..lineTo(w * .39, h * .49)
+        ..lineTo(w * .61, h * .49)
+        ..close(),
+      gold,
+    );
+
+    // Neck and face.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * .41, h * .27, w * .18, h * .13),
+        Radius.circular(w * .04),
+      ),
+      skin,
+    );
+    canvas.drawOval(
+      Rect.fromLTWH(w * .31, h * .08, w * .38, h * .28),
+      skin,
+    );
+
+    // Hair, beard and crown differ by court rank.
+    if (rank == 13) {
+      canvas.drawArc(
+        Rect.fromLTWH(w * .29, h * .055, w * .42, h * .34),
+        math.pi,
+        math.pi,
+        false,
+        Paint()
+          ..color = const Color(0xFF4B3028)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w * .09,
+      );
+      final beard = Path()
+        ..moveTo(w * .34, h * .27)
+        ..quadraticBezierTo(w * .5, h * .48, w * .66, h * .27)
+        ..lineTo(w * .61, h * .37)
+        ..lineTo(w * .5, h * .43)
+        ..lineTo(w * .39, h * .37)
+        ..close();
+      canvas.drawPath(beard, dark);
+    } else if (rank == 12) {
+      canvas.drawOval(
+        Rect.fromLTWH(w * .24, h * .07, w * .52, h * .31),
+        Paint()..color = const Color(0xFF4A263A),
+      );
+      canvas.drawOval(
+        Rect.fromLTWH(w * .32, h * .09, w * .36, h * .25),
+        skin,
+      );
+    } else {
+      canvas.drawArc(
+        Rect.fromLTWH(w * .28, h * .04, w * .44, h * .27),
+        math.pi,
+        math.pi,
+        false,
+        Paint()
+          ..color = const Color(0xFF4A3026)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w * .08,
+      );
+      // Jack's feather.
+      canvas.drawPath(
+        Path()
+          ..moveTo(w * .52, h * .10)
+          ..quadraticBezierTo(w * .78, h * -.04, w * .70, h * .17)
+          ..quadraticBezierTo(w * .60, h * .21, w * .52, h * .10),
+        Paint()..color = accent,
+      );
+    }
+
+    // Eyes and nose.
+    final eye = Paint()
+      ..color = const Color(0xFF342B28)
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(Offset(w * .39, h * .21), Offset(w * .45, h * .21), eye);
+    canvas.drawLine(Offset(w * .55, h * .21), Offset(w * .61, h * .21), eye);
+    canvas.drawLine(Offset(w * .5, h * .22), Offset(w * .48, h * .27), eye);
+
+    // Crown / head ornament.
+    final crown = Path()
+      ..moveTo(w * .32, h * .12)
+      ..lineTo(w * .34, h * .015)
+      ..lineTo(w * .45, h * .085)
+      ..lineTo(w * .5, h * -.005)
+      ..lineTo(w * .55, h * .085)
+      ..lineTo(w * .66, h * .015)
+      ..lineTo(w * .68, h * .12)
+      ..close();
+    if (rank != 11) {
+      canvas.drawPath(crown, gold);
+      canvas.drawLine(
+        Offset(w * .34, h * .12),
+        Offset(w * .66, h * .12),
+        Paint()
+          ..color = accent
+          ..strokeWidth = 1.2,
+      );
+    } else {
+      canvas.drawCircle(Offset(w * .5, h * .055), w * .045, gold);
+    }
+  }
+
+  void _paintAce(Canvas canvas, Size size) {
+    final center = Offset(size.width * .5, size.height * .5);
+    final radius = size.width * .34;
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFFFFF8DF)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..color = const Color(0xFFD4A84F)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4,
+    );
+    _drawSuit(canvas, center, size.width * .29);
+    for (var i = 0; i < 8; i++) {
+      final angle = i * math.pi / 4;
+      final point = Offset(
+        center.dx + math.cos(angle) * size.width * .43,
+        center.dy + math.sin(angle) * size.height * .43,
+      );
+      canvas.drawCircle(point, size.width * .025, Paint()..color = accent);
+    }
+  }
+
+  void _drawSuit(Canvas canvas, Offset center, double fontSize) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: suitSymbol,
+        style: TextStyle(
+          color: ink,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    painter.paint(
+      canvas,
+      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CourtCardPainter oldDelegate) =>
+      oldDelegate.rank != rank ||
+      oldDelegate.suitSymbol != suitSymbol ||
+      oldDelegate.ink != ink ||
+      oldDelegate.accent != accent;
+}
+

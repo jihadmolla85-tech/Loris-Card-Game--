@@ -26,6 +26,24 @@ void main() {
       expect(result, 1);
     });
 
+    test('Does not rotate until the dealer team has positive net points', () {
+      final negative = DealerRotationEngine.nextDealerIndex(
+        currentDealerIndex: 2,
+        playerCount: 4,
+        dealerTeamScore: -4,
+        isRedeal: false,
+      );
+      expect(negative, 2);
+
+      final positive = DealerRotationEngine.nextDealerIndex(
+        currentDealerIndex: 2,
+        playerCount: 4,
+        dealerTeamScore: 1,
+        isRedeal: false,
+      );
+      expect(positive, 3);
+    });
+
     test('Moves dealer to the right in four-player game', () {
       final result = DealerRotationEngine.nextDealerIndex(
         currentDealerIndex: 1,

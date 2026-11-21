@@ -4,12 +4,14 @@ import '../models/loris_card.dart';
 
 class DealerSelectionResult {
   final int dealerIndex;
+  final int firstPlayerIndex;
   final Card jackCard;
   final List<Card> drawnCards;
   final List<Card> shuffledDeck;
 
   const DealerSelectionResult({
     required this.dealerIndex,
+    required this.firstPlayerIndex,
     required this.jackCard,
     required this.drawnCards,
     required this.shuffledDeck,
@@ -51,6 +53,7 @@ class InitialDealerSelector {
 
         return DealerSelectionResult(
           dealerIndex: currentPlayer,
+          firstPlayerIndex: firstPlayerIndex,
           jackCard: card,
           drawnCards: List.unmodifiable(drawnCards),
           shuffledDeck: List.unmodifiable(shuffledDeck),

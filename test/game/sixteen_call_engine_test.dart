@@ -69,6 +69,52 @@ void main() {
       );
     });
 
+    test('Allows 16 Call immediately after reaching the bid without losing a trick', () {
+      engine = createEngine();
+      winFirstFour(engine);
+      expect(engine.canCall, isTrue);
+    });
+
+    test('PASS permanently closes the 16-call window without ending the round', () {
+      engine = createEngine();
+      winFirstFour(engine);
+
+      engine.pass16(passerPlayerIndex: 2);
+
+      expect(engine.status, SixteenCallStatus.passed);
+      expect(engine.canCall, isFalse);
+      expect(engine.isRoundEnded, isFalse);
+
+      engine.recordTrickWinner(0);
+
+      expect(engine.status, SixteenCallStatus.passed);
+      expect(engine.canCall, isFalse);
+      expect(engine.isRoundEnded, isFalse);
+    });
+
+    test('Only the qualifying trick winner may pass 16', () {
+      engine = createEngine();
+      winFirstFour(engine);
+
+      expect(
+        () => engine.pass16(passerPlayerIndex: 0),
+        throwsStateError,
+      );
+      expect(engine.canCall, isTrue);
+    });
+
+    test('Disables 16 Call if opponents have won any trick', () {
+      engine = createEngine();
+      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(1);
+      engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(2);
+      expect(engine.biddingTeamTricks, 4);
+      expect(engine.canCall, isFalse);
+      expect(() => engine.call16(callerPlayerIndex: 2), throwsStateError);
+    });
+
     test('Only previous trick winner can call', () {
       engine = createEngine();
       winFirstFour(engine);
@@ -86,8 +132,9 @@ void main() {
       engine.recordTrickWinner(1);
       engine.recordTrickWinner(3);
       engine.recordTrickWinner(1);
-      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(3);
 
+      expect(engine.canCall, isTrue);
       expect(
         () => engine.call16(callerPlayerIndex: 0),
         throwsStateError,
@@ -111,6 +158,7 @@ void main() {
       winFirstFour(engine);
       engine.call16(callerPlayerIndex: 2);
 
+      // Four tricks have already been completed; four remain.
       engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
@@ -184,6 +232,29 @@ void main() {
         () => engine.call16(callerPlayerIndex: 2),
         throwsStateError,
       );
+    });
+
+    test('offers the exact-bid call in a six-player game for team B', () {
+      engine = createEngine(players: 6, team: 1);
+
+      // Team B occupies odd seats in the six-player A-B-A-B-A-B layout.
+      for (final winner in [1, 3, 5, 1]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.completedTricks, 4);
+      expect(engine.biddingTeamTricks, 4);
+      expect(engine.canCall, isTrue);
+
+      // No extra trick is required after the bid is reached.
+      engine.call16(callerPlayerIndex: 1);
+      expect(engine.status, SixteenCallStatus.inProgress);
+
+      engine.recordTrickWinner(0);
+
+      expect(engine.status, SixteenCallStatus.failed);
+      expect(engine.biddingTeamPoints, -16);
+      expect(engine.opposingTeamPoints, 16);
     });
   });
 }

@@ -1,6 +1,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loris_card_game/game/engine/game_round_controller.dart';
+import 'package:loris_card_game/game/engine/sixteen_call_engine.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
@@ -92,12 +93,15 @@ void main() {
     });
 
     test('Applies 16 Call success points only once', () {
+      // The team can call immediately after reaching its four-trick bid,
+      // provided the opponents have not won a trick.
       for (var i = 0; i < 4; i++) {
         playOneTrick();
       }
 
       controller.call16(callerPlayerIndex: 0);
 
+      // Four tricks remain in the eight-trick round.
       for (var i = 0; i < 4; i++) {
         playOneTrick();
       }
@@ -105,6 +109,91 @@ void main() {
       expect(controller.isRoundEnded, isTrue);
       expect(matchScore.teamAScore, 16);
       expect(matchScore.teamBScore, -16);
+    });
+
+    test('Passing 16 closes the option and keeps normal play active', () {
+      for (var i = 0; i < 4; i++) {
+        playOneTrick();
+      }
+
+      expect(controller.sixteenCallEngine!.canCall, isTrue);
+
+      controller.pass16(passerPlayerIndex: 0);
+
+      expect(
+        controller.sixteenCallEngine!.status,
+        SixteenCallStatus.passed,
+      );
+      expect(controller.sixteenCallEngine!.canCall, isFalse);
+      expect(controller.isRoundEnded, isFalse);
+
+      playOneTrick();
+
+      expect(controller.sixteenCallEngine!.canCall, isFalse);
+      expect(controller.isRoundEnded, isFalse);
+    });
+
+    test('Does not offer 16 after opponents win any trick before the bid is reached', () {
+      final hands = List.generate(4, (_) => <Card>[]);
+
+      void addTrickColumn(Suit suit, List<int> ranks) {
+        for (var player = 0; player < 4; player++) {
+          hands[player].add(Card.normal(suit: suit, rank: ranks[player]));
+        }
+      }
+
+      // Trick winners in order: opponent 1, then bidding-team players
+      // 2, 0, 2, 0. The team reaches its four-trick bid after trick five,
+      // but its earlier loss permanently disables the 16-call option.
+      addTrickColumn(Suit.clubs, [7, 14, 8, 9]);
+      addTrickColumn(Suit.hearts, [10, 11, 14, 12]);
+      addTrickColumn(Suit.diamonds, [14, 7, 8, 9]);
+      addTrickColumn(Suit.spades, [10, 11, 14, 12]);
+      addTrickColumn(Suit.clubs, [13, 10, 11, 12]);
+
+      hands[0].addAll([
+        Card.normal(suit: Suit.hearts, rank: 7),
+        Card.normal(suit: Suit.diamonds, rank: 10),
+        Card.normal(suit: Suit.spades, rank: 8),
+      ]);
+      hands[1].addAll([
+        Card.normal(suit: Suit.hearts, rank: 8),
+        Card.normal(suit: Suit.diamonds, rank: 11),
+        Card.normal(suit: Suit.spades, rank: 9),
+      ]);
+      hands[2].addAll([
+        Card.normal(suit: Suit.hearts, rank: 9),
+        Card.normal(suit: Suit.diamonds, rank: 12),
+        Card.normal(suit: Suit.spades, rank: 13),
+      ]);
+      hands[3].addAll([
+        Card.normal(suit: Suit.hearts, rank: 13),
+        Card.normal(suit: Suit.diamonds, rank: 13),
+        Card.loris(replacesRank: 7),
+      ]);
+
+      controller = GameRoundController(
+        hands: hands,
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+        matchScoreEngine: matchScore,
+        bidScoringEngine: bidScore,
+      );
+
+      for (var i = 0; i < 5; i++) {
+        playOneTrick();
+      }
+
+      expect(controller.completedTricks, 5);
+      expect(controller.biddingTeamTricks, 4);
+      expect(controller.sixteenCallEngine!.canCall, isFalse);
+      expect(
+        () => controller.call16(callerPlayerIndex: 0),
+        throwsStateError,
+      );
+      expect(controller.isRoundEnded, isFalse);
     });
 
     test('Detects match winner after round scoring', () {

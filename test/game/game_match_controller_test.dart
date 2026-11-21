@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loris_card_game/game/engine/game_match_controller.dart';
+import 'package:loris_card_game/game/engine/sixteen_call_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/deal_controller.dart';
@@ -161,14 +162,14 @@ void main() {
       expect(match.dealerIndex, 0);
     });
 
-    test('Detects match winner and prevents another round', () {
-      matchScore.teamAScore = 28;
-      matchScore.teamBScore = -28;
+    test('Ends the match without advancing the dealer again', () {
+      matchScore.teamAScore = -28;
+      matchScore.teamBScore = 28;
 
       match.startRound(
-        hands: createHands(),
+        hands: createHands(teamBWins: true),
         trumpSuit: Suit.spades,
-        biddingTeam: 0,
+        biddingTeam: 1,
         bidAmount: 4,
       );
 
@@ -177,7 +178,8 @@ void main() {
       }
 
       expect(match.isMatchOver, isTrue);
-      expect(match.matchWinner, MatchWinner.teamA);
+      expect(match.matchWinner, MatchWinner.teamB);
+      expect(match.dealerIndex, 3);
 
       expect(
         () => match.startRound(
@@ -361,6 +363,37 @@ void main() {
       expect(newHands.length, 4);
       expect(newHands.every((hand) => hand.length == 8), isTrue);
       expect(match.dealerIndex, 3);
+    });
+
+    test('Restores a passed 16-call window without reopening it', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        playOneTrick();
+      }
+
+      expect(match.currentRound.sixteenCallEngine!.canCall, isTrue);
+      match.pass16(passerPlayerIndex: 0);
+
+      final snapshot = match.createSnapshot();
+      final restored = GameMatchController(
+        initialDealerIndex: snapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(snapshot);
+
+      expect(
+        restored.currentRound.sixteenCallEngine!.status,
+        SixteenCallStatus.passed,
+      );
+      expect(restored.currentRound.sixteenCallEngine!.canCall, isFalse);
+      expect(restored.currentRound.isRoundEnded, isFalse);
     });
 
     test('Restores a saved match in the middle of a trick', () {
