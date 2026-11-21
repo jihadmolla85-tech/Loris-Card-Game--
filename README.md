@@ -39,3 +39,5 @@ The current playable mode is one human player against AI opponents, with offline
 
 
 <!-- CI refresh: validate gender-separated player portrait assets. -->
+
+<!-- Re-run CI after portrait analyzer fix. -->
