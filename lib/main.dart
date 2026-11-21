@@ -3200,7 +3200,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         loris.Suit.hearts => 'Hearts',
         loris.Suit.spades => 'Spades',
       };
-      assetPath = 'assets/${suitName}_${rankName}.png';
+      assetPath = 'assets/${suitName}_$rankName.png';
     }
 
     return Container(
