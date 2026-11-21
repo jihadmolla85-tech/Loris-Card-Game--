@@ -3299,84 +3299,57 @@ class _AnimePortrait extends StatelessWidget {
   final int seed;
   final double size;
 
-  static final Future<ui.Image> _portraitAtlas = _loadPortraitAtlas();
-
-  static Future<ui.Image> _loadPortraitAtlas() async {
-    final data = await rootBundle.load('assets/images/loris_portrait_atlas.jpg');
-    final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-    final frame = await codec.getNextFrame();
-    return frame.image;
+  static Future<List<String>> _portraitAssets(bool female) async {
+    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final folder = female ? 'assets/portraits/women/' : 'assets/portraits/men/';
+    final assets = manifest
+        .listAssets()
+        .where((path) => path.startsWith(folder) && path.toLowerCase().endsWith('.jpg'))
+        .toList()
+      ..sort();
+    return assets;
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      border: Border.all(color: const Color(0xFFFFD978), width: 1.5),
-      boxShadow: const [
-        BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(0, 2)),
-      ],
-    ),
-    child: ClipOval(
-      child: FutureBuilder<ui.Image>(
-        future: _portraitAtlas,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const ColoredBox(color: Color(0xFF29445C));
-          }
-          return CustomPaint(
-            painter: _PortraitAtlasPainter(
-              image: snapshot.data!,
-              portraitIndex: seed % 24,
-            ),
-            child: const SizedBox.expand(),
-          );
-        },
+  Widget build(BuildContext context) {
+    // Keep the gender collections separate and distribute the default AI
+    // seats evenly until per-player gender selection is added to setup.
+    final female = seed.isOdd;
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFFFD978), width: 1.5),
+        boxShadow: const [
+          BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(0, 2)),
+        ],
       ),
-    ),
-  );
-}
-
-class _PortraitAtlasPainter extends CustomPainter {
-  const _PortraitAtlasPainter({
-    required this.image,
-    required this.portraitIndex,
-  });
-
-  final ui.Image image;
-  final int portraitIndex;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // The supplied sheet is a 6-column by 4-row portrait atlas.
-    // Derive cell dimensions from the decoded image instead of assuming
-    // 40px cells (which cropped blank margins on the original sheet).
-    const columns = 6;
-    const rows = 4;
-    final cellWidth = image.width / columns;
-    final cellHeight = image.height / rows;
-    final column = portraitIndex % columns;
-    final row = (portraitIndex ~/ columns) % rows;
-    final cropSize = cellWidth < cellHeight ? cellWidth : cellHeight;
-    final source = Rect.fromLTWH(
-      column * cellWidth + (cellWidth - cropSize) * .5,
-      row * cellHeight + (cellHeight - cropSize) * .15,
-      cropSize,
-      cropSize,
-    );
-    canvas.drawImageRect(
-      image,
-      source,
-      Offset.zero & size,
-      Paint()..filterQuality = FilterQuality.high,
+      child: ClipOval(
+        child: FutureBuilder<List<String>>(
+          future: _portraitAssets(female),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              return const ColoredBox(color: Color(0xFF29445C));
+            }
+            final assets = snapshot.data!;
+            final path = assets[seed.abs() % assets.length];
+            return ColoredBox(
+              color: const Color(0xFF29445C),
+              child: Image.asset(
+                path,
+                fit: BoxFit.contain,
+                width: size,
+                height: size,
+                errorBuilder: (_, __, ___) =>
+                    const ColoredBox(color: Color(0xFF29445C)),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(covariant _PortraitAtlasPainter oldDelegate) =>
-      oldDelegate.image != image || oldDelegate.portraitIndex != portraitIndex;
 }
 
 class _LorisJokerArt extends StatelessWidget {
