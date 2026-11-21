@@ -60,6 +60,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - assets/
     - assets/sounds/
     - assets/images/loris_logo.jpg
     - 'assets/Splash Screen and back page of card.jpg'

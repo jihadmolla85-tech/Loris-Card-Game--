@@ -3181,69 +3181,50 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     bool compact = false,
     bool tableCard = false,
   }) {
-    final isRed = _isRedSuit(card.suit);
-    final ink = card.isLoris ? const Color(0xFF17243B) : isRed ? const Color(0xFFB51F32) : const Color(0xFF17202B);
     final width = tableCard ? 60.0 : compact ? 48.0 : 62.0;
     final height = tableCard ? 86.0 : compact ? 68.0 : 92.0;
-
-    Widget corner({required bool upsideDown}) {
-      return Transform.rotate(
-        angle: upsideDown ? 3.1415926535 : 0,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(card.isLoris ? 'L' : card.displayName,
-              style: TextStyle(color: ink, fontSize: tableCard ? 14 : compact ? 11 : 15, height: 1, fontWeight: FontWeight.w900)),
-            Text(card.isLoris ? '★' : _suitSymbol(card.suit),
-              style: TextStyle(color: ink, fontSize: tableCard ? 13 : compact ? 10 : 13, height: 1.05, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      );
-    }
+    final rankName = switch (card.rank) {
+      11 => 'J',
+      12 => 'Q',
+      13 => 'K',
+      14 => 'A',
+      final rank => '$rank',
+    };
+    final assetPath = card.isLoris
+        ? 'assets/Spades_Joker_Blue.png'
+        : 'assets/${card.suit!.name}_${rankName}.png';
 
     return Container(
       width: width,
       height: height,
-      padding: EdgeInsets.all(compact ? 3 : 4),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(compact ? 5 : 7),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: card.isLoris
-              ? const [Color(0xFFFFF1B5), Color(0xFFE6B94E), Color(0xFFFFE9A0)]
-              : const [Colors.white, Color(0xFFF8F7F1), Color(0xFFE5E2D9)],
+        border: Border.all(
+          color: enabled ? const Color(0xFFFFD76B) : const Color(0xFFD1C9B8),
+          width: enabled ? 2.2 : .8,
         ),
-        border: Border.all(color: enabled ? const Color(0xFFFFD76B) : const Color(0xFFD1C9B8), width: enabled ? 2.2 : .8),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: enabled ? 9 : 5, offset: const Offset(2, 4)),
-          if (enabled) const BoxShadow(color: Color(0x88FFD76B), blurRadius: 12, spreadRadius: 1),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .55),
+            blurRadius: enabled ? 9 : 5,
+            offset: const Offset(2, 4),
+          ),
+          if (enabled)
+            const BoxShadow(color: Color(0x88FFD76B), blurRadius: 12, spreadRadius: 1),
         ],
       ),
-      child: Stack(
-        children: [
-          Align(alignment: Alignment.topLeft, child: corner(upsideDown: false)),
-          Align(alignment: Alignment.bottomRight, child: corner(upsideDown: true)),
-          Center(
-            child: card.isLoris
-                ? Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: tableCard ? 40 : compact ? 30 : 42, height: tableCard ? 48 : compact ? 36 : 52, fit: BoxFit.contain)
-                : card.rank != null && card.rank! >= 11 && card.rank! <= 13
-                    ? _CourtCardArt(
-                        rank: card.rank!,
-                        ink: ink,
-                        size: Size(tableCard ? 34 : compact ? 27 : 36, tableCard ? 46 : compact ? 36 : 49),
-                      )
-                    : Text(
-                        _suitSymbol(card.suit),
-                        style: TextStyle(
-                          color: ink,
-                          fontSize: tableCard ? 29 : compact ? 22 : 31,
-                          fontWeight: FontWeight.w900,
-                          shadows: const [Shadow(color: Color(0x22000000), blurRadius: 1, offset: Offset(1, 1))],
-                        ),
-                      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        assetPath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Center(
+          child: Text(
+            card.isLoris ? 'LORIS' : '${card.displayName}\n${_suitSymbol(card.suit)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-        ],
+        ),
       ),
     );
   }
