@@ -740,8 +740,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _dealerDrawnCards = dealerSelection.drawnCards;
         _dealerRevealVisibleCount = 0;
         _dealerDrawActive = true;
-        _dealerIndex = _dealerFirstPlayerIndex;
-        _status = '${_playerNames[_dealerFirstPlayerIndex]} starts the random dealer draw';
+        // No dealer is confirmed until the first Jack is revealed.
+        _dealerIndex = null;
+        _status = 'Drawing cards to select the dealer';
       });
       for (var i = 0; i < dealerSelection.drawnCards.length; i++) {
         await Future.delayed(const Duration(milliseconds: 560));
@@ -756,8 +757,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (!mounted) return;
       setState(() {
         _dealerDrawActive = false;
+        // The first revealed Jack determines the dealer for this match.
         _dealerIndex = dealerSelection.dealerIndex;
-        _status = 'JACK FOUND • ${_playerNames[dealerSelection.dealerIndex]} is the dealer';
+        _status = 'Dealer selected';
       });
       await Future.delayed(const Duration(milliseconds: 650));
       if (!mounted) return;
@@ -2591,11 +2593,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                 ),
               ),
-              if (_dealerIndex != null)
-                Text(
-                  'JACK WINNER • ${_playerNames[_dealerIndex!]}',
-                  style: const TextStyle(color: LorisApp.gold, fontSize: 10, fontWeight: FontWeight.w900),
-                ),
             ],
           ),
         ],
