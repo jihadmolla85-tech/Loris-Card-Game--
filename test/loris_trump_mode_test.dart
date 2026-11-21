@@ -15,12 +15,46 @@ List<Card> _hand(Suit firstSuit, int firstRank, Suit secondSuit, int secondRank)
 
 void main() {
   group('LORIS selected as trump', () {
-    test('ordinary suits do not gain trump privilege', () {
+    test('follows the led suit and ignores off-suit high cards', () {
       final hands = [
         _hand(Suit.clubs, 7, Suit.hearts, 8),
-        _hand(Suit.diamonds, 14, Suit.spades, 8),
-        _hand(Suit.clubs, 9, Suit.hearts, 10),
-        _hand(Suit.diamonds, 13, Suit.spades, 9),
+        _hand(Suit.clubs, 9, Suit.diamonds, 14),
+        _hand(Suit.clubs, 12, Suit.hearts, 10),
+        _hand(Suit.clubs, 10, Suit.spades, 9),
+      ];
+      final engine = TrickEngine(
+        hands: hands,
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        lorisTrump: true,
+      );
+
+      engine.playCard(0, hands[0][0]);
+      expect(engine.legalCardsFor(1), contains(hands[1][0]));
+      expect(engine.legalCardsFor(1), isNot(contains(hands[1][1])));
+      engine.playCard(1, hands[1][0]);
+      engine.playCard(2, hands[2][0]);
+      engine.playCard(3, hands[3][0]);
+
+      // The highest club wins. The off-suit Ace of Diamonds is not a trump.
+      expect(engine.winnerIndex, 2);
+    });
+
+    test('allows any discard when void in the led suit', () {
+      final hands = [
+        _hand(Suit.clubs, 7, Suit.hearts, 8),
+        [
+          Card.normal(suit: Suit.diamonds, rank: 14),
+          Card.normal(suit: Suit.spades, rank: 8),
+          Card.normal(suit: Suit.diamonds, rank: 7),
+          Card.normal(suit: Suit.hearts, rank: 8),
+          Card.normal(suit: Suit.diamonds, rank: 9),
+          Card.normal(suit: Suit.spades, rank: 10),
+          Card.normal(suit: Suit.hearts, rank: 11),
+          Card.normal(suit: Suit.diamonds, rank: 12),
+        ],
+        _hand(Suit.clubs, 12, Suit.hearts, 10),
+        _hand(Suit.clubs, 10, Suit.spades, 9),
       ];
       final engine = TrickEngine(
         hands: hands,
@@ -35,8 +69,8 @@ void main() {
       engine.playCard(2, hands[2][0]);
       engine.playCard(3, hands[3][0]);
 
-      // The Ace of Diamonds wins by rank; Diamonds is not a trump suit.
-      expect(engine.winnerIndex, 1);
+      // The void player's off-suit Ace cannot beat the led-suit Queen.
+      expect(engine.winnerIndex, 2);
     });
 
     test('LORIS remains the highest card in this mode', () {
