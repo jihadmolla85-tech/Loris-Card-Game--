@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - feature/show-trump-bidder
+      - feature/gender-separated-player-portraits
   pull_request:
     branches:
       - main
@@ -33,6 +34,15 @@ jobs:
         with:
           channel: stable
           cache: false
+
+      - name: Extract original player portrait archives
+        run: |
+          mkdir -p assets/portraits/men assets/portraits/women /tmp/loris-portrait-zips
+          unzip -oq "assets/Player Portrait.zip" -d /tmp/loris-portrait-zips
+          unzip -ojq "/tmp/loris-portrait-zips/Man's Portrait.zip" '*.jpg' -d assets/portraits/men
+          unzip -ojq "/tmp/loris-portrait-zips/Women's portrait.zip" '*.jpg' -d assets/portraits/women
+          test "$(find assets/portraits/men -maxdepth 1 -type f -name '*.jpg' | wc -l)" -eq 40
+          test "$(find assets/portraits/women -maxdepth 1 -type f -name '*.jpg' | wc -l)" -eq 40
 
       - name: Install dependencies
         run: flutter pub get
