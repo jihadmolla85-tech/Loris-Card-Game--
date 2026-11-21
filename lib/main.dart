@@ -25,6 +25,7 @@ import 'game/engine/trick_engine.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   runApp(const LorisApp());
 }
 
@@ -105,7 +106,7 @@ class _LorisLaunchScreenState extends State<LorisLaunchScreen> {
       body: SizedBox.expand(
         child: Image.asset(
           'assets/Splash Screen and back page of card.jpg',
-          fit: BoxFit.cover,
+          fit: BoxFit.fill,
         ),
       ),
     );
