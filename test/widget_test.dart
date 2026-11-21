@@ -13,6 +13,7 @@ void main() {
   testWidgets('audio preferences persist after reopening the app', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LorisApp());
+    await tester.pump(const Duration(milliseconds: 1600));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('SETTINGS'));
@@ -31,6 +32,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(const LorisApp());
+    await tester.pump(const Duration(milliseconds: 1600));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('SETTINGS'));
@@ -42,6 +44,8 @@ void main() {
   testWidgets('LORIS home screen loads', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     await tester.pumpWidget(const LorisApp());
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pumpAndSettle();
 
     expect(
       find.byWidgetPredicate(
