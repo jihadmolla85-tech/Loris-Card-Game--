@@ -3341,7 +3341,7 @@ class _AnimePortrait extends StatelessWidget {
                 fit: BoxFit.contain,
                 width: size,
                 height: size,
-                errorBuilder: (_, __, ___) =>
+                errorBuilder: (_, _, _) =>
                     const ColoredBox(color: Color(0xFF29445C)),
               ),
             );
