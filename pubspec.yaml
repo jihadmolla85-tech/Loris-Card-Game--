@@ -107,20 +107,20 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# Generate the launcher icon and native opening screen from the uploaded LORIS PNG.
+# Keep the native opening screen artwork consistent with the supplied card back.
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/images/file_00000000f9f882119c70821c3044291b.png
+  image_path: 'assets/Splash Screen and back page of card.jpg'
   adaptive_icon_background: "#07366B"
   adaptive_icon_foreground: assets/images/file_00000000f9f882119c70821c3044291b.png
 
 flutter_native_splash:
-  color: "#07366B"
-  image: assets/images/file_00000000f9f882119c70821c3044291b.png
+  color: "#16070D"
+  image: 'assets/Splash Screen and back page of card.jpg'
   android: true
   ios: true
   android_12:
-    color: "#07366B"
-    image: assets/images/file_00000000f9f882119c70821c3044291b.png
-    icon_background_color: "#07366B"
+    color: "#16070D"
+    image: 'assets/Splash Screen and back page of card.jpg'
+    icon_background_color: "#16070D"
