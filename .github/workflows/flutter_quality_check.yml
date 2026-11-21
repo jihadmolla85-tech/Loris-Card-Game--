@@ -47,6 +47,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate LORIS app icon and native splash screen
+        run: |
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+
       - name: Flutter Analyze
         run: flutter analyze lib
 
