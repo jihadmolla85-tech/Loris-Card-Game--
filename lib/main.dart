@@ -2335,7 +2335,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       const SizedBox(width: 6),
                       const Flexible(child: Text('TEAMMATE’S HAND', maxLines: 2, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10))),
                     ] else ...[
-                      if (isJoker) const _LorisJokerArt(width: 22, height: 29)
+                      if (isJoker) Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: 22, height: 29, fit: BoxFit.contain)
                       else Text(_suitSymbol(suit), style: TextStyle(color: accent, fontSize: 25, fontWeight: FontWeight.w900)),
                       const SizedBox(width: 6),
                       Text(isJoker ? 'L' : _suitName(suit!), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
@@ -2569,7 +2569,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   if (_trumpSuit != null)
                     Text(_suitSymbol(_trumpSuit), style: TextStyle(color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF6575) : Colors.white, fontSize: 25, fontWeight: FontWeight.w900))
                   else
-                    const _LorisJokerArt(width: 22, height: 27),
+                    Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: 22, height: 27, fit: BoxFit.contain),
                   const SizedBox(width: 6),
                   Text(_trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
                 ],
