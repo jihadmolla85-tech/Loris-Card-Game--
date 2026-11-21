@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
@@ -2668,24 +2669,24 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final displayedTrumpBidderIndex = _started ? _trumpBidderIndex : null;
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
-            Alignment(0, .82),
-            Alignment(-.88, 0),
-            Alignment(0, -.84),
-            Alignment(.88, 0),
+            Alignment(0, .74),
+            Alignment(-.68, 0),
+            Alignment(0, -.74),
+            Alignment(.68, 0),
           ]
         : const <Alignment>[
-            Alignment(0, .85),
-            Alignment(-.87, .53),
-            Alignment(-.87, -.53),
-            Alignment(0, -.85),
-            Alignment(.87, -.53),
-            Alignment(.87, .53),
+            Alignment(0, .76),
+            Alignment(-.73, .43),
+            Alignment(-.73, -.43),
+            Alignment(0, -.76),
+            Alignment(.73, -.43),
+            Alignment(.73, .43),
           ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
-        final seatWidth = widget.playerCount == 6 ? 88.0 : 96.0;
+        final seatWidth = widget.playerCount == 6 ? 94.0 : 108.0;
 
         return SizedBox(
           width: double.infinity,
@@ -2816,7 +2817,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       duration: const Duration(milliseconds: 350),
                       curve: Curves.easeOutCubic,
                       width: seatWidth,
-                      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+                      padding: EdgeInsets.zero,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(13),
                         gradient: LinearGradient(
@@ -2846,159 +2847,16 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             const BoxShadow(color: Color(0x99FFD76B), blurRadius: 18, spreadRadius: 2),
                         ],
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              _AnimePortrait(seed: index, size: 42),
-                              if (_bidThinkingPlayer == index)
-                                Positioned(
-                                  right: -34,
-                                  top: -5,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF17243B),
-                                      borderRadius: BorderRadius.circular(7),
-                                      border: Border.all(color: LorisApp.gold, width: .8),
-                                    ),
-                                    child: const Text(
-                                      'THINKING…',
-                                      style: TextStyle(color: Color(0xFFFFE5A0), fontSize: 7, fontWeight: FontWeight.w900),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  _playerNames[index],
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: index.isEven
-                                    ? const [
-                                        Color(0xFF2877D4),
-                                        Color(0xFF123D78),
-                                      ]
-                                    : const [
-                                        Color(0xFFD64B55),
-                                        Color(0xFF7C1728),
-                                      ],
-                              ),
-                              borderRadius: BorderRadius.circular(7),
-                              border: Border.all(
-                                color: index.isEven
-                                    ? const Color(0xFF9CCBFF)
-                                    : const Color(0xFFFFB0B6),
-                                width: .8,
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black45,
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              'TEAM ${index.isEven ? "A" : "B"}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: .8,
-                              ),
-                            ),
-                          ),
-                          if (displayedTrumpBidderIndex == index)
-                            Container(
-                              margin: const EdgeInsets.only(top: 3),
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF087F8C), Color(0xFF064B59)],
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFF8DF3F0), width: 1.2),
-                                boxShadow: const [
-                                  BoxShadow(color: Color(0x9900D9D0), blurRadius: 7, spreadRadius: 1),
-                                ],
-                              ),
-                              child: const Text(
-                                '★ BIDDER',
-                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .7),
-                              ),
-                            ),
-                          if (_dealerIndex == index)
-                            Container(
-                              margin: const EdgeInsets.only(top: 3),
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFFFC857), Color(0xFFB86B13)],
-                                ),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: const Color(0xFFFFE6A1), width: 1.2),
-                                boxShadow: const [
-                                  BoxShadow(color: Color(0x99FFB52E), blurRadius: 7, spreadRadius: 1),
-                                ],
-                              ),
-                              child: const Text(
-                                '♛ DEALER',
-                                style: TextStyle(color: Color(0xFF40220A), fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: .6),
-                              ),
-                            ),
-                          if (currentPlayer == index)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 2),
-                              child: Icon(Icons.circle, size: 6, color: Color(0xFFFFE7A0)),
-                            ),
-                          if (index != 0)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  for (var back = 0; back < (handCounts[index] > 0 ? 3 : 0); back++)
-                                    Transform.translate(
-                                      offset: Offset(back * -3.0, 0),
-                                      child: Container(
-                                        width: 7,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(1.5),
-                                          gradient: const LinearGradient(colors: [Color(0xFFB63A45), Color(0xFF5A1020)]),
-                                          border: Border.all(color: const Color(0xFFFFD978), width: .5),
-                                        ),
-                                      ),
-                                    ),
-                                  const SizedBox(width: 3),
-                                  Text('${handCounts[index]}', style: const TextStyle(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ),
-                          if (_collectingTrickWinner == index)
-                            const Text('TRICK WON', style: TextStyle(color: Color(0xFFFFE7A0), fontSize: 9, fontWeight: FontWeight.w900)),
-                        ],
+                      child: _AnimePortrait(
+                        seed: index,
+                        playerName: _playerNames[index],
+                        teamName: index.isEven ? 'TEAM A' : 'TEAM B',
+                        isDealer: _dealerIndex == index,
+                        isBidder: displayedTrumpBidderIndex == index,
+                        isCurrentPlayer: currentPlayer == index,
+                        isThinking: _bidThinkingPlayer == index,
+                        handCount: index == 0 ? null : handCounts[index],
+                        trickWon: _collectingTrickWinner == index,
                       ),
                     ),
                   ),
@@ -3292,11 +3150,27 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 class _AnimePortrait extends StatelessWidget {
   const _AnimePortrait({
     required this.seed,
-    this.size = 36,
+    required this.playerName,
+    required this.teamName,
+    required this.isDealer,
+    required this.isBidder,
+    required this.isCurrentPlayer,
+    required this.isThinking,
+    required this.handCount,
+    required this.trickWon,
   });
 
   final int seed;
-  final double size;
+  final String playerName;
+  final String teamName;
+  final bool isDealer;
+  final bool isBidder;
+  final bool isCurrentPlayer;
+  final bool isThinking;
+  final int? handCount;
+  final bool trickWon;
+
+  static final Map<String, Future<Size>> _imageSizeCache = {};
 
   static Future<List<String>> _portraitAssets(bool female) async {
     final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
@@ -3309,44 +3183,228 @@ class _AnimePortrait extends StatelessWidget {
     return assets;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Keep the gender collections separate and distribute the default AI
-    // seats evenly until per-player gender selection is added to setup.
-    final female = seed.isOdd;
+  static Future<Size> _loadImageSize(String path) {
+    return _imageSizeCache.putIfAbsent(path, () {
+      final completer = Completer<Size>();
+      final stream = AssetImage(path).resolve(ImageConfiguration.empty);
+      late final ImageStreamListener listener;
+      listener = ImageStreamListener(
+        (ImageInfo info, bool synchronousCall) {
+          if (!completer.isCompleted) {
+            completer.complete(Size(
+              info.image.width.toDouble(),
+              info.image.height.toDouble(),
+            ));
+          }
+          stream.removeListener(listener);
+        },
+        onError: (Object error, StackTrace? stackTrace) {
+          if (!completer.isCompleted) {
+            completer.complete(const Size(3, 4));
+          }
+          stream.removeListener(listener);
+        },
+      );
+      stream.addListener(listener);
+      return completer.future;
+    });
+  }
+
+  Widget _tag(
+    String label, {
+    required Color background,
+    Color foreground = Colors.white,
+  }) {
     return Container(
-      width: size,
-      height: size,
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFFFD978), width: 1.5),
+        color: background.withValues(alpha: .94),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: Colors.white.withValues(alpha: .72), width: .65),
         boxShadow: const [
-          BoxShadow(color: Colors.black45, blurRadius: 5, offset: Offset(0, 2)),
+          BoxShadow(color: Colors.black54, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
-      child: ClipOval(
-        child: FutureBuilder<List<String>>(
-          future: _portraitAssets(female),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const ColoredBox(color: Color(0xFF29445C));
-            }
-            final assets = snapshot.data!;
-            final path = assets[seed.abs() % assets.length];
-            return ColoredBox(
-              color: const Color(0xFF29445C),
-              child: Image.asset(
-                path,
-                fit: BoxFit.contain,
-                width: size,
-                height: size,
-                errorBuilder: (_, _, _) =>
-                    const ColoredBox(color: Color(0xFF29445C)),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: foreground,
+          fontSize: 7.5,
+          fontWeight: FontWeight.w900,
+          letterSpacing: .35,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Keep the original male/female portrait collections separate.
+    final female = seed.isOdd;
+    return FutureBuilder<List<String>>(
+      future: _portraitAssets(female),
+      builder: (context, assetsSnapshot) {
+        if (!assetsSnapshot.hasData || assetsSnapshot.data!.isEmpty) {
+          return const AspectRatio(
+            aspectRatio: 3 / 4,
+            child: ColoredBox(color: Color(0xFF29445C)),
+          );
+        }
+
+        final assets = assetsSnapshot.data!;
+        final path = assets[seed.abs() % assets.length];
+        return FutureBuilder<Size>(
+          future: _loadImageSize(path),
+          builder: (context, sizeSnapshot) {
+            final imageSize = sizeSnapshot.data ?? const Size(3, 4);
+            final ratio = imageSize.width > 0 && imageSize.height > 0
+                ? imageSize.width / imageSize.height
+                : 3 / 4;
+
+            return AspectRatio(
+              // Match the plot to the source image itself: no crop, no stretch,
+              // and no letterboxed empty bands around the original portrait.
+              aspectRatio: ratio,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(11),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      path,
+                      fit: BoxFit.fill,
+                      filterQuality: FilterQuality.high,
+                      errorBuilder: (_, _, _) => const ColoredBox(
+                        color: Color(0xFF29445C),
+                      ),
+                    ),
+                    const Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: [0, .20, .58, 1],
+                            colors: [
+                              Color(0x99000000),
+                              Color(0x12000000),
+                              Color(0x00000000),
+                              Color(0xCC000000),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 5,
+                      left: 5,
+                      child: _tag(
+                        teamName,
+                        background: seed.isEven
+                            ? const Color(0xFF1559A4)
+                            : const Color(0xFF9F2434),
+                      ),
+                    ),
+                    if (isThinking)
+                      Positioned(
+                        top: 5,
+                        right: 5,
+                        child: _tag(
+                          'THINKING…',
+                          background: const Color(0xFF17243B),
+                          foreground: const Color(0xFFFFE5A0),
+                        ),
+                      )
+                    else if (isCurrentPlayer)
+                      Positioned(
+                        top: 7,
+                        right: 7,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE7A0),
+                            shape: BoxShape.circle,
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black87, blurRadius: 4),
+                            ],
+                          ),
+                        ),
+                      ),
+                    Positioned(
+                      left: 4,
+                      right: 4,
+                      bottom: 5,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            playerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              shadows: [
+                                Shadow(color: Colors.black, blurRadius: 5),
+                                Shadow(color: Colors.black, blurRadius: 2),
+                              ],
+                            ),
+                          ),
+                          if (isDealer || isBidder) ...[
+                            const SizedBox(height: 3),
+                            Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 3,
+                              runSpacing: 2,
+                              children: [
+                                if (isBidder)
+                                  _tag(
+                                    '★ BIDDER',
+                                    background: const Color(0xFF075E69),
+                                    foreground: Colors.white,
+                                  ),
+                                if (isDealer)
+                                  _tag(
+                                    '♛ DEALER',
+                                    background: const Color(0xFFFFC857),
+                                    foreground: const Color(0xFF40220A),
+                                  ),
+                              ],
+                            ),
+                          ],
+                          if (handCount != null || trickWon) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              [
+                                if (handCount != null) '$handCount CARDS',
+                                if (trickWon) 'TRICK WON',
+                              ].join('  •  '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFFFFE7A0),
+                                fontSize: 7,
+                                fontWeight: FontWeight.w900,
+                                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
-        ),
-      ),
+        );
+      },
     );
   }
 }
