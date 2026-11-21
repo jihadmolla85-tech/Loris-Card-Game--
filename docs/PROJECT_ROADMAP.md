@@ -47,7 +47,7 @@ This file is the continuity checklist for future development. Update it whenever
 
 ## Quality gates
 
-- [x] Flutter analyze, all tests, Android APK build, and artifact upload passed on latest commit `a7260962` (CI Run #580).
+- [x] Flutter analyze, all tests, Android APK build, and artifact upload passed on commit `cfb0c77f` (CI Run #581).
 - [ ] Test both 4-player and 6-player gameplay end-to-end.
 - [ ] Confirm save/resume does not duplicate or skip a trick.
 - [ ] Test on a physical Android device; CI alone is not device QA.
@@ -117,3 +117,9 @@ This file is the continuity checklist for future development. Update it whenever
 - Updated the in-game Playing Tricks instructions to match the engine: LORIS wins any trick in which it is played; otherwise the selected trump suit wins when present, or the led suit wins when there is no ordinary trump.
 - Confirmed Flutter Analyze, all existing tests, Android APK build, and APK artifact upload passed on commit `a72609620da0da7acee50161cfc0a4870bced405` (CI Run #580).
 - Physical-device checks for four-player and six-player matches, save/resume, animation readability, and responsive layouts remain outstanding.
+
+
+### 2026-11-21 — Six-player CALL 16 regression coverage
+- Added six-player engine tests that exercise all three teammate seats during a successful CALL 16 and confirm an opponent trick breaks eligibility.
+- CI Run #581 passed for the previous commit; this new test-only change requires its own CI run.
+- Physical-device verification remains outstanding.
