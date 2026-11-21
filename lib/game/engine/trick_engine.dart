@@ -105,7 +105,8 @@ class TrickEngine {
   /// Returns every card the player is allowed to play on this turn.
   ///
   /// LORIS is always playable. Otherwise players must follow the led suit.
-  /// If void in the led suit, they must trump when they hold a trump card.
+  /// In ordinary-suit trump mode, a void player must trump when holding one;
+/// in LORIS-trump mode, a void player may discard any card.
   /// Whenever a trump has already been played, a higher trump must be used
   /// when the player is void in the led suit (or when trump itself was led)
   /// and such a higher trump is held.
@@ -245,23 +246,23 @@ class TrickEngine {
 
     final firstCard = trickPlays.first.card;
     final currentLedSuit = firstCard.isLoris ? Suit.spades : firstCard.suit;
-    final trumpPlays = lorisTrump
-        ? <TrickPlay>[]
-        : trickPlays.where((play) => play.card.suit == trumpSuit).toList();
+    final ledSuitPlays = trickPlays
+        .where((play) => play.card.suit == currentLedSuit)
+        .toList();
 
     if (lorisTrump) {
-      // With LORIS selected as trump, no ordinary suit has trump privilege.
-      // After the LORIS card itself, highest rank wins regardless of suit.
-      return _highestRankPlay(trickPlays).playerIndex;
+      // LORIS is the only trump in this mode. If it was not played, the
+      // highest card of the led suit wins; off-suit honours cannot overtake.
+      return _highestRankPlay(ledSuitPlays).playerIndex;
     }
 
+    final trumpPlays = trickPlays
+        .where((play) => play.card.suit == trumpSuit)
+        .toList();
     if (trumpPlays.isNotEmpty) {
       return _highestRankPlay(trumpPlays).playerIndex;
     }
 
-    final ledSuitPlays = trickPlays
-        .where((play) => play.card.suit == currentLedSuit)
-        .toList();
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }
 
