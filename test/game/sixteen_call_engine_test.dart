@@ -219,5 +219,36 @@ void main() {
         throwsStateError,
       );
     });
+    test('supports a six-player bidding team across all teammate seats', () {
+      engine = createEngine(team: 1, players: 6);
+      for (final winner in [1, 3, 5, 1]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.canCall, isTrue);
+      engine.call16(callerPlayerIndex: 1);
+
+      for (final winner in [3, 5, 1, 3]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.status, SixteenCallStatus.succeeded);
+      expect(engine.biddingTeamPoints, 16);
+      expect(engine.opposingTeamPoints, -16);
+    });
+
+    test('a six-player opponent trick breaks 16-call eligibility', () {
+      engine = createEngine(team: 1, players: 6);
+      for (final winner in [1, 0, 3, 5]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.canCall, isFalse);
+      expect(
+        () => engine.call16(callerPlayerIndex: 5),
+        throwsStateError,
+      );
+    });
+
   });
 }
