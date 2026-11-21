@@ -3197,7 +3197,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       loris.Suit.spades => 'Spades',
     };
     final assetPath = card.isLoris
-        ? 'assets/Spades_Joker_Blue.png'
+        ? 'assets/Spades_Joker_Red.png'
         : 'assets/${suitName}_$rankName.png';
 
     return Container(
