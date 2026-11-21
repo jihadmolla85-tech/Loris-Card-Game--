@@ -2786,7 +2786,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
         final seatWidth = widget.playerCount == 6 ? 78.0 : 88.0;
-        final seatHeight = widget.playerCount == 6 ? 104.0 : 112.0;
 
         return SizedBox(
           width: double.infinity,
@@ -3361,8 +3360,9 @@ class _AnimePortrait extends StatelessWidget {
                 : 3 / 4;
 
             return AspectRatio(
-              // Match the plot to the source image itself: no crop, no stretch,
-              // and no letterboxed empty bands around the original portrait.
+              // Match the portrait bounds to the exact source-image ratio.
+              // BoxFit.fill then covers the full bounds without cropping or
+              // distortion because both aspect ratios are identical.
               aspectRatio: ratio,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(11),
@@ -3371,7 +3371,7 @@ class _AnimePortrait extends StatelessWidget {
                   children: [
                     Image.asset(
                       path,
-                      fit: BoxFit.contain,
+                      fit: BoxFit.fill,
                       filterQuality: FilterQuality.high,
                       errorBuilder: (_, _, _) => const ColoredBox(
                         color: Color(0xFF29445C),
