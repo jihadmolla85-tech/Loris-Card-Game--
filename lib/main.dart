@@ -3190,15 +3190,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       14 => 'A',
       final rank => '$rank',
     };
-    final suitName = switch (card.suit!) {
-      loris.Suit.clubs => 'Clubs',
-      loris.Suit.diamonds => 'Diamonds',
-      loris.Suit.hearts => 'Hearts',
-      loris.Suit.spades => 'Spades',
-    };
-    final assetPath = card.isLoris
-        ? 'assets/Spades_Joker_Red.png'
-        : 'assets/${suitName}_$rankName.png';
+    final String assetPath;
+    if (card.isLoris) {
+      assetPath = 'assets/Spades_Joker_Red.png';
+    } else {
+      final suitName = switch (card.suit!) {
+        loris.Suit.clubs => 'Clubs',
+        loris.Suit.diamonds => 'Diamonds',
+        loris.Suit.hearts => 'Hearts',
+        loris.Suit.spades => 'Spades',
+      };
+      assetPath = 'assets/${suitName}_${rankName}.png';
+    }
 
     return Container(
       width: width,
