@@ -34,7 +34,7 @@ void main() {
       expect(engine.legalCardsFor(1), isNot(contains(hands[1][1])));
       engine.playCard(1, hands[1][0]);
       engine.playCard(2, hands[2][0]);
-      engine.playCard(3, hands[3][0]);
+      engine.playCard(3, hands[3][2]);
 
       // The highest club wins. The off-suit Ace of Diamonds is not a trump.
       expect(engine.winnerIndex, 2);
