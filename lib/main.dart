@@ -230,9 +230,12 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
                   title: 'PLAYING TRICKS',
                   body: 'You must follow the suit led if you have a card of that suit. '
                       'If you are void in the led suit, you may play any card. '
-                      'Trumping and overtrumping are optional. The LORIS card '
-                      'acts as its replaced Spades card. In LORIS mode there is '
-                      'no trump suit; the highest card of the led suit wins.',
+                      'Trumping and overtrumping are optional. The special LORIS card '
+                      'wins any trick in which it is played. If no LORIS appears, '
+                      'the highest card of the selected trump suit wins when trump '
+                      'is present; otherwise the highest card of the led suit wins. '
+                      'In LORIS/Joker mode there is no ordinary trump suit, so if '
+                      'LORIS is not played, the highest card of the led suit wins.',
                 ),
                 _RuleSection(
                   title: 'SCORING',

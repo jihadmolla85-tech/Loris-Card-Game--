@@ -47,7 +47,7 @@ This file is the continuity checklist for future development. Update it whenever
 
 ## Quality gates
 
-- [x] Flutter analyze, all tests, and Android APK build passed on commit `0770f0b0` (CI Run #578); the newer LORIS effect polish commit is awaiting its own CI run.
+- [x] Flutter analyze, all tests, Android APK build, and artifact upload passed on latest commit `a7260962` (CI Run #580).
 - [ ] Test both 4-player and 6-player gameplay end-to-end.
 - [ ] Confirm save/resume does not duplicate or skip a trick.
 - [ ] Test on a physical Android device; CI alone is not device QA.
@@ -68,7 +68,7 @@ This file is the continuity checklist for future development. Update it whenever
 ### 2026-11-19 — Dealer rotation scoring correction
 - Corrected the dealer rule to use the dealer team's cumulative match total: the dealer changes only when that team's total score is +1 or higher. A round's individual win/loss does not override this total-score threshold.
 - Added a regression test confirming the dealer rotates when the cumulative total remains +2 even though the team loses 4 points in the current round.
-- CI verification pending.
+- CI Run #580 passed on the latest branch head.
 
 
 ### 2026-11-19 — Right-to-left play and trump-selection correction
@@ -105,9 +105,15 @@ This file is the continuity checklist for future development. Update it whenever
 ### 2026-11-21 — LORIS card play effect polish
 - Added an elastic entrance, layered purple gradient, gold rim, and stronger glow to the LORIS play announcement.
 - Existing card-flight timing, sound, haptic timeout protection, and gameplay state transitions remain unchanged.
-- CI verification pending; effect timing and readability still need physical-device review.
+- CI Run #580 passed on the latest branch head; effect timing and readability still need physical-device review.
 
 
 ### 2026-11-21 — CI Run #578 passed
 - Flutter Analyze, the full existing test suite, Android APK build, and artifact upload all completed successfully for commit `0770f0b0b7a19d931d3eadb45ce151ae2a20f42b`.
 - The subsequent LORIS play-effect polish commit `214cda73` is not covered by Run #578 and requires a fresh CI result.
+
+
+### 2026-11-21 — Correct LORIS rulebook explanation and CI Run #580
+- Updated the in-game Playing Tricks instructions to match the engine: LORIS wins any trick in which it is played; otherwise the selected trump suit wins when present, or the led suit wins when there is no ordinary trump.
+- Confirmed Flutter Analyze, all existing tests, Android APK build, and APK artifact upload passed on commit `a72609620da0da7acee50161cfc0a4870bced405` (CI Run #580).
+- Physical-device checks for four-player and six-player matches, save/resume, animation readability, and responsive layouts remain outstanding.
