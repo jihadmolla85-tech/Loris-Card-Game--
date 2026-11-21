@@ -96,7 +96,7 @@ void main() {
       engine.playCard(0, hands[0][0]);
       engine.playCard(1, hands[1][0]);
       engine.playCard(2, hands[2][0]);
-      engine.playCard(3, hands[3][0]);
+      engine.playCard(3, hands[3][2]);
 
       expect(engine.winnerIndex, 1);
     });
