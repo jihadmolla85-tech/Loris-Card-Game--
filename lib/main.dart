@@ -1675,6 +1675,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         _biddingController = null;
         _started = false;
         _finished = false;
+        // Clear the previous round's confirmation banner before dealing
+        // and bidding for the next round.
+        _winCelebration = null;
         _trumpSuit = null;
         _trumpCard = null;
         _trumpBidderIndex = null;
