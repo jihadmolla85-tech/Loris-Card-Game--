@@ -57,7 +57,68 @@ class LorisApp extends StatelessWidget {
           surface: const Color(0xFFFFE8B2),
         ),
       ),
-      home: const LorisHomeScreen(),
+      home: const LorisLaunchScreen(),
+    );
+  }
+}
+
+
+// ============================================================
+// VISIBLE FLUTTER LAUNCH SCREEN
+// Android 12+ may crop or suppress a branded bitmap in its system splash.
+// Show the same supplied LORIS artwork in Flutter immediately after startup.
+// ============================================================
+
+class LorisLaunchScreen extends StatefulWidget {
+  const LorisLaunchScreen({super.key});
+
+  @override
+  State<LorisLaunchScreen> createState() => _LorisLaunchScreenState();
+}
+
+class _LorisLaunchScreenState extends State<LorisLaunchScreen> {
+  Timer? _launchTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _launchTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const LorisHomeScreen(),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _launchTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF07366B),
+      body: Center(
+        child: Image.asset(
+          'assets/images/file_00000000f9f882119c70821c3044291b.png',
+          width: 300,
+          height: 190,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => const Text(
+            'LORIS',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 42,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 5,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
