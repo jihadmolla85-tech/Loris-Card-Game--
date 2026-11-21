@@ -2667,26 +2667,28 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     bool dealerDrawActive = false,
   }) {
     final displayedTrumpBidderIndex = _started ? _trumpBidderIndex : null;
+    // Move portrait plots toward the table edges to keep played cards
+    // and the central trick area unobstructed.
     final seatAlignments = widget.playerCount == 4
         ? const <Alignment>[
-            Alignment(0, .74),
-            Alignment(-.68, 0),
-            Alignment(0, -.74),
-            Alignment(.68, 0),
+            Alignment(0, .88),
+            Alignment(-.90, 0),
+            Alignment(0, -.88),
+            Alignment(.90, 0),
           ]
         : const <Alignment>[
-            Alignment(0, .76),
-            Alignment(-.73, .43),
-            Alignment(-.73, -.43),
-            Alignment(0, -.76),
-            Alignment(.73, -.43),
-            Alignment(.73, .43),
+            Alignment(0, .90),
+            Alignment(-.88, .54),
+            Alignment(-.88, -.54),
+            Alignment(0, -.90),
+            Alignment(.88, -.54),
+            Alignment(.88, .54),
           ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
-        final seatWidth = widget.playerCount == 6 ? 94.0 : 108.0;
+        final seatWidth = widget.playerCount == 6 ? 78.0 : 88.0;
 
         return SizedBox(
           width: double.infinity,
