@@ -2786,6 +2786,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       builder: (context, constraints) {
         final tableHeight = constraints.maxHeight;
         final seatWidth = widget.playerCount == 6 ? 78.0 : 88.0;
+        final seatHeight = widget.playerCount == 6 ? 104.0 : 112.0;
 
         return SizedBox(
           width: double.infinity,
@@ -2848,6 +2849,60 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   ),
                 if (_isDealingCards && _dealingToPlayerIndex == null)
                   Positioned(top: tableHeight * .40, left: 0, right: 0, child: const IgnorePointer(child: Center(child: Text('DEALING CARDS…', style: TextStyle(color: Color(0xFFFFE39A), fontSize: 11, fontWeight: FontWeight.w900))))),
+                for (var index = 0; index < widget.playerCount; index++)
+                  Align(
+                    alignment: seatAlignments[index],
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeOutCubic,
+                      width: seatWidth,
+                      padding: EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(13),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: _collectingTrickWinner == index
+                              ? const [Color(0xFFFFE7A0), Color(0xFFB77A2D), Color(0xFF63351C)]
+                              : index.isEven
+                                  ? (currentPlayer == index
+                                      ? const [Color(0xFF2877D4), Color(0xFF123D78), Color(0xFF0B2852)]
+                                      : const [Color(0xFF205DA8), Color(0xFF123D78), Color(0xFF0A2347)])
+                                  : (currentPlayer == index
+                                      ? const [Color(0xFFD64B55), Color(0xFF7C1728), Color(0xFF4A101D)]
+                                      : const [Color(0xFFB93443), Color(0xFF7C1728), Color(0xFF430D19)]),
+                        ),
+                        border: Border.all(
+                          color: _collectingTrickWinner == index
+                              ? const Color(0xFFFFE6A0)
+                              : currentPlayer == index
+                                  ? (index.isEven ? const Color(0xFFB9DCFF) : const Color(0xFFFFB9C0))
+                                  : (index.isEven ? const Color(0xFF78B7F5) : const Color(0xFFE77B86)),
+                          width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.8 : 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: 8, offset: const Offset(0, 4)),
+                          if (_collectingTrickWinner == index)
+                            const BoxShadow(color: Color(0x99FFD76B), blurRadius: 18, spreadRadius: 2),
+                        ],
+                      ),
+                      child: _AnimePortrait(
+                        seed: _portraitSeeds[index],
+                        female: _portraitGenders[index],
+                        playerName: _playerNames[index],
+                        teamName: index.isEven ? 'TEAM A' : 'TEAM B',
+                        teamColor: index.isEven
+                            ? const Color(0xFF1559A4)
+                            : const Color(0xFF9F2434),
+                        isDealer: _dealerIndex == index,
+                        isBidder: displayedTrumpBidderIndex == index,
+                        isCurrentPlayer: currentPlayer == index,
+                        isThinking: _bidThinkingPlayer == index,
+                        handCount: index == 0 ? null : handCounts[index],
+                        trickWon: _collectingTrickWinner == index,
+                      ),
+                    ),
+                  ),
                 if (plays.isNotEmpty)
                   for (var playIndex = 0; playIndex < plays.length; playIndex++)
                     Builder(builder: (context) {
@@ -2909,60 +2964,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 // The entire screen is the play surface; no inset oval/table overlay.
                 // Played cards remain in directional slots around the center so each
                 // card is visibly associated with the seat that played it.
-                for (var index = 0; index < widget.playerCount; index++)
-                  Align(
-                    alignment: seatAlignments[index],
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 350),
-                      curve: Curves.easeOutCubic,
-                      width: seatWidth,
-                      padding: EdgeInsets.zero,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(13),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: _collectingTrickWinner == index
-                              ? const [Color(0xFFFFE7A0), Color(0xFFB77A2D), Color(0xFF63351C)]
-                              : index.isEven
-                                  ? (currentPlayer == index
-                                      ? const [Color(0xFF2877D4), Color(0xFF123D78), Color(0xFF0B2852)]
-                                      : const [Color(0xFF205DA8), Color(0xFF123D78), Color(0xFF0A2347)])
-                                  : (currentPlayer == index
-                                      ? const [Color(0xFFD64B55), Color(0xFF7C1728), Color(0xFF4A101D)]
-                                      : const [Color(0xFFB93443), Color(0xFF7C1728), Color(0xFF430D19)]),
-                        ),
-                        border: Border.all(
-                          color: _collectingTrickWinner == index
-                              ? const Color(0xFFFFE6A0)
-                              : currentPlayer == index
-                                  ? (index.isEven ? const Color(0xFFB9DCFF) : const Color(0xFFFFB9C0))
-                                  : (index.isEven ? const Color(0xFF78B7F5) : const Color(0xFFE77B86)),
-                          width: _collectingTrickWinner == index ? 2.2 : currentPlayer == index ? 1.8 : 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: 8, offset: const Offset(0, 4)),
-                          if (_collectingTrickWinner == index)
-                            const BoxShadow(color: Color(0x99FFD76B), blurRadius: 18, spreadRadius: 2),
-                        ],
-                      ),
-                      child: _AnimePortrait(
-                        seed: _portraitSeeds[index],
-                        female: _portraitGenders[index],
-                        playerName: _playerNames[index],
-                        teamName: index.isEven ? 'TEAM A' : 'TEAM B',
-                        teamColor: index.isEven
-                            ? const Color(0xFF1559A4)
-                            : const Color(0xFF9F2434),
-                        isDealer: _dealerIndex == index,
-                        isBidder: displayedTrumpBidderIndex == index,
-                        isCurrentPlayer: currentPlayer == index,
-                        isThinking: _bidThinkingPlayer == index,
-                        handCount: index == 0 ? null : handCounts[index],
-                        trickWon: _collectingTrickWinner == index,
-                      ),
-                    ),
-                  ),
                 if (dealerDrawCards != null && dealerDrawVisibleCount > 0)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -3370,7 +3371,7 @@ class _AnimePortrait extends StatelessWidget {
                   children: [
                     Image.asset(
                       path,
-                      fit: BoxFit.fill,
+                      fit: BoxFit.contain,
                       filterQuality: FilterQuality.high,
                       errorBuilder: (_, _, _) => const ColoredBox(
                         color: Color(0xFF29445C),
