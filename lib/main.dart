@@ -101,22 +101,11 @@ class _LorisLaunchScreenState extends State<LorisLaunchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF07366B),
-      body: Center(
+      backgroundColor: const Color(0xFF16070D),
+      body: SizedBox.expand(
         child: Image.asset(
-          'assets/images/file_00000000f9f882119c70821c3044291b.png',
-          width: 300,
-          height: 190,
+          'assets/Splash Screen and back page of card.jpg',
           fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => const Text(
-            'LORIS',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 42,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 5,
-            ),
-          ),
         ),
       ),
     );

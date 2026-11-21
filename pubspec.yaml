@@ -62,6 +62,7 @@ flutter:
   assets:
     - assets/sounds/
     - assets/images/loris_logo.jpg
+    - 'assets/Splash Screen and back page of card.jpg'
     - assets/images/file_00000000f9f882119c70821c3044291b.png
     - assets/images/loris_icon.jpg
     - assets/images/loris_portrait_atlas.jpg
