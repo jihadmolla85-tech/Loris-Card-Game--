@@ -1,6 +1,6 @@
-
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:loris_card_game/game/engine/game_round_controller.dart';
+import 'package:loris_card_game/game/engine/sixteen_call_engine.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
@@ -13,11 +13,18 @@ void main() {
     List<List<Card>> createHands() {
       return List.generate(
         4,
-        (_) => List.generate(
+        (player) => List.generate(
           8,
-          (i) => Card.normal(
+          (_) => Card.normal(
             suit: Suit.clubs,
-            rank: 7 + i,
+            // Team A wins each fixture trick, allowing the 16-call
+            // test to reach the required bid number of tricks.
+            rank: switch (player) {
+              0 => 14,
+              1 => 10,
+              2 => 13,
+              _ => 9,
+            },
           ),
         ),
       );
@@ -40,7 +47,7 @@ void main() {
       );
     });
 
-    void playOneTrick() {
+    void playOneTrick({bool resolve16Decision = true}) {
       for (var i = 0; i < 4; i++) {
         final player = controller.trickEngine.currentPlayerIndex;
         final card = controller.trickEngine.hands[player].first;
@@ -48,11 +55,14 @@ void main() {
         controller.playCard(player, card);
       }
 
-      controller.completeTrick();
+      final winner = controller.completeTrick();
+      if (resolve16Decision && controller.sixteenCallEngine?.canCall == true) {
+        controller.pass16(callerPlayerIndex: winner);
+      }
     }
 
     test('Starts with the dealer right player', () {
-      expect(controller.nextPlayerIndex, 0);
+      expect(controller.nextPlayerIndex, 2);
     });
 
     test('Scores the round after eight tricks', () {
@@ -91,10 +101,43 @@ void main() {
       );
     });
 
+    test('Pauses the next trick until the human passes the 16 decision', () {
+      for (var trick = 0; trick < 4; trick++) {
+        for (var i = 0; i < 4; i++) {
+          final player = controller.trickEngine.currentPlayerIndex;
+          final card = controller.trickEngine.hands[player].first;
+          controller.playCard(player, card);
+        }
+        if (trick < 3) {
+          controller.completeTrick();
+        }
+      }
+      // The fourth trick is complete on the table; complete it to open the
+      // CALL 16 decision window before the next trick begins.
+      controller.completeTrick();
+
+      expect(controller.sixteenCallEngine!.canCall, isTrue);
+      final nextPlayer = controller.nextPlayerIndex!;
+      final nextCard = controller.trickEngine.hands[nextPlayer].first;
+      expect(
+        () => controller.playCard(nextPlayer, nextCard),
+        throwsStateError,
+      );
+
+      controller.pass16(callerPlayerIndex: 0);
+      expect(controller.sixteenCallEngine!.status, SixteenCallStatus.passed);
+      expect(
+        () => controller.playCard(nextPlayer, nextCard),
+        returnsNormally,
+      );
+    });
+
     test('Applies 16 Call success points only once', () {
-      for (var i = 0; i < 4; i++) {
+      // Bid is 4: call 16 immediately after the bidding team reaches four tricks.
+      for (var i = 0; i < 3; i++) {
         playOneTrick();
       }
+      playOneTrick(resolve16Decision: false);
 
       controller.call16(callerPlayerIndex: 0);
 

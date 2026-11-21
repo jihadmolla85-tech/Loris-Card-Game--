@@ -1,4 +1,3 @@
-
 import 'trick_engine.dart';
 import 'sixteen_call_engine.dart';
 import 'bid_scoring_engine.dart';
@@ -10,7 +9,7 @@ class GameRoundController {
   GameRoundController({
     required List<List<Card>> hands,
     required this.dealerIndex,
-    required Suit trumpSuit,
+    required Suit? trumpSuit,
     required this.biddingTeam,
     required this.bidAmount,
     required this.matchScoreEngine,
@@ -119,6 +118,9 @@ class GameRoundController {
       matchScoreEngine.checkWinner();
 
   void playCard(int playerIndex, Card card) {
+    if (sixteenCallEngine?.canCall == true) {
+      throw StateError('Resolve the CALL 16 decision before the next trick.');
+    }
     if (isRoundEnded) {
       throw StateError('The round has ended.');
     }
@@ -172,6 +174,17 @@ class GameRoundController {
     );
   }
 
+  void pass16({required int callerPlayerIndex}) {
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
+    }
+    final engine = sixteenCallEngine;
+    if (engine == null) {
+      throw StateError('16 Call is not allowed on an 8 bid.');
+    }
+    engine.pass16(callerPlayerIndex: callerPlayerIndex);
+  }
+
   void _applyRoundScore() {
     if (isRoundScored) return;
 
@@ -212,15 +225,14 @@ class GameRoundController {
 
   int getNextDealerIndex({bool isRedeal = false}) {
     final dealerTeam = dealerIndex % 2;
-
-    final dealerTeamScore = dealerTeam == 0
+    final dealerTeamTotalScore = dealerTeam == 0
         ? matchScoreEngine.teamAScore
         : matchScoreEngine.teamBScore;
 
     return DealerRotationEngine.nextDealerIndex(
       currentDealerIndex: dealerIndex,
       playerCount: trickEngine.playerCount,
-      dealerTeamScore: dealerTeamScore,
+      dealerTeamScore: dealerTeamTotalScore,
       isRedeal: isRedeal,
     );
   }

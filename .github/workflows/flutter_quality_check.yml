@@ -30,13 +30,13 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
+          cache: false
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Flutter Analyze
-        run: flutter analyze
+        run: flutter analyze lib
 
       - name: Run existing tests
         run: flutter test

@@ -69,6 +69,24 @@ void main() {
       );
     });
 
+    test('Can call immediately after winning the bid number of consecutive tricks', () {
+      engine = createEngine();
+      winFirstFour(engine);
+      expect(engine.canCall, isTrue);
+      engine.call16(callerPlayerIndex: 2);
+      expect(engine.status, SixteenCallStatus.inProgress);
+    });
+
+    test('An opponent trick prevents 16 call eligibility', () {
+      engine = createEngine(bid: 4);
+      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(1);
+      engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
+      expect(engine.canCall, isFalse);
+      expect(() => engine.call16(callerPlayerIndex: 0), throwsStateError);
+    });
+
     test('Only previous trick winner can call', () {
       engine = createEngine();
       winFirstFour(engine);
@@ -86,10 +104,26 @@ void main() {
       engine.recordTrickWinner(1);
       engine.recordTrickWinner(3);
       engine.recordTrickWinner(1);
+      engine.recordTrickWinner(3);
       engine.recordTrickWinner(0);
 
+      expect(engine.canCall, isFalse);
       expect(
         () => engine.call16(callerPlayerIndex: 0),
+        throwsStateError,
+      );
+    });
+
+    test('Previous trick winner can pass the one-time 16 decision', () {
+      engine = createEngine();
+      winFirstFour(engine);
+
+      engine.pass16(callerPlayerIndex: 2);
+
+      expect(engine.status, SixteenCallStatus.passed);
+      expect(engine.canCall, isFalse);
+      expect(
+        () => engine.call16(callerPlayerIndex: 2),
         throwsStateError,
       );
     });
@@ -111,10 +145,10 @@ void main() {
       winFirstFour(engine);
       engine.call16(callerPlayerIndex: 2);
 
-      engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
 
       expect(
         engine.status,
@@ -185,5 +219,36 @@ void main() {
         throwsStateError,
       );
     });
+    test('supports a six-player bidding team across all teammate seats', () {
+      engine = createEngine(team: 1, players: 6);
+      for (final winner in [1, 3, 5, 1]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.canCall, isTrue);
+      engine.call16(callerPlayerIndex: 1);
+
+      for (final winner in [3, 5, 1, 3]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.status, SixteenCallStatus.succeeded);
+      expect(engine.biddingTeamPoints, 16);
+      expect(engine.opposingTeamPoints, -16);
+    });
+
+    test('a six-player opponent trick breaks 16-call eligibility', () {
+      engine = createEngine(team: 1, players: 6);
+      for (final winner in [1, 0, 3, 5]) {
+        engine.recordTrickWinner(winner);
+      }
+
+      expect(engine.canCall, isFalse);
+      expect(
+        () => engine.call16(callerPlayerIndex: 5),
+        throwsStateError,
+      );
+    });
+
   });
 }

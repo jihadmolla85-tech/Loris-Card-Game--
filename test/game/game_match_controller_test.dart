@@ -89,7 +89,10 @@ void main() {
         match.playCard(player, card);
       }
 
-      match.completeTrick();
+      final winner = match.completeTrick();
+      if (match.currentRound.sixteenCallEngine?.canCall == true) {
+        match.pass16(callerPlayerIndex: winner);
+      }
     }
 
     test('Starts with the initial dealer', () {
@@ -108,7 +111,7 @@ void main() {
 
       expect(match.hasStarted, isTrue);
       expect(match.currentRound.dealerIndex, 3);
-      expect(match.nextPlayerIndex, 0);
+      expect(match.nextPlayerIndex, 2);
     });
 
     test('Prevents starting another round before current round ends', () {
@@ -145,6 +148,26 @@ void main() {
       expect(match.dealerIndex, 3);
     });
 
+    test('Rotates dealer when cumulative score stays +1 or more after this round loses points', () {
+      // Team B owns dealer seat 3 and already has a positive match total.
+      // Rotation depends on the cumulative total, not this round's delta.
+      matchScore.teamBScore = 6;
+      matchScore.teamAScore = -6;
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 8; i++) {
+        playOneTrick();
+      }
+
+      expect(matchScore.teamBScore, 2);
+      expect(match.dealerIndex, 2);
+    });
+
     test('Rotates dealer when dealer team reaches at least 1 point', () {
       match.startRound(
         hands: createHands(teamBWins: true),
@@ -158,7 +181,7 @@ void main() {
       }
 
       expect(matchScore.teamBScore, 4);
-      expect(match.dealerIndex, 0);
+      expect(match.dealerIndex, 2);
     });
 
     test('Detects match winner and prevents another round', () {
@@ -202,7 +225,7 @@ void main() {
         playOneTrick();
       }
 
-      expect(match.dealerIndex, 0);
+      expect(match.dealerIndex, 2);
     });
 
     test('Starts a round by dealing cards automatically', () {
@@ -218,7 +241,7 @@ void main() {
       expect(hands.every((hand) => hand.length == 8), isTrue);
       expect(match.hasStarted, isTrue);
       expect(match.currentRound.dealerIndex, 3);
-      expect(match.nextPlayerIndex, 0);
+      expect(match.nextPlayerIndex, 2);
     });
 
     test('Starts a six-player round by dealing cards automatically', () {
@@ -249,7 +272,7 @@ void main() {
       expect(hands.every((hand) => hand.length == 8), isTrue);
       expect(sixPlayerMatch.hasStarted, isTrue);
       expect(sixPlayerMatch.currentRound.dealerIndex, 5);
-      expect(sixPlayerMatch.nextPlayerIndex, 0);
+      expect(sixPlayerMatch.nextPlayerIndex, 4);
     });
 
     test('Supports a six-player match', () {
@@ -278,7 +301,7 @@ void main() {
       );
 
       expect(sixPlayerMatch.currentRound.dealerIndex, 5);
-      expect(sixPlayerMatch.nextPlayerIndex, 0);
+      expect(sixPlayerMatch.nextPlayerIndex, 4);
     });
 
     test('Rejects an invalid player count', () {
@@ -387,7 +410,7 @@ void main() {
       expect(restored.currentRound.trickEngine.plays, hasLength(1));
       expect(
         restored.currentRound.trickEngine.currentPlayerIndex,
-        (player + 1) % 4,
+        (player - 1 + 4) % 4,
       );
       expect(
         restored.currentRound.trickEngine.hands[player].contains(playedCard),
