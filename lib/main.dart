@@ -345,7 +345,7 @@ class _LorisHomeScreenState extends State<LorisHomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/images/loris_logo.jpg', width: 290, height: 162, fit: BoxFit.contain),
+                  Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: 290, height: 162, fit: BoxFit.contain),
                   const SizedBox(height: 18),
                   const SizedBox(height: 34),
                   Container(
@@ -3141,7 +3141,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
           Align(alignment: Alignment.bottomRight, child: corner(upsideDown: true)),
           Center(
             child: card.isLoris
-                ? Image.asset('assets/images/loris_logo.jpg', width: tableCard ? 40 : compact ? 30 : 42, height: tableCard ? 48 : compact ? 36 : 52, fit: BoxFit.contain)
+                ? Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: tableCard ? 40 : compact ? 30 : 42, height: tableCard ? 48 : compact ? 36 : 52, fit: BoxFit.contain)
                 : card.rank != null && card.rank! >= 11 && card.rank! <= 13
                     ? _CourtCardArt(
                         rank: card.rank!,
