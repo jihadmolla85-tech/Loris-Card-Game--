@@ -2,6 +2,8 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:loris_card_game/game/engine/game_save_service.dart';
 import 'package:loris_card_game/game/engine/game_match_controller.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
@@ -60,6 +62,7 @@ void main() {
     }
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       matchScore = MatchScoreEngine();
       bidScore = BidScoringEngine();
 
@@ -447,6 +450,47 @@ void main() {
       expect(restored.currentRound.completedTricks, 8);
       expect(restored.matchScoreEngine.teamAScore, 4);
       expect(restored.matchScoreEngine.teamBScore, -4);
+    });
+
+    test('resumeGame returns false when no save exists', () async {
+      final service = GameSaveService();
+      final restored = GameMatchController(
+        initialDealerIndex: 3,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+
+      expect(await restored.resumeGame(service), isFalse);
+      expect(restored.hasStarted, isFalse);
+    });
+
+    test('resumeGame restores a saved match with a mid-trick play', () async {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      final round = match.currentRound;
+      final player = round.trickEngine.currentPlayerIndex;
+      final playedCard = round.trickEngine.hands[player].first;
+      match.playCard(player, playedCard);
+
+      final service = GameSaveService();
+      await match.saveGame(service);
+
+      final restored = GameMatchController(
+        initialDealerIndex: 3,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+
+      expect(await restored.resumeGame(service), isTrue);
+      expect(restored.hasStarted, isTrue);
+      expect(restored.currentRound.trickEngine.plays, hasLength(1));
+      expect(restored.currentRound.trickEngine.hands[player].contains(playedCard), isFalse);
+      expect(restored.currentRound.trickEngine.currentPlayerIndex, (player - 1 + 4) % 4);
     });
 
   });
