@@ -1,7 +1,6 @@
-
 class DealerRotationEngine {
   /// Returns the next dealer when a new round begins.
-  /// The next dealer is the player to the current dealer's right.
+  /// Rotate only when the dealer team's cumulative match total is +1 or more.
   static int nextDealerIndex({
     required int currentDealerIndex,
     required int playerCount,
@@ -22,12 +21,12 @@ class DealerRotationEngine {
       return currentDealerIndex;
     }
 
-    // Dealer's team has not reached +1: keep the same dealer.
+    // Rotate only if the dealer team's total match score is at least +1.
     if (dealerTeamScore < 1) {
       return currentDealerIndex;
     }
 
-    // New round: move to the player on the dealer's right.
-    return (currentDealerIndex + 1) % playerCount;
+    // New round: move one seat right-to-left around the table.
+    return (currentDealerIndex - 1 + playerCount) % playerCount;
   }
 }

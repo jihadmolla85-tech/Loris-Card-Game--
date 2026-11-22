@@ -45,7 +45,7 @@ void main() {
         random: Random(21),
       );
 
-      expect(result.dealerIndex, 5);
+      expect(result.dealerIndex, 3);
       expect(result.jackCard.rank, 11);
       expect(result.drawnCards.length, 8);
     });
@@ -61,7 +61,7 @@ void main() {
       );
 
       expect(result.drawnCards.length, 18);
-      expect(result.dealerIndex, 3);
+      expect(result.dealerIndex, 1);
       expect(result.jackCard.rank, 11);
       expect(result.drawnCards.take(17).every((card) => card.rank != 11), isTrue);
     });

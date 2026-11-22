@@ -71,7 +71,7 @@ class DealController {
     final dealer = _dealerIndex!;
 
     final shuffledDeck = shuffleEngine.shuffle(deck);
-    final firstPlayerIndex = (dealer + 1) % players;
+    final firstPlayerIndex = (dealer - 1 + players) % players;
 
     _currentHands = CardDealer.deal(
       deck: shuffledDeck,

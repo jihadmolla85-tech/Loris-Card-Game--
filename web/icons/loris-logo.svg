@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8f2032"/><stop offset="1" stop-color="#3d0d1b"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0ad"/><stop offset=".5" stop-color="#e2ad48"/><stop offset="1" stop-color="#9c6427"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="238" r="198" fill="none" stroke="url(#gold)" stroke-width="10" opacity=".85"/>
+  <path d="M154 92h180a24 24 0 0 1 24 24v244a24 24 0 0 1-24 24H154a24 24 0 0 1-24-24V116a24 24 0 0 1 24-24Z" fill="#160711" opacity=".45" filter="url(#shadow)"/>
+  <g transform="rotate(-10 235 246)">
+    <rect x="125" y="83" width="190" height="300" rx="22" fill="url(#gold)"/>
+    <rect x="137" y="95" width="166" height="276" rx="15" fill="#fff8e9"/>
+    <path d="M158 119h45v8h-45z" fill="#a51f35"/>
+    <path d="M180 142 201 163 180 184 159 163Z" fill="#b51f35"/>
+    <path d="M262 286c-20-23-51-7-51 16 0 16 14 25 27 35 9 7 18 16 24 26 7-10 16-19 25-26 13-10 27-19 27-35 0-23-31-39-52-16Z" fill="#b51f35"/>
+    <path d="M158 326h45v8h-45z" fill="#a51f35"/>
+  </g>
+  <g transform="rotate(10 300 246)">
+    <rect x="202" y="104" width="190" height="300" rx="22" fill="url(#gold)"/>
+    <rect x="214" y="116" width="166" height="276" rx="15" fill="#fff8e9"/>
+    <path d="M235 140h45v8h-45z" fill="#1c2630"/>
+    <path d="M257 162c-8-16-28-11-28 5 0 12 17 24 28 36 11-12 28-24 28-36 0-16-20-21-28-5Z" fill="#1c2630"/>
+    <path d="M257 350 236 329h42Z" fill="#b51f35"/>
+  </g>
+  <text x="256" y="468" text-anchor="middle" font-family="Arial,sans-serif" font-size="48" font-weight="900" letter-spacing="8" fill="#fff0ad">LORIS</text>
+</svg>

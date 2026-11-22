@@ -1,7 +1,9 @@
+import 'dart:math';
+
 import '../models/loris_card.dart';
 
 class TrumpSelectionResult {
-  final Suit trumpSuit;
+  final Suit? trumpSuit;
   final int cardOwnerIndex;
   final Card selectedCard;
   final bool revealedToEveryone;
@@ -17,6 +19,39 @@ class TrumpSelectionResult {
 }
 
 class TrumpSelectionEngine {
+  /// Randomly chooses one ordinary card from any teammate's hand.
+  /// The caller uses only its suit; the selected card is never shown to players.
+  static MapEntry<int, Card> selectRandomTeammateCard({
+    required List<List<Card>> hands,
+    required int bidderIndex,
+    required Random random,
+  }) {
+    final playerCount = hands.length;
+    if ((playerCount != 4 && playerCount != 6) ||
+        bidderIndex < 0 ||
+        bidderIndex >= playerCount) {
+      throw ArgumentError('Invalid player count or bidder index.');
+    }
+
+    final eligible = <MapEntry<int, Card>>[];
+    for (var playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+      if (playerIndex == bidderIndex ||
+          playerIndex % 2 != bidderIndex % 2) {
+        continue;
+      }
+      for (final card in hands[playerIndex]) {
+        if (!card.isLoris && card.suit != null) {
+          eligible.add(MapEntry(playerIndex, card));
+        }
+      }
+    }
+
+    if (eligible.isEmpty) {
+      throw StateError('No eligible ordinary card exists in teammate hands.');
+    }
+    return eligible[random.nextInt(eligible.length)];
+  }
+
   static TrumpSelectionResult select({
     required List<List<Card>> hands,
     required int bidderIndex,
@@ -39,33 +74,44 @@ class TrumpSelectionEngine {
       throw StateError('Only the highest bidder can select trump.');
     }
 
-    // Teams sit alternately: A-B-A-B-A-B.
-    final sameTeam =
-        bidderIndex % 2 == cardOwnerIndex % 2;
-
-    if (!sameTeam) {
-      throw ArgumentError('Card must belong to the bidder or a teammate.');
+    // A bidder may privately draw a random normal card from a teammate.
+    // Opponent cards are never eligible, and the selected card is not revealed.
+    if (cardOwnerIndex % 2 != bidderIndex % 2) {
+      throw ArgumentError('Trump card must belong to the bidder or a teammate.');
     }
 
     if (!hands[cardOwnerIndex].contains(selectedCard)) {
       throw ArgumentError('Selected card is not in the owner hand.');
     }
 
-    if (selectedCard.isLoris || selectedCard.suit == null) {
-      throw ArgumentError('LORIS cannot be used to select trump.');
+    if (selectedCard.isLoris) {
+      if (cardOwnerIndex != bidderIndex) {
+        throw ArgumentError('The bidder must hold the LORIS Joker to select Joker mode.');
+      }
+      return TrumpSelectionResult(
+        trumpSuit: null,
+        cardOwnerIndex: cardOwnerIndex,
+        selectedCard: selectedCard,
+        revealedToEveryone: false,
+        bidderHasTrumpSuit: true,
+      );
+    }
+    if (selectedCard.suit == null) {
+      throw ArgumentError('Selected card has no suit.');
     }
 
     final trumpSuit = selectedCard.suit!;
 
-    final bidderHasTrumpSuit = hands[bidderIndex].any(
-      (card) => !card.isLoris && card.suit == trumpSuit,
+    final bidderHasTrumpSuit = hands.asMap().entries.any(
+      (entry) => entry.key % 2 == bidderIndex % 2 &&
+          entry.value.any((card) => !card.isLoris && card.suit == trumpSuit),
     );
 
     return TrumpSelectionResult(
       trumpSuit: trumpSuit,
       cardOwnerIndex: cardOwnerIndex,
       selectedCard: selectedCard,
-      revealedToEveryone: cardOwnerIndex != bidderIndex,
+      revealedToEveryone: false,
       bidderHasTrumpSuit: bidderHasTrumpSuit,
     );
   }
