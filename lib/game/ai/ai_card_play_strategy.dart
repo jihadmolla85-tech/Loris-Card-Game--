@@ -74,7 +74,7 @@ class AiCardPlayStrategy {
     return pool.first;
   }
 
-  Card _cheapest(List<Card> cards, Suit trumpSuit) {
+  Card _cheapest(List<Card> cards, Suit trumpSuit, bool lorisTrump) {
     final sorted = List<Card>.from(cards)
       ..sort((a, b) => _cardCost(a, trumpSuit, lorisTrump).compareTo(_cardCost(b, trumpSuit, lorisTrump)));
     return sorted.first;
