@@ -329,9 +329,26 @@ class GameMatchController {
       );
     }
 
+    if (snapshot.playerCount != null &&
+        snapshot.playerCount != 4 &&
+        snapshot.playerCount != 6) {
+      throw const FormatException('Invalid saved player count.');
+    }
+
     if (snapshot.dealerIndex < 0 ||
         snapshot.dealerIndex >= 6) {
       throw const FormatException('Invalid saved dealer index.');
+    }
+
+    if (snapshot.playerCount != null &&
+        snapshot.dealerIndex >= snapshot.playerCount!) {
+      throw const FormatException('Invalid saved dealer index for player count.');
+    }
+
+    if (snapshot.playerCount != null &&
+        snapshot.hands.isNotEmpty &&
+        snapshot.hands.length != snapshot.playerCount) {
+      throw const FormatException('Saved hand count does not match player count.');
     }
 
     dealerIndex = snapshot.dealerIndex;

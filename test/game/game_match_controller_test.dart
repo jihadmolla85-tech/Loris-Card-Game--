@@ -452,6 +452,40 @@ void main() {
       expect(restored.matchScoreEngine.teamBScore, -4);
     });
 
+    test('Rejects a saved player count other than four or six', () {
+      final invalid = GameStateSnapshot(
+        playerCount: 5,
+        dealerIndex: 0,
+        dealerAdvanced: false,
+        teamAScore: 0,
+        teamBScore: 0,
+      );
+      expect(() => match.restoreSnapshot(invalid), throwsFormatException);
+    });
+
+    test('Rejects dealer index outside a saved four-player match', () {
+      final invalid = GameStateSnapshot(
+        playerCount: 4,
+        dealerIndex: 4,
+        dealerAdvanced: false,
+        teamAScore: 0,
+        teamBScore: 0,
+      );
+      expect(() => match.restoreSnapshot(invalid), throwsFormatException);
+    });
+
+    test('Rejects hand count inconsistent with saved player count', () {
+      final invalid = GameStateSnapshot(
+        playerCount: 6,
+        dealerIndex: 0,
+        dealerAdvanced: false,
+        teamAScore: 0,
+        teamBScore: 0,
+        hands: createHands(),
+      );
+      expect(() => match.restoreSnapshot(invalid), throwsFormatException);
+    });
+
     test('resumeGame returns false when no save exists', () async {
       final service = GameSaveService();
       final restored = GameMatchController(
