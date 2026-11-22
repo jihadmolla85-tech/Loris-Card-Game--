@@ -21,7 +21,12 @@ class AiCardPlayStrategy {
     final nonLoris = legal.where((card) => !card.isLoris).toList();
 
     if (plays.isEmpty) {
-      return _chooseLead(nonLoris.isEmpty ? legal : nonLoris, hand, engine.trumpSuit, engine.lorisTrump);
+      return _chooseLead(
+        nonLoris.isEmpty ? legal : nonLoris,
+        hand,
+        engine.trumpSuit,
+        engine.lorisTrump,
+      );
     }
 
     final currentWinner = engine.currentWinnerIndex;
@@ -46,9 +51,16 @@ class AiCardPlayStrategy {
     return _cheapest(legal, engine.trumpSuit, engine.lorisTrump);
   }
 
-  Card _chooseLead(List<Card> candidates, List<Card> hand, Suit trumpSuit, bool lorisTrump) {
+  Card _chooseLead(
+    List<Card> candidates,
+    List<Card> hand,
+    Suit trumpSuit,
+    bool lorisTrump,
+  ) {
     final sideSuitCards = candidates
-        .where((card) => !card.isLoris && (lorisTrump || card.suit != trumpSuit))
+        .where(
+          (card) => !card.isLoris && (lorisTrump || card.suit != trumpSuit),
+        )
         .toList();
     final pool = sideSuitCards.isNotEmpty ? sideSuitCards : candidates;
 
@@ -76,7 +88,11 @@ class AiCardPlayStrategy {
 
   Card _cheapest(List<Card> cards, Suit trumpSuit, bool lorisTrump) {
     final sorted = List<Card>.from(cards)
-      ..sort((a, b) => _cardCost(a, trumpSuit, lorisTrump).compareTo(_cardCost(b, trumpSuit, lorisTrump)));
+      ..sort(
+        (a, b) => _cardCost(a, trumpSuit, lorisTrump).compareTo(
+          _cardCost(b, trumpSuit, lorisTrump),
+        ),
+      );
     return sorted.first;
   }
 

@@ -126,7 +126,10 @@ void main() {
         lorisTrump: true,
       );
 
-      expect(strategy.chooseCard(engine: engine, playerIndex: 0), c(Suit.spades, 3));
+      expect(
+        strategy.chooseCard(engine: engine, playerIndex: 0),
+        c(Suit.spades, 3),
+      );
     });
 
     test('does not penalize the selected suit as ordinary trump in LORIS mode', () {
@@ -154,7 +157,10 @@ void main() {
       engine.playCard(0, c(Suit.hearts, 14));
       engine.playCard(1, c(Suit.hearts, 13));
 
-      expect(strategy.chooseCard(engine: engine, playerIndex: 2), c(Suit.spades, 8));
+      expect(
+        strategy.chooseCard(engine: engine, playerIndex: 2),
+        c(Suit.spades, 8),
+      );
     });
 
     test('six-player decisions do not change when unseen hands are redistributed', () {
