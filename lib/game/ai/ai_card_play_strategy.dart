@@ -21,7 +21,7 @@ class AiCardPlayStrategy {
     final nonLoris = legal.where((card) => !card.isLoris).toList();
 
     if (plays.isEmpty) {
-      return _chooseLead(nonLoris.isEmpty ? legal : nonLoris, hand, engine.trumpSuit);
+      return _chooseLead(nonLoris.isEmpty ? legal : nonLoris, hand, engine.trumpSuit, engine.lorisTrump);
     }
 
     final currentWinner = engine.currentWinnerIndex;
@@ -29,7 +29,7 @@ class AiCardPlayStrategy {
 
     if (partnerIsWinning) {
       // Save LORIS, honours and trump while following the compulsory rules.
-      return _cheapest(legal, engine.trumpSuit);
+      return _cheapest(legal, engine.trumpSuit, engine.lorisTrump);
     }
 
     final cardsThatWin = legal
@@ -39,16 +39,16 @@ class AiCardPlayStrategy {
 
     // Spend the least valuable card that actually takes the trick.
     if (cardsThatWin.isNotEmpty) {
-      return _cheapest(cardsThatWin, engine.trumpSuit);
+      return _cheapest(cardsThatWin, engine.trumpSuit, engine.lorisTrump);
     }
 
     // The trick cannot be won: discard the least valuable legal card.
-    return _cheapest(legal, engine.trumpSuit);
+    return _cheapest(legal, engine.trumpSuit, engine.lorisTrump);
   }
 
-  Card _chooseLead(List<Card> candidates, List<Card> hand, Suit trumpSuit) {
+  Card _chooseLead(List<Card> candidates, List<Card> hand, Suit trumpSuit, bool lorisTrump) {
     final sideSuitCards = candidates
-        .where((card) => !card.isLoris && card.suit != trumpSuit)
+        .where((card) => !card.isLoris && (lorisTrump || card.suit != trumpSuit))
         .toList();
     final pool = sideSuitCards.isNotEmpty ? sideSuitCards : candidates;
 
@@ -76,11 +76,11 @@ class AiCardPlayStrategy {
 
   Card _cheapest(List<Card> cards, Suit trumpSuit) {
     final sorted = List<Card>.from(cards)
-      ..sort((a, b) => _cardCost(a, trumpSuit).compareTo(_cardCost(b, trumpSuit)));
+      ..sort((a, b) => _cardCost(a, trumpSuit, lorisTrump).compareTo(_cardCost(b, trumpSuit, lorisTrump)));
     return sorted.first;
   }
 
-  int _cardCost(Card card, Suit trumpSuit) {
+  int _cardCost(Card card, Suit trumpSuit, bool lorisTrump) {
     if (card.isLoris) return 1000;
     final rank = card.rank ?? 0;
     final honourCost = switch (rank) {
@@ -90,7 +90,7 @@ class AiCardPlayStrategy {
       11 => 20,
       _ => rank,
     };
-    return honourCost + (card.suit == trumpSuit ? 25 : 0);
+    return honourCost + (!lorisTrump && card.suit == trumpSuit ? 25 : 0);
   }
 
 

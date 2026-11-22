@@ -109,6 +109,54 @@ void main() {
       expect(engine.legalCardsFor(2), contains(chosen));
     });
 
+    test('leads from the longest ordinary suit in LORIS trump mode', () {
+      final hand = [
+        c(Suit.spades, 3), c(Suit.spades, 4), c(Suit.spades, 5),
+        c(Suit.spades, 6), c(Suit.clubs, 14), c(Suit.hearts, 3),
+        c(Suit.diamonds, 4), const Card.loris(replacesRank: 3),
+      ];
+      final engine = TrickEngine(
+        hands: handsWith(
+          hand,
+          List.generate(8, (i) => c(Suit.hearts, i + 4)),
+          List.generate(8, (i) => c(Suit.diamonds, i + 5)),
+        ),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        lorisTrump: true,
+      );
+
+      expect(strategy.chooseCard(engine: engine, playerIndex: 0), c(Suit.spades, 3));
+    });
+
+    test('does not penalize the selected suit as ordinary trump in LORIS mode', () {
+      final hand = [
+        c(Suit.spades, 8), c(Suit.spades, 9), c(Suit.clubs, 10),
+        c(Suit.diamonds, 10), c(Suit.clubs, 11), c(Suit.diamonds, 11),
+        c(Suit.spades, 12), const Card.loris(replacesRank: 7),
+      ];
+      final engine = TrickEngine(
+        hands: handsWith(
+          [
+            c(Suit.hearts, 14),
+            ...List.generate(7, (i) => c(Suit.clubs, i + 3)),
+          ],
+          [
+            c(Suit.hearts, 13),
+            ...List.generate(7, (i) => c(Suit.diamonds, i + 3)),
+          ],
+          hand,
+        ),
+        dealerIndex: 3,
+        trumpSuit: Suit.spades,
+        lorisTrump: true,
+      );
+      engine.playCard(0, c(Suit.hearts, 14));
+      engine.playCard(1, c(Suit.hearts, 13));
+
+      expect(strategy.chooseCard(engine: engine, playerIndex: 2), c(Suit.spades, 8));
+    });
+
     test('six-player decisions do not change when unseen hands are redistributed', () {
       final deck = <Card>[
         for (final suit in Suit.values)
