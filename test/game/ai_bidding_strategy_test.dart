@@ -18,6 +18,36 @@ void main() {
       );
     });
 
+    test('rejects a duplicate card in the AI hand', () {
+      const duplicateHand = [
+        Card.normal(suit: Suit.clubs, rank: 14),
+        Card.normal(suit: Suit.clubs, rank: 14),
+        Card.normal(suit: Suit.clubs, rank: 12),
+        Card.normal(suit: Suit.diamonds, rank: 7),
+        Card.normal(suit: Suit.diamonds, rank: 8),
+        Card.normal(suit: Suit.hearts, rank: 7),
+        Card.normal(suit: Suit.hearts, rank: 8),
+        Card.normal(suit: Suit.spades, rank: 9),
+      ];
+
+      expect(() => strategy.evaluateHand(duplicateHand), throwsArgumentError);
+    });
+
+    test('rejects a LORIS card without a valid replacement rank', () {
+      const malformedHand = [
+        Card.loris(replacesRank: null),
+        Card.normal(suit: Suit.clubs, rank: 14),
+        Card.normal(suit: Suit.clubs, rank: 13),
+        Card.normal(suit: Suit.diamonds, rank: 7),
+        Card.normal(suit: Suit.diamonds, rank: 8),
+        Card.normal(suit: Suit.hearts, rank: 7),
+        Card.normal(suit: Suit.hearts, rank: 8),
+        Card.normal(suit: Suit.spades, rank: 9),
+      ];
+
+      expect(() => strategy.evaluateHand(malformedHand), throwsArgumentError);
+    });
+
     test('passes with a weak hand instead of inventing a bid', () {
       const hand = [
         Card.normal(suit: Suit.clubs, rank: 7),
