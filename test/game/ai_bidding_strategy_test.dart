@@ -18,6 +18,48 @@ void main() {
       );
     });
 
+    test('rejects player indices outside the supported six seats', () {
+      const hand = [
+        Card.normal(suit: Suit.clubs, rank: 14),
+        Card.normal(suit: Suit.clubs, rank: 13),
+        Card.normal(suit: Suit.clubs, rank: 12),
+        Card.normal(suit: Suit.diamonds, rank: 14),
+        Card.normal(suit: Suit.diamonds, rank: 13),
+        Card.normal(suit: Suit.hearts, rank: 14),
+        Card.normal(suit: Suit.hearts, rank: 13),
+        Card.normal(suit: Suit.spades, rank: 14),
+      ];
+      expect(() => strategy.chooseBid(
+        hand: hand, playerIndex: 6, highestBid: null, highestBidder: null,
+      ), throwsArgumentError);
+      expect(() => strategy.chooseBid(
+        hand: hand, playerIndex: -1, highestBid: null, highestBidder: null,
+      ), throwsArgumentError);
+    });
+
+    test('rejects impossible bid context values', () {
+      const hand = [
+        Card.normal(suit: Suit.clubs, rank: 14),
+        Card.normal(suit: Suit.clubs, rank: 13),
+        Card.normal(suit: Suit.clubs, rank: 12),
+        Card.normal(suit: Suit.diamonds, rank: 14),
+        Card.normal(suit: Suit.diamonds, rank: 13),
+        Card.normal(suit: Suit.hearts, rank: 14),
+        Card.normal(suit: Suit.hearts, rank: 13),
+        Card.normal(suit: Suit.spades, rank: 14),
+      ];
+      for (final bid in [3, 9]) {
+        expect(() => strategy.chooseBid(
+          hand: hand, playerIndex: 1, highestBid: bid, highestBidder: null,
+        ), throwsArgumentError);
+      }
+      for (final bidder in [-1, 6]) {
+        expect(() => strategy.chooseBid(
+          hand: hand, playerIndex: 1, highestBid: null, highestBidder: bidder,
+        ), throwsArgumentError);
+      }
+    });
+
     test('rejects a duplicate card in the AI hand', () {
       const duplicateHand = [
         Card.normal(suit: Suit.clubs, rank: 14),
