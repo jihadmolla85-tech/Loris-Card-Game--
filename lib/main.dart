@@ -2386,16 +2386,29 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (choice.key != bidder) ...[
-                      const Icon(Icons.groups_rounded, color: LorisApp.gold, size: 24),
-                      const SizedBox(width: 6),
-                      const Flexible(child: Text('TEAMMATE’S HAND', maxLines: 2, textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10))),
-                    ] else ...[
-                      if (isJoker) Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: 22, height: 29, fit: BoxFit.contain)
-                      else Text(_suitSymbol(suit), style: TextStyle(color: accent, fontSize: 25, fontWeight: FontWeight.w900)),
-                      const SizedBox(width: 6),
-                      Text(isJoker ? 'L' : _suitName(suit!), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10)),
-                    ],
+                    _buildTrumpSampleCard(
+                      suit,
+                      isLoris: isJoker,
+                      width: 34,
+                      height: 48,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        choice.key != bidder
+                            ? 'TEAMMATE’S HAND'
+                            : isJoker
+                                ? 'LORIS'
+                                : _suitName(suit!).toUpperCase(),
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -2643,19 +2656,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         child: const Text('TRUMP', style: TextStyle(color: Color(0xFF17243B), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
                       ),
                       const SizedBox(width: 11),
-                      if (_trumpSuit != null)
-                        Text(
-                          _suitSymbol(_trumpSuit),
-                          style: TextStyle(
-                            color: _isRedSuit(_trumpSuit) ? const Color(0xFFFF6678) : Colors.white,
-                            fontSize: 31,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                            shadows: const [Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(1, 2))],
-                          ),
-                        )
-                      else
-                        Image.asset('assets/images/file_00000000f9f882119c70821c3044291b.png', width: 29, height: 34, fit: BoxFit.contain),
+                      _buildTrumpSampleCard(
+                        _trumpSuit,
+                        isLoris: _trumpSuit == null,
+                        width: 38,
+                        height: 52,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         _trumpSuit == null ? 'LORIS' : _suitName(_trumpSuit!).toUpperCase(),
@@ -3279,6 +3285,52 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   // ----------------------------------------------------------
   // CARD WIDGET
   // ----------------------------------------------------------
+
+  Widget _buildTrumpSampleCard(
+    loris.Suit? suit, {
+    bool isLoris = false,
+    double width = 38,
+    double height = 52,
+  }) {
+    final String assetPath;
+    if (isLoris) {
+      assetPath = 'assets/Spades_Joker_Blue.png';
+    } else {
+      final suitName = switch (suit!) {
+        loris.Suit.clubs => 'Clubs',
+        loris.Suit.diamonds => 'Diamonds',
+        loris.Suit.hearts => 'Hearts',
+        loris.Suit.spades => 'Spades',
+      };
+      assetPath = 'assets/${suitName}_2.png';
+    }
+
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: const Color(0xFFD1C9B8), width: .8),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black45,
+            blurRadius: 4,
+            offset: Offset(1, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        assetPath,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Center(
+          child: Text(isLoris ? 'LORIS' : '2',
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ),
+    );
+  }
 
   Widget _buildCard(
     loris.Card card, {
