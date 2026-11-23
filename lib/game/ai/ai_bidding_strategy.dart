@@ -27,8 +27,14 @@ class AiBiddingStrategy {
     required int? highestBidder,
   }) {
     _validateHand(hand);
-    if (playerIndex < 0) {
+    if (playerIndex < 0 || playerIndex >= 6) {
       throw ArgumentError.value(playerIndex, 'playerIndex');
+    }
+    if (highestBid != null && (highestBid < 4 || highestBid > 8)) {
+      throw ArgumentError.value(highestBid, 'highestBid');
+    }
+    if (highestBidder != null && (highestBidder < 0 || highestBidder >= 6)) {
+      throw ArgumentError.value(highestBidder, 'highestBidder');
     }
 
     // A partner has already committed the team's contract. Do not compete.
