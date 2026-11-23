@@ -25,6 +25,7 @@ import 'game/engine/bidding_round_controller.dart';
 import 'game/engine/trump_selection_engine.dart';
 import 'game/engine/trick_engine.dart';
 import 'game/ai/ai_card_play_strategy.dart';
+import 'game/ai/ai_sixteen_call_strategy.dart';
 import 'game/ai/ai_trump_selection_strategy.dart';
 
 void main() {
@@ -1451,6 +1452,8 @@ await _revealDealerDrawOnTable(
   // ----------------------------------------------------------
 
   final AiCardPlayStrategy _aiCardPlayStrategy = const AiCardPlayStrategy();
+  final AiSixteenCallStrategy _aiSixteenCallStrategy =
+      const AiSixteenCallStrategy();
 
   loris.Card _chooseAiCard(int playerIndex) {
     final engine = _matchController.currentRound.trickEngine;
@@ -1581,7 +1584,8 @@ await _revealDealerDrawOnTable(
         _winCelebrationIsLoss = false;
       });
 
-      // AI automatically makes a valid 16 call when eligible.
+      // The AI decides from its own remaining hand only. It never inspects
+      // the partner's or opponents' hidden cards to make a 16-call decision.
       final sixteen = round.sixteenCallEngine;
 
       if (!_finished &&
@@ -1590,14 +1594,28 @@ await _revealDealerDrawOnTable(
           sixteen.canCall &&
           sixteen.lastTrickWinnerIndex == winner) {
         try {
-          _matchController.call16(callerPlayerIndex: winner);
+          final shouldCall = _aiSixteenCallStrategy.shouldCall(
+            hand: round.trickEngine.hands[winner],
+            completedTricks: round.completedTricks,
+            trumpSuit: round.trickEngine.trumpSuit,
+            lorisTrump: round.trickEngine.lorisTrump,
+          );
 
-          setState(() {
-            _status =
-                'AI called 16! Their team must win every remaining trick.';
-          });
+          if (shouldCall) {
+            _matchController.call16(callerPlayerIndex: winner);
+            setState(() {
+              _status =
+                  'AI called 16! Their team must win every remaining trick.';
+            });
+          } else {
+            _matchController.pass16(passerPlayerIndex: winner);
+            setState(() {
+              _status =
+                  'AI passed 16 after assessing its own remaining cards.';
+            });
+          }
         } catch (e) {
-          setState(() => _error = 'AI 16 call error: $e');
+          setState(() => _error = 'AI 16-call decision error: $e');
         }
       }
 
