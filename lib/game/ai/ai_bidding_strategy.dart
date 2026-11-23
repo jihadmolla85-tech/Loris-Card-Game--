@@ -26,9 +26,7 @@ class AiBiddingStrategy {
     required int? highestBid,
     required int? highestBidder,
   }) {
-    if (hand.length != 8) {
-      throw ArgumentError('AI hand must contain 8 cards.');
-    }
+    _validateHand(hand);
     if (playerIndex < 0) {
       throw ArgumentError.value(playerIndex, 'playerIndex');
     }
@@ -58,9 +56,7 @@ class AiBiddingStrategy {
 
   /// Returns an approximate number of tricks the hand can support.
   double evaluateHand(List<Card> hand) {
-    if (hand.length != 8) {
-      throw ArgumentError('AI hand must contain 8 cards.');
-    }
+    _validateHand(hand);
 
     final suitCounts = <Suit, int>{for (final suit in Suit.values) suit: 0};
     for (final card in hand) {
@@ -113,6 +109,34 @@ class AiBiddingStrategy {
     strength += voids * 0.08;
 
     return strength;
+  }
+
+  void _validateHand(List<Card> hand) {
+    if (hand.length != 8) {
+      throw ArgumentError('AI hand must contain 8 cards.');
+    }
+
+    if (hand.toSet().length != hand.length) {
+      throw ArgumentError('AI hand cannot contain duplicate cards.');
+    }
+
+    for (final card in hand) {
+      if (card.isLoris) {
+        final replacedRank = card.replacesRank;
+        if (card.suit != null ||
+            card.rank != null ||
+            replacedRank == null ||
+            replacedRank < 3 ||
+            replacedRank > 14) {
+          throw ArgumentError('AI hand contains an invalid LORIS card.');
+        }
+      } else if (card.suit == null ||
+          card.rank == null ||
+          card.rank! < 3 ||
+          card.rank! > 14) {
+        throw ArgumentError('AI hand contains an invalid normal card.');
+      }
+    }
   }
 
   int? _bidForStrength(double strength) {
