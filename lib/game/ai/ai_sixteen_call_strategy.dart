@@ -30,13 +30,13 @@ class AiSixteenCallStrategy {
     };
     var potential = 0.0;
 
+    // Build the complete suit holdings before scoring so the estimate is
+    // independent of the order in which cards happen to be stored.
     for (final card in hand) {
       if (card.isLoris) {
         if (card.suit != null || card.rank != null) {
           throw ArgumentError('AI hand contains an invalid LORIS card.');
         }
-        // LORIS is the strongest single-card control in either trump mode.
-        potential += 1.25;
         continue;
       }
 
@@ -46,11 +46,21 @@ class AiSixteenCallStrategy {
         throw ArgumentError('AI hand contains an invalid normal card.');
       }
       ranksBySuit[suit]!.add(rank);
+    }
 
+    for (final card in hand) {
+      if (card.isLoris) {
+        // LORIS is the strongest single-card control in either trump mode.
+        potential += 1.25;
+        continue;
+      }
+
+      final suit = card.suit!;
+      final rank = card.rank!;
       final heldRanks = ranksBySuit[suit]!;
-      final hasAce = heldRanks.contains(14) || rank == 14;
-      final hasKing = heldRanks.contains(13) || rank == 13;
-      final hasQueen = heldRanks.contains(12) || rank == 12;
+      final hasAce = heldRanks.contains(14);
+      final hasKing = heldRanks.contains(13);
+      final hasQueen = heldRanks.contains(12);
 
       potential += switch (rank) {
         14 => 1.0,

@@ -63,6 +63,31 @@ void main() {
       );
     });
 
+    test('decision is independent of hand card order', () {
+      final hand = [
+        Card.normal(suit: Suit.spades, rank: 14),
+        Card.normal(suit: Suit.spades, rank: 13),
+        Card.normal(suit: Suit.spades, rank: 12),
+        Card.normal(suit: Suit.spades, rank: 11),
+      ];
+
+      final forward = strategy.shouldCall(
+        hand: hand,
+        completedTricks: 4,
+        trumpSuit: Suit.spades,
+        lorisTrump: false,
+      );
+      final reversed = strategy.shouldCall(
+        hand: hand.reversed.toList(),
+        completedTricks: 4,
+        trumpSuit: Suit.spades,
+        lorisTrump: false,
+      );
+
+      expect(forward, isTrue);
+      expect(reversed, forward);
+    });
+
     test('passes on a weak hand even when it holds LORIS', () {
       final hand = [
         Card.loris(replacesRank: 7),
