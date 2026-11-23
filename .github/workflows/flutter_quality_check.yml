@@ -7,6 +7,7 @@ on:
       - main
       - feature/show-trump-bidder
       - feature/gender-separated-player-portraits
+      - feature/trump-indicator-card-display
   pull_request:
     branches:
       - main
