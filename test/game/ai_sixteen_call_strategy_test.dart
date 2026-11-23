@@ -30,7 +30,7 @@ void main() {
         Card.loris(replacesRank: 7),
         Card.normal(suit: Suit.clubs, rank: 14),
         Card.normal(suit: Suit.hearts, rank: 14),
-        Card.normal(suit: Suit.spades, rank: 13),
+        Card.normal(suit: Suit.spades, rank: 14),
       ];
 
       expect(
