@@ -32,6 +32,24 @@ void main() {
       expect(controller.engine.currentPlayerIndex, 1);
     });
 
+    test('AI bidding completes across all four valid seats', () {
+      final controller = BiddingRoundController(
+        hands: makeHands(4),
+        dealerIndex: 3,
+      );
+
+      controller.submitHumanBid(null);
+
+      for (final expectedPlayer in [1, 2, 3]) {
+        expect(controller.isAiTurn, isTrue);
+        final record = controller.submitNextAiBid();
+        expect(record.playerIndex, expectedPlayer);
+      }
+
+      expect(controller.isComplete, isTrue);
+      expect(controller.history, hasLength(4));
+    });
+
     test('each AI action advances exactly one player in a six-player game', () {
       final controller = BiddingRoundController(
         hands: makeHands(6),
