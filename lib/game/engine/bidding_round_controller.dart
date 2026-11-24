@@ -72,6 +72,7 @@ class BiddingRoundController {
       playerIndex: playerIndex,
       highestBid: engine.highestBid,
       highestBidder: engine.highestBidder,
+      playerCount: engine.playerCount,
     );
 
     engine.submitBid(decision.bidAmount);
