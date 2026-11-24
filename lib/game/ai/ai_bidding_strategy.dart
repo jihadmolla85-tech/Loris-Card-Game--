@@ -25,15 +25,20 @@ class AiBiddingStrategy {
     required int playerIndex,
     required int? highestBid,
     required int? highestBidder,
+    int playerCount = 6,
   }) {
     _validateHand(hand);
-    if (playerIndex < 0 || playerIndex >= 6) {
+    if (playerCount != 4 && playerCount != 6) {
+      throw ArgumentError.value(playerCount, 'playerCount');
+    }
+    if (playerIndex < 0 || playerIndex >= playerCount) {
       throw ArgumentError.value(playerIndex, 'playerIndex');
     }
     if (highestBid != null && (highestBid < 4 || highestBid > 8)) {
       throw ArgumentError.value(highestBid, 'highestBid');
     }
-    if (highestBidder != null && (highestBidder < 0 || highestBidder >= 6)) {
+    if (highestBidder != null &&
+        (highestBidder < 0 || highestBidder >= playerCount)) {
       throw ArgumentError.value(highestBidder, 'highestBidder');
     }
 
