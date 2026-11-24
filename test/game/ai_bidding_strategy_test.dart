@@ -37,6 +37,74 @@ void main() {
       ), throwsArgumentError);
     });
 
+    test('enforces the active four-player seat range', () {
+      const hand = [
+        Card.normal(suit: Suit.clubs, rank: 14),
+        Card.normal(suit: Suit.clubs, rank: 13),
+        Card.normal(suit: Suit.clubs, rank: 12),
+        Card.normal(suit: Suit.diamonds, rank: 14),
+        Card.normal(suit: Suit.diamonds, rank: 13),
+        Card.normal(suit: Suit.hearts, rank: 14),
+        Card.normal(suit: Suit.hearts, rank: 13),
+        Card.normal(suit: Suit.spades, rank: 14),
+      ];
+
+      expect(
+        () => strategy.chooseBid(
+          hand: hand,
+          playerIndex: 4,
+          highestBid: null,
+          highestBidder: null,
+          playerCount: 4,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => strategy.chooseBid(
+          hand: hand,
+          playerIndex: 3,
+          highestBid: null,
+          highestBidder: 4,
+          playerCount: 4,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => strategy.chooseBid(
+          hand: hand,
+          playerIndex: 3,
+          highestBid: null,
+          highestBidder: null,
+          playerCount: 4,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('rejects unsupported player counts', () {
+      const hand = [
+        Card.normal(suit: Suit.clubs, rank: 14),
+        Card.normal(suit: Suit.clubs, rank: 13),
+        Card.normal(suit: Suit.clubs, rank: 12),
+        Card.normal(suit: Suit.diamonds, rank: 14),
+        Card.normal(suit: Suit.diamonds, rank: 13),
+        Card.normal(suit: Suit.hearts, rank: 14),
+        Card.normal(suit: Suit.hearts, rank: 13),
+        Card.normal(suit: Suit.spades, rank: 14),
+      ];
+
+      expect(
+        () => strategy.chooseBid(
+          hand: hand,
+          playerIndex: 1,
+          highestBid: null,
+          highestBidder: null,
+          playerCount: 5,
+        ),
+        throwsArgumentError,
+      );
+    });
+
     test('rejects impossible bid context values', () {
       const hand = [
         Card.normal(suit: Suit.clubs, rank: 14),
