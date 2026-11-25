@@ -56,6 +56,36 @@ class GameRoundController {
       throw ArgumentError('Invalid bidding team tricks count.');
     }
 
+    if (restoredBiddingTeamTricks > restoredCompletedTricks) {
+      throw ArgumentError(
+        'Bidding-team tricks cannot exceed completed tricks.',
+',
+      );
+    }
+
+    if (bidAmount < 8 &&
+        (restoredSixteenCompletedTricks != restoredCompletedTricks ||
+            restoredSixteenBiddingTeamTricks !=
+                restoredBiddingTeamTricks)) {
+      throw ArgumentError(
+        'Restored 16-call counters must match the round counters.',
+',
+      );
+    }
+
+    if (bidAmount < 8) {
+      for (final restoredPlayerIndex in [
+        restoredSixteenLastTrickWinnerIndex,
+        restoredSixteenCallerIndex,
+      ]) {
+        if (restoredPlayerIndex != null &&
+            (restoredPlayerIndex < 0 ||
+                restoredPlayerIndex >= hands.length)) {
+          throw ArgumentError('Invalid restored 16-call player index.');
+        }
+      }
+    }
+
     trickEngine = TrickEngine(
       hands: hands,
       dealerIndex: dealerIndex,

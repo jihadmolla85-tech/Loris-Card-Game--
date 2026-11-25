@@ -387,10 +387,34 @@ class GameMatchController {
       return;
     }
 
-    final restoredStatus = SixteenCallStatus.values.firstWhere(
+    var restoredStatus = SixteenCallStatus.values.firstWhere(
       (status) => status.name == snapshot.sixteenCallStatus,
       orElse: () => SixteenCallStatus.notCalled,
     );
+    var restoredSixteenCompletedTricks =
+        snapshot.sixteenCompletedTricks;
+    var restoredSixteenBiddingTeamTricks =
+        snapshot.sixteenBiddingTeamTricks;
+    var restoredSixteenLastTrickWinnerIndex =
+        snapshot.sixteenLastTrickWinnerIndex;
+    var restoredSixteenCallerIndex = snapshot.sixteenCallerIndex;
+    var restoredSixteenBiddingTeamPoints =
+        snapshot.sixteenBiddingTeamPoints;
+    var restoredSixteenOpposingTeamPoints =
+        snapshot.sixteenOpposingTeamPoints;
+
+    // Older v1 saves did not persist the 16-call history. Because the past
+    // trick winners cannot be reconstructed, close the opportunity safely
+    // rather than accidentally reopening a call after an opponent has won.
+    if (snapshot.bidAmount! < 8 && !snapshot.hasSixteenCallState) {
+      restoredStatus = SixteenCallStatus.passed;
+      restoredSixteenCompletedTricks = snapshot.completedTricks;
+      restoredSixteenBiddingTeamTricks = snapshot.biddingTeamTricks;
+      restoredSixteenLastTrickWinnerIndex = null;
+      restoredSixteenCallerIndex = null;
+      restoredSixteenBiddingTeamPoints = 0;
+      restoredSixteenOpposingTeamPoints = 0;
+    }
 
     final restoredPlays = snapshot.trickPlays
         .map((play) => TrickPlay(
@@ -417,17 +441,17 @@ class GameMatchController {
       restoredFirstPlayerIndex: snapshot.firstPlayerIndex,
       restoredSixteenCallStatus: restoredStatus,
       restoredSixteenCompletedTricks:
-          snapshot.sixteenCompletedTricks,
+          restoredSixteenCompletedTricks,
       restoredSixteenBiddingTeamTricks:
-          snapshot.sixteenBiddingTeamTricks,
+          restoredSixteenBiddingTeamTricks,
       restoredSixteenLastTrickWinnerIndex:
-          snapshot.sixteenLastTrickWinnerIndex,
+          restoredSixteenLastTrickWinnerIndex,
       restoredSixteenCallerIndex:
-          snapshot.sixteenCallerIndex,
+          restoredSixteenCallerIndex,
       restoredSixteenBiddingTeamPoints:
-          snapshot.sixteenBiddingTeamPoints,
+          restoredSixteenBiddingTeamPoints,
       restoredSixteenOpposingTeamPoints:
-          snapshot.sixteenOpposingTeamPoints,
+          restoredSixteenOpposingTeamPoints,
     );
   }
 

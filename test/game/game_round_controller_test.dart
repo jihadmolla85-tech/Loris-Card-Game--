@@ -52,6 +52,83 @@ void main() {
       controller.completeTrick();
     }
 
+    test('Rejects restored bidding-team trick totals above completed tricks', () {
+      final remainingHands = List.generate(
+        4,
+        (_) => List.generate(
+          7,
+          (i) => Card.normal(suit: Suit.clubs, rank: 7 + i),
+        ),
+      );
+
+      expect(
+        () => GameRoundController(
+          hands: remainingHands,
+          dealerIndex: 3,
+          trumpSuit: Suit.spades,
+          biddingTeam: 0,
+          bidAmount: 4,
+          matchScoreEngine: matchScore,
+          bidScoringEngine: bidScore,
+          restoredCompletedTricks: 1,
+          restoredBiddingTeamTricks: 2,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('Rejects mismatched restored 16-call counters', () {
+      final remainingHands = List.generate(
+        4,
+        (_) => List.generate(
+          7,
+          (i) => Card.normal(suit: Suit.clubs, rank: 7 + i),
+        ),
+      );
+
+      expect(
+        () => GameRoundController(
+          hands: remainingHands,
+          dealerIndex: 3,
+          trumpSuit: Suit.spades,
+          biddingTeam: 0,
+          bidAmount: 4,
+          matchScoreEngine: matchScore,
+          bidScoringEngine: bidScore,
+          restoredCompletedTricks: 1,
+          restoredBiddingTeamTricks: 1,
+          restoredSixteenCompletedTricks: 0,
+          restoredSixteenBiddingTeamTricks: 1,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('Allows restoring a mid-round 8 bid without a 16-call engine', () {
+      final remainingHands = List.generate(
+        4,
+        (_) => List.generate(
+          7,
+          (i) => Card.normal(suit: Suit.clubs, rank: 7 + i),
+        ),
+      );
+
+      expect(
+        () => GameRoundController(
+          hands: remainingHands,
+          dealerIndex: 3,
+          trumpSuit: Suit.spades,
+          biddingTeam: 0,
+          bidAmount: 8,
+          matchScoreEngine: matchScore,
+          bidScoringEngine: bidScore,
+          restoredCompletedTricks: 1,
+          restoredBiddingTeamTricks: 0,
+        ),
+        returnsNormally,
+      );
+    });
+
     test('Starts with the dealer right player', () {
       expect(controller.nextPlayerIndex, 0);
     });

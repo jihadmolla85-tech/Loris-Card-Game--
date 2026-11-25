@@ -14,6 +14,7 @@ void main() {
 
       expect(snapshot.version, 1);
       expect(snapshot.dealerIndex, 0);
+      expect(snapshot.hasSixteenCallState, isFalse);
     });
 
     test('round-trips the one-time 16-call decision through JSON', () {
@@ -38,6 +39,7 @@ void main() {
       expect(restored.sixteenBiddingTeamTricks, 4);
       expect(restored.sixteenLastTrickWinnerIndex, 3);
       expect(restored.sixteenCallerIndex, isNull);
+      expect(restored.hasSixteenCallState, isTrue);
     });
 
     test('rejects snapshots from unsupported future versions', () {

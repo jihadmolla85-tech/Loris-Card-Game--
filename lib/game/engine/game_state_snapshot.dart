@@ -28,6 +28,7 @@ class GameStateSnapshot {
     this.sixteenCallerIndex,
     this.sixteenBiddingTeamPoints = 0,
     this.sixteenOpposingTeamPoints = 0,
+    this.hasSixteenCallState = true,
     this.redealShouldRedeal = false,
     this.redealReasons = const [],
     this.redealDealerIndex,
@@ -61,6 +62,8 @@ class GameStateSnapshot {
   final int? sixteenCallerIndex;
   final int sixteenBiddingTeamPoints;
   final int sixteenOpposingTeamPoints;
+  /// False when loading a pre-16-call save that omitted the rule-state fields.
+  final bool hasSixteenCallState;
 
   final bool redealShouldRedeal;
   final List<String> redealReasons;
@@ -107,6 +110,15 @@ class GameStateSnapshot {
     final rawHands = json['hands'] as List? ?? const [];
     final rawDeck = json['originalDeck'] as List? ?? const [];
     final rawPlays = json['trickPlays'] as List? ?? const [];
+    final hasSixteenCallState = const [
+      'sixteenCallStatus',
+      'sixteenCompletedTricks',
+      'sixteenBiddingTeamTricks',
+      'sixteenLastTrickWinnerIndex',
+      'sixteenCallerIndex',
+      'sixteenBiddingTeamPoints',
+      'sixteenOpposingTeamPoints',
+    ].every(json.containsKey);
 
     return GameStateSnapshot(
       version: version,
@@ -153,6 +165,7 @@ class GameStateSnapshot {
           _intValue(json, 'sixteenBiddingTeamPoints'),
       sixteenOpposingTeamPoints:
           _intValue(json, 'sixteenOpposingTeamPoints'),
+      hasSixteenCallState: hasSixteenCallState,
       redealShouldRedeal: _boolValue(json, 'redealShouldRedeal'),
       redealReasons: (json['redealReasons'] as List? ?? const [])
           .map((value) => value.toString())
