@@ -366,7 +366,7 @@ void main() {
       expect(match.dealerIndex, 3);
     });
 
-    test('Safely closes legacy 16-call state when trick history is missing', () {
+    test('Restores a pending legacy 16-call window from public counters', () {
       match.startRound(
         hands: createHands(),
         trumpSuit: Suit.spades,
@@ -377,8 +377,6 @@ void main() {
       for (var i = 0; i < 4; i++) {
         playOneTrick();
       }
-
-      expect(match.currentRound.sixteenCallEngine!.canCall, isTrue);
 
       final legacyJson = match.createSnapshot().toJson()
         ..remove('sixteenCallStatus')
@@ -399,8 +397,9 @@ void main() {
       restored.restoreSnapshot(legacySnapshot);
 
       final sixteen = restored.currentRound.sixteenCallEngine!;
-      expect(sixteen.status, SixteenCallStatus.passed);
-      expect(sixteen.canCall, isFalse);
+      expect(sixteen.status, SixteenCallStatus.notCalled);
+      expect(sixteen.canCall, isTrue);
+      expect(sixteen.lastTrickWinnerIndex, 0);
       expect(sixteen.completedTricks, 4);
       expect(sixteen.biddingTeamTricks, 4);
       expect(restored.currentRound.completedTricks, 4);
@@ -411,6 +410,45 @@ void main() {
             .hasSixteenCallState,
         isTrue,
       );
+    });
+
+    test('Keeps legacy 16-call state closed after the bid window has passed', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        playOneTrick();
+      }
+      match.pass16(passerPlayerIndex: 0);
+      playOneTrick();
+
+      final legacyJson = match.createSnapshot().toJson()
+        ..remove('sixteenCallStatus')
+        ..remove('sixteenCompletedTricks')
+        ..remove('sixteenBiddingTeamTricks')
+        ..remove('sixteenLastTrickWinnerIndex')
+        ..remove('sixteenCallerIndex')
+        ..remove('sixteenBiddingTeamPoints')
+        ..remove('sixteenOpposingTeamPoints');
+      final legacySnapshot = GameStateSnapshot.fromJson(legacyJson);
+
+      final restored = GameMatchController(
+        initialDealerIndex: legacySnapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(legacySnapshot);
+
+      final sixteen = restored.currentRound.sixteenCallEngine!;
+      expect(sixteen.status, SixteenCallStatus.passed);
+      expect(sixteen.canCall, isFalse);
+      expect(sixteen.completedTricks, 5);
+      expect(sixteen.biddingTeamTricks, 5);
+      expect(restored.currentRound.isRoundEnded, isFalse);
     });
 
     test('Restores a passed 16-call window without reopening it', () {
