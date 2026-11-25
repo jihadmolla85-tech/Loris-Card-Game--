@@ -417,6 +417,57 @@ void main() {
       expect(sixteen.lastTrickWinnerIndex, 0);
     });
 
+    test('Preserves legacy 16-call eligibility before the bid is reached', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 2; i++) {
+        playOneTrick();
+      }
+
+      final legacyJson = match.createSnapshot().toJson()
+        ..remove('sixteenCallStatus')
+        ..remove('sixteenCompletedTricks')
+        ..remove('sixteenBiddingTeamTricks')
+        ..remove('sixteenLastTrickWinnerIndex')
+        ..remove('sixteenCallerIndex')
+        ..remove('sixteenBiddingTeamPoints')
+        ..remove('sixteenOpposingTeamPoints');
+      final legacySnapshot = GameStateSnapshot.fromJson(legacyJson);
+
+      final restored = GameMatchController(
+        initialDealerIndex: legacySnapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(legacySnapshot);
+
+      final sixteen = restored.currentRound.sixteenCallEngine!;
+      expect(sixteen.status, SixteenCallStatus.notCalled);
+      expect(sixteen.canCall, isFalse);
+      expect(sixteen.completedTricks, 2);
+      expect(sixteen.biddingTeamTricks, 2);
+
+      for (var i = 0; i < 2; i++) {
+        final round = restored.currentRound;
+        for (var play = 0; play < 4; play++) {
+          final player = round.trickEngine.currentPlayerIndex;
+          final card = round.trickEngine.hands[player].first;
+          restored.playCard(player, card);
+        }
+        restored.completeTrick();
+      }
+
+      expect(sixteen.completedTricks, 4);
+      expect(sixteen.biddingTeamTricks, 4);
+      expect(sixteen.canCall, isTrue);
+      expect(sixteen.lastTrickWinnerIndex, 0);
+    });
+
     test('Safely closes legacy 16-call state when trick history is missing', () {
       match.startRound(
         hands: createHands(),

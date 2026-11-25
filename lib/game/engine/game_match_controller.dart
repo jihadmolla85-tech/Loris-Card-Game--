@@ -425,7 +425,7 @@ class GameMatchController {
             previousWinner >= 0 &&
             previousWinner < (snapshot.playerCount ?? snapshot.hands.length);
         restoredSixteenLastTrickWinnerIndex =
-            winnerIsKnown && previousWinner! % 2 == snapshot.biddingTeam
+            winnerIsKnown && previousWinner % 2 == snapshot.biddingTeam
                 ? previousWinner
                 : null;
       } else {
