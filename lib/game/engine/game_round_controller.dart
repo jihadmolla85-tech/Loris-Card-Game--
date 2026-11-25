@@ -59,7 +59,6 @@ class GameRoundController {
     if (restoredBiddingTeamTricks > restoredCompletedTricks) {
       throw ArgumentError(
         'Bidding-team tricks cannot exceed completed tricks.',
-',
       );
     }
 
@@ -69,7 +68,6 @@ class GameRoundController {
                 restoredBiddingTeamTricks)) {
       throw ArgumentError(
         'Restored 16-call counters must match the round counters.',
-',
       );
     }
 
