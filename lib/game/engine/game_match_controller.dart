@@ -403,49 +403,17 @@ class GameMatchController {
     var restoredSixteenOpposingTeamPoints =
         snapshot.sixteenOpposingTeamPoints;
 
-    // Older v1 saves omitted 16-call state. Reconstruct a pending window
-    // only when public counters and the previous trick's leader/winner make
-    // it unambiguous; otherwise close the window to avoid reopening a call
-    // after it may already have been answered or after an opponent has won.
+    // Older v1 saves omitted the 16-call decision history. Since we cannot
+    // distinguish an unanswered prompt from a prior PASS (or a prior CALL),
+    // fail closed and suppress the option for the resumed round.
     if (snapshot.bidAmount! < 8 && !snapshot.hasSixteenCallState) {
+      restoredStatus = SixteenCallStatus.passed;
       restoredSixteenCompletedTricks = snapshot.completedTricks;
       restoredSixteenBiddingTeamTricks = snapshot.biddingTeamTricks;
+      restoredSixteenLastTrickWinnerIndex = null;
       restoredSixteenCallerIndex = null;
       restoredSixteenBiddingTeamPoints = 0;
       restoredSixteenOpposingTeamPoints = 0;
-
-      final previousWinner = snapshot.firstPlayerIndex;
-      final validPreviousWinner = previousWinner != null &&
-          previousWinner >= 0 &&
-          previousWinner < (snapshot.playerCount ?? snapshot.hands.length);
-      final previousWinnerOnBiddingTeam = validPreviousWinner &&
-          previousWinner! % 2 == snapshot.biddingTeam;
-
-      final allCompletedTricksBelongToBiddingTeam =
-          snapshot.completedTricks == snapshot.biddingTeamTricks;
-      final beforeOrAtBid = snapshot.completedTricks <= snapshot.bidAmount!;
-
-      if (snapshot.completedTricks == 0) {
-        restoredStatus = SixteenCallStatus.notCalled;
-        restoredSixteenLastTrickWinnerIndex = null;
-      } else if (beforeOrAtBid &&
-          allCompletedTricksBelongToBiddingTeam &&
-          snapshot.completedTricks < snapshot.bidAmount! &&
-          previousWinnerOnBiddingTeam) {
-        restoredStatus = SixteenCallStatus.notCalled;
-        restoredSixteenLastTrickWinnerIndex = previousWinner;
-      } else if (snapshot.completedTricks == snapshot.bidAmount &&
-          allCompletedTricksBelongToBiddingTeam &&
-          previousWinnerOnBiddingTeam &&
-          snapshot.trickPlays.isEmpty) {
-        // A save taken immediately after the qualifying trick can safely
-        // restore the prompt because its winner is the current trick leader.
-        restoredStatus = SixteenCallStatus.notCalled;
-        restoredSixteenLastTrickWinnerIndex = previousWinner;
-      } else {
-        restoredStatus = SixteenCallStatus.passed;
-        restoredSixteenLastTrickWinnerIndex = null;
-      }
     }
 
     final restoredPlays = snapshot.trickPlays
