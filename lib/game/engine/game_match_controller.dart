@@ -403,17 +403,35 @@ class GameMatchController {
     var restoredSixteenOpposingTeamPoints =
         snapshot.sixteenOpposingTeamPoints;
 
-    // Older v1 saves omitted the 16-call decision history. Since we cannot
-    // distinguish an unanswered prompt from a prior PASS (or a prior CALL),
-    // fail closed and suppress the option for the resumed round.
+    // Older v1 saves omitted 16-call decision history. Before the bid is
+    // reached, PASS cannot have happened yet, so preserve eligibility when
+    // every completed trick belongs to the bidding team. At the exact bid or
+    // later, PASS/CALL may already have happened; fail closed to avoid reopening.
     if (snapshot.bidAmount! < 8 && !snapshot.hasSixteenCallState) {
-      restoredStatus = SixteenCallStatus.passed;
       restoredSixteenCompletedTricks = snapshot.completedTricks;
       restoredSixteenBiddingTeamTricks = snapshot.biddingTeamTricks;
-      restoredSixteenLastTrickWinnerIndex = null;
       restoredSixteenCallerIndex = null;
       restoredSixteenBiddingTeamPoints = 0;
       restoredSixteenOpposingTeamPoints = 0;
+
+      if (snapshot.completedTricks == 0) {
+        restoredStatus = SixteenCallStatus.notCalled;
+        restoredSixteenLastTrickWinnerIndex = null;
+      } else if (snapshot.completedTricks < snapshot.bidAmount! &&
+          snapshot.biddingTeamTricks == snapshot.completedTricks) {
+        restoredStatus = SixteenCallStatus.notCalled;
+        final previousWinner = snapshot.firstPlayerIndex;
+        final winnerIsKnown = previousWinner != null &&
+            previousWinner >= 0 &&
+            previousWinner < (snapshot.playerCount ?? snapshot.hands.length);
+        restoredSixteenLastTrickWinnerIndex =
+            winnerIsKnown && previousWinner! % 2 == snapshot.biddingTeam
+                ? previousWinner
+                : null;
+      } else {
+        restoredStatus = SixteenCallStatus.passed;
+        restoredSixteenLastTrickWinnerIndex = null;
+      }
     }
 
     final restoredPlays = snapshot.trickPlays
