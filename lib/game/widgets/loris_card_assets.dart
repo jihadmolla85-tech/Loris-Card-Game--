@@ -17,7 +17,7 @@ String lorisCardFaceAssetPath(Card card) {
     14 => 'A',
     final rank => '$rank',
   };
-  return 'assets/$suitName${'_'}$rankName.png';
+  return 'assets/${suitName}_$rankName.png';
 }
 
 /// Rank-two faces are the suit samples shown in the trump picker. They are
