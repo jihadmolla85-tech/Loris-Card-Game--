@@ -56,6 +56,8 @@ dev_dependencies:
 flutter:
   assets:
     - assets/
+    - assets/sounds/
+    - assets/images/
     - assets/portraits/men/
     - assets/portraits/women/
 
