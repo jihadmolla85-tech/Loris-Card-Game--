@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 
 /// Detailed illustrated player portrait with a varied global character roster.
 /// Expression is supplied by the live match state; variant controls appearance.
@@ -11,12 +12,28 @@ class LorisPortraitAvatar extends StatelessWidget {
     this.size = 54,
     this.highlighted = false,
     this.expression,
+    this.female = false,
   });
 
   final int variant;
   final double size;
   final bool highlighted;
   final int? expression;
+  final bool female;
+
+  static final Map<bool, Future<List<String>>> _portraitAssetCache = {};
+
+  static Future<List<String>> _portraitAssets(bool female) {
+    return _portraitAssetCache.putIfAbsent(female, () async {
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      final folder = female ? 'assets/portraits/women/' : 'assets/portraits/men/';
+      final assets = manifest.listAssets()
+          .where((path) => path.startsWith(folder) && path.toLowerCase().endsWith('.jpg'))
+          .toList()
+        ..sort();
+      return assets;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,12 +57,33 @@ class LorisPortraitAvatar extends StatelessWidget {
         ],
       ),
       child: ClipOval(
-        child: CustomPaint(
-          painter: _LorisPortraitPainter(
-            variant: variant,
-            expression: expression ?? variant % 6,
-          ),
-          child: const SizedBox.expand(),
+        child: FutureBuilder<List<String>>(
+          future: _portraitAssets(female),
+          builder: (context, snapshot) {
+            final assets = snapshot.data;
+            if (assets == null || assets.isEmpty) {
+              return CustomPaint(
+                painter: _LorisPortraitPainter(
+                  variant: variant,
+                  expression: expression ?? variant % 6,
+                ),
+                child: const SizedBox.expand(),
+              );
+            }
+            final path = assets[variant.abs() % assets.length];
+            return Image.asset(
+              path,
+              fit: BoxFit.cover,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, _, _) => CustomPaint(
+                painter: _LorisPortraitPainter(
+                  variant: variant,
+                  expression: expression ?? variant % 6,
+                ),
+                child: const SizedBox.expand(),
+              ),
+            );
+          },
         ),
       ),
     );

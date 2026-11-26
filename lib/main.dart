@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
 import 'game/widgets/loris_3d_table.dart';
+import 'game/widgets/loris_card_assets.dart';
 import 'game/engine/game_settings_service.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -521,6 +522,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   late final List<String> _playerNames;
   late final List<String> _playerAvatars;
   late final List<int> _portraitVariants;
+  late final List<bool> _portraitGenders;
 
   late final DealController _dealController;
   late final GameMatchController _matchController;
@@ -575,6 +577,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     final shuffledAvatars = List<String>.from(_avatarPool)..shuffle(_random);
     final shuffledPortraits = List<int>.generate(12, (index) => index)..shuffle(_random);
     _portraitVariants = shuffledPortraits.take(widget.playerCount).toList();
+    _portraitGenders = List<bool>.generate(widget.playerCount, (_) => _random.nextBool());
     _playerNames = [
       'YOU',
       ...shuffledNames.take(widget.playerCount - 1),
@@ -855,6 +858,7 @@ await _revealDealerDrawOnTable(
           SizedBox(width: 112, child: Row(children: [
             LorisPortraitAvatar(
               variant: _portraitVariants[player],
+              female: _portraitGenders[player],
               size: 30,
               highlighted: isDealer,
               expression: isDealer ? 0 : 1,
@@ -1205,7 +1209,6 @@ await _revealDealerDrawOnTable(
                     final representative = ownCards.firstWhere(
                       (card) => card.suit == suit,
                     );
-                    final red = _isRedSuit(suit);
                     return InkWell(
                       onTap: () => Navigator.pop(
                         dialogContext,
@@ -1213,30 +1216,34 @@ await _revealDealerDrawOnTable(
                       ),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
-                        width: 72,
-                        height: 74,
+                        width: 78,
+                        height: 116,
+                        padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                           color: const Color(0xFF152A40),
                           border: Border.all(color: LorisApp.gold, width: 1.5),
                           borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(0, 3)),
+                          ],
                         ),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              _suitSymbol(suit),
-                              style: TextStyle(
-                                color: red ? Colors.redAccent : Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w900,
+                            Expanded(
+                              child: Image.asset(
+                                lorisTrumpPreviewCardAssetPath(suit),
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
                               ),
                             ),
+                            const SizedBox(height: 3),
                             Text(
                               _suitName(suit).toUpperCase(),
                               style: const TextStyle(
                                 color: Colors.white70,
-                                fontSize: 9,
+                                fontSize: 8,
                                 fontWeight: FontWeight.bold,
+                                letterSpacing: .7,
                               ),
                             ),
                           ],
@@ -2752,7 +2759,7 @@ await _revealDealerDrawOnTable(
               children: List.generate(widget.playerCount, (index) => Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LorisPortraitAvatar(variant: _portraitVariants[index], size: 20),
+                  LorisPortraitAvatar(variant: _portraitVariants[index], female: _portraitGenders[index], size: 20),
                   const SizedBox(width: 3),
                   Text('${_playerNames[index]} ${_dealCounts.length > index ? _dealCounts[index] : 0}/8',
                     style: const TextStyle(color: Colors.white70, fontSize: 10)),
@@ -2893,6 +2900,7 @@ await _revealDealerDrawOnTable(
                           : Colors.white,
                       child: LorisPortraitAvatar(
                         variant: _portraitVariants[index],
+                        female: _portraitGenders[index],
                         size: 38,
                       ),
                     ),
@@ -3079,7 +3087,8 @@ await _revealDealerDrawOnTable(
                               boxShadow: [BoxShadow(color: _teamColor(index).withValues(alpha: .48), blurRadius: 8)],
                             ),
                             child: LorisPortraitAvatar(
-                              variant: index,
+                              variant: _portraitVariants[index],
+                              female: _portraitGenders[index],
                               expression: _avatarExpressionFor(index, currentPlayer),
                               size: avatarSize,
                               highlighted: currentPlayer == index || _collectingTrickWinner == index,
@@ -3433,51 +3442,6 @@ await _revealDealerDrawOnTable(
   // CARD WIDGET
   // ----------------------------------------------------------
 
-  bool _isCourtCard(loris.Card card) =>
-      !card.isLoris && card.rank != null && card.rank! >= 11;
-
-  List<Offset> _pipPositions(int rank) {
-    // Coordinates follow familiar casino-deck pip layouts (0..1 card space).
-    const layouts = <int, List<Offset>>{
-      7: [Offset(.5,.16), Offset(.25,.29), Offset(.75,.29), Offset(.5,.42), Offset(.25,.57), Offset(.75,.57), Offset(.5,.80)],
-      8: [Offset(.5,.13), Offset(.25,.27), Offset(.75,.27), Offset(.5,.40), Offset(.5,.60), Offset(.25,.73), Offset(.75,.73), Offset(.5,.87)],
-      9: [Offset(.25,.15), Offset(.75,.15), Offset(.25,.32), Offset(.75,.32), Offset(.5,.50), Offset(.25,.68), Offset(.75,.68), Offset(.25,.85), Offset(.75,.85)],
-      10: [Offset(.25,.12), Offset(.75,.12), Offset(.5,.25), Offset(.25,.34), Offset(.75,.34), Offset(.25,.66), Offset(.75,.66), Offset(.5,.75), Offset(.25,.88), Offset(.75,.88)],
-    };
-    if (rank == 2) return const [Offset(.5,.28), Offset(.5,.72)];
-    if (rank == 3) return const [Offset(.5,.2), Offset(.5,.5), Offset(.5,.8)];
-    if (rank == 4) return const [Offset(.28,.25), Offset(.72,.25), Offset(.28,.75), Offset(.72,.75)];
-    if (rank == 5) return const [Offset(.28,.22), Offset(.72,.22), Offset(.5,.5), Offset(.28,.78), Offset(.72,.78)];
-    if (rank == 6) return const [Offset(.28,.18), Offset(.72,.18), Offset(.28,.5), Offset(.72,.5), Offset(.28,.82), Offset(.72,.82)];
-    return layouts[rank] ?? const [Offset(.5,.5)];
-  }
-
-  Widget _buildPipFace(loris.Card card, Color ink, bool compact) {
-    final positions = _pipPositions(card.rank!);
-    final pipSize = compact ? 9.5 : 13.5;
-    return LayoutBuilder(
-      builder: (context, constraints) => Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (final point in positions)
-            Positioned(
-              left: point.dx * constraints.maxWidth - pipSize / 2,
-              top: point.dy * constraints.maxHeight - pipSize / 2,
-              child: Text(
-                _suitSymbol(card.suit),
-                style: TextStyle(
-                  color: ink,
-                  fontSize: pipSize,
-                  height: 1,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   int _avatarExpressionFor(int index, int? currentPlayer) {
     if (_collectingTrickWinner == index) return 0; // celebrating the trick
     if (currentPlayer == index) return 1; // concentrating on the decision
@@ -3491,321 +3455,49 @@ await _revealDealerDrawOnTable(
     bool enabled = false,
     bool compact = false,
   }) {
-    final isRed = _isRedSuit(card.suit);
-    final ink = card.isLoris ? const Color(0xFF17243B) : isRed ? const Color(0xFFB51F32) : const Color(0xFF17202B);
     final width = compact ? 48.0 : 62.0;
     final height = compact ? 68.0 : 92.0;
-
-    Widget corner({required bool upsideDown}) {
-      return Transform.rotate(
-        angle: upsideDown ? 3.1415926535 : 0,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(card.isLoris ? '★' : card.displayName,
-              style: TextStyle(color: ink, fontSize: compact ? 11 : 15, height: 1, fontWeight: FontWeight.w900)),
-            Text(card.isLoris ? '♛' : _suitSymbol(card.suit),
-              style: TextStyle(color: ink, fontSize: compact ? 10 : 13, height: 1.05, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      );
-    }
 
     return Container(
       width: width,
       height: height,
-      padding: EdgeInsets.all(compact ? 3 : 4),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(compact ? 5 : 7),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: card.isLoris
-              ? const [Color(0xFFFFF1B5), Color(0xFFE6B94E), Color(0xFFFFE9A0)]
-              : const [Colors.white, Color(0xFFF8F7F1), Color(0xFFE5E2D9)],
+        border: Border.all(
+          color: enabled ? const Color(0xFFFFD76B) : const Color(0xFFD1C9B8),
+          width: enabled ? 2.2 : .8,
         ),
-        border: Border.all(color: enabled ? const Color(0xFFFFD76B) : const Color(0xFFD1C9B8), width: enabled ? 2.2 : .8),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: .55), blurRadius: enabled ? 9 : 5, offset: const Offset(2, 4)),
-          if (enabled) const BoxShadow(color: Color(0x88FFD76B), blurRadius: 12, spreadRadius: 1),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Align(alignment: Alignment.topLeft, child: corner(upsideDown: false)),
-          Align(alignment: Alignment.bottomRight, child: corner(upsideDown: true)),
-          Center(
-            child: card.isLoris
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, color: ink, size: compact ? 19 : 25),
-                      if (!compact) Text('LORIS', style: TextStyle(color: ink, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                    ],
-                  )
-                : _isCourtCard(card)
-                    ? CustomPaint(
-                        size: Size(compact ? 34 : 45, compact ? 43 : 61),
-                        painter: _CourtCardPainter(
-                          rank: card.rank!,
-                          suitSymbol: _suitSymbol(card.suit),
-                          ink: ink,
-                          accent: isRed
-                              ? const Color(0xFFB51F32)
-                              : const Color(0xFF173B68),
-                        ),
-                      )
-                    : _buildPipFace(card, ink, compact),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .55),
+            blurRadius: enabled ? 9 : 5,
+            offset: const Offset(2, 4),
           ),
+          if (enabled)
+            const BoxShadow(
+              color: Color(0x88FFD76B),
+              blurRadius: 12,
+              spreadRadius: 1,
+            ),
         ],
       ),
-    );
-  }
-
-
-}
-
-/// Original illustrated court-card artwork. Each face card has its own
-/// silhouette, costume and ornament rather than a plain suit pip.
-class _CourtCardPainter extends CustomPainter {
-  const _CourtCardPainter({
-    required this.rank,
-    required this.suitSymbol,
-    required this.ink,
-    required this.accent,
-  });
-
-  final int rank;
-  final String suitSymbol;
-  final Color ink;
-  final Color accent;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bounds = Offset.zero & size;
-    final panel = RRect.fromRectAndRadius(
-      bounds.deflate(1),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(
-      panel,
-      Paint()
-        ..color = const Color(0xFFFFFDF5)
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawRRect(
-      panel,
-      Paint()
-        ..color = accent.withValues(alpha: .72)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    );
-
-    if (rank == 14) {
-      _paintAce(canvas, size);
-      return;
-    }
-
-    // Two opposing, mirrored royal portraits evoke traditional court cards.
-    canvas.save();
-    _paintPortrait(canvas, size);
-    canvas.translate(size.width, size.height);
-    canvas.rotate(math.pi);
-    _paintPortrait(canvas, size);
-    canvas.restore();
-
-    final divider = Paint()
-      ..color = accent.withValues(alpha: .75)
-      ..strokeWidth = .8;
-    canvas.drawLine(
-      Offset(size.width * .16, size.height * .5),
-      Offset(size.width * .84, size.height * .5),
-      divider,
-    );
-    final center = Offset(size.width * .5, size.height * .5);
-    canvas.drawCircle(center, size.width * .105, Paint()..color = const Color(0xFFFFFDF5));
-    _drawSuit(canvas, center, size.width * .12);
-  }
-
-  void _paintPortrait(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final outfit = Paint()
-      ..color = rank == 11
-          ? const Color(0xFF245C79)
-          : rank == 12
-              ? const Color(0xFF8B3150)
-              : const Color(0xFF263B61);
-    final gold = Paint()..color = const Color(0xFFD4A84F);
-    final dark = Paint()..color = const Color(0xFF382B2B);
-    final skin = Paint()..color = const Color(0xFFE8B98E);
-
-    // Shoulder armour / royal robe.
-    final robe = Path()
-      ..moveTo(w * .12, h * .48)
-      ..quadraticBezierTo(w * .18, h * .34, w * .5, h * .36)
-      ..quadraticBezierTo(w * .82, h * .34, w * .88, h * .48)
-      ..lineTo(w * .92, h * .5)
-      ..lineTo(w * .08, h * .5)
-      ..close();
-    canvas.drawPath(robe, outfit);
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * .5, h * .37)
-        ..lineTo(w * .39, h * .49)
-        ..lineTo(w * .61, h * .49)
-        ..close(),
-      gold,
-    );
-
-    // Neck and face.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * .41, h * .27, w * .18, h * .13),
-        Radius.circular(w * .04),
-      ),
-      skin,
-    );
-    canvas.drawOval(
-      Rect.fromLTWH(w * .31, h * .08, w * .38, h * .28),
-      skin,
-    );
-
-    // Hair, beard and crown differ by court rank.
-    if (rank == 13) {
-      canvas.drawArc(
-        Rect.fromLTWH(w * .29, h * .055, w * .42, h * .34),
-        math.pi,
-        math.pi,
-        false,
-        Paint()
-          ..color = const Color(0xFF4B3028)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = w * .09,
-      );
-      final beard = Path()
-        ..moveTo(w * .34, h * .27)
-        ..quadraticBezierTo(w * .5, h * .48, w * .66, h * .27)
-        ..lineTo(w * .61, h * .37)
-        ..lineTo(w * .5, h * .43)
-        ..lineTo(w * .39, h * .37)
-        ..close();
-      canvas.drawPath(beard, dark);
-    } else if (rank == 12) {
-      canvas.drawOval(
-        Rect.fromLTWH(w * .24, h * .07, w * .52, h * .31),
-        Paint()..color = const Color(0xFF4A263A),
-      );
-      canvas.drawOval(
-        Rect.fromLTWH(w * .32, h * .09, w * .36, h * .25),
-        skin,
-      );
-    } else {
-      canvas.drawArc(
-        Rect.fromLTWH(w * .28, h * .04, w * .44, h * .27),
-        math.pi,
-        math.pi,
-        false,
-        Paint()
-          ..color = const Color(0xFF4A3026)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = w * .08,
-      );
-      // Jack's feather.
-      canvas.drawPath(
-        Path()
-          ..moveTo(w * .52, h * .10)
-          ..quadraticBezierTo(w * .78, h * -.04, w * .70, h * .17)
-          ..quadraticBezierTo(w * .60, h * .21, w * .52, h * .10),
-        Paint()..color = accent,
-      );
-    }
-
-    // Eyes and nose.
-    final eye = Paint()
-      ..color = const Color(0xFF342B28)
-      ..strokeWidth = 1
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(w * .39, h * .21), Offset(w * .45, h * .21), eye);
-    canvas.drawLine(Offset(w * .55, h * .21), Offset(w * .61, h * .21), eye);
-    canvas.drawLine(Offset(w * .5, h * .22), Offset(w * .48, h * .27), eye);
-
-    // Crown / head ornament.
-    final crown = Path()
-      ..moveTo(w * .32, h * .12)
-      ..lineTo(w * .34, h * .015)
-      ..lineTo(w * .45, h * .085)
-      ..lineTo(w * .5, h * -.005)
-      ..lineTo(w * .55, h * .085)
-      ..lineTo(w * .66, h * .015)
-      ..lineTo(w * .68, h * .12)
-      ..close();
-    if (rank != 11) {
-      canvas.drawPath(crown, gold);
-      canvas.drawLine(
-        Offset(w * .34, h * .12),
-        Offset(w * .66, h * .12),
-        Paint()
-          ..color = accent
-          ..strokeWidth = 1.2,
-      );
-    } else {
-      canvas.drawCircle(Offset(w * .5, h * .055), w * .045, gold);
-    }
-  }
-
-  void _paintAce(Canvas canvas, Size size) {
-    final center = Offset(size.width * .5, size.height * .5);
-    final radius = size.width * .34;
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = const Color(0xFFFFF8DF)
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = const Color(0xFFD4A84F)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4,
-    );
-    _drawSuit(canvas, center, size.width * .29);
-    for (var i = 0; i < 8; i++) {
-      final angle = i * math.pi / 4;
-      final point = Offset(
-        center.dx + math.cos(angle) * size.width * .43,
-        center.dy + math.sin(angle) * size.height * .43,
-      );
-      canvas.drawCircle(point, size.width * .025, Paint()..color = accent);
-    }
-  }
-
-  void _drawSuit(Canvas canvas, Offset center, double fontSize) {
-    final painter = TextPainter(
-      text: TextSpan(
-        text: suitSymbol,
-        style: TextStyle(
-          color: ink,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w900,
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        lorisCardFaceAssetPath(card),
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) => Center(
+          child: Text(
+            card.isLoris ? 'LORIS' : '${card.displayName}\n${_suitSymbol(card.suit)}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
       ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(
-      canvas,
-      Offset(center.dx - painter.width / 2, center.dy - painter.height / 2),
     );
   }
 
-  @override
-  bool shouldRepaint(covariant _CourtCardPainter oldDelegate) =>
-      oldDelegate.rank != rank ||
-      oldDelegate.suitSymbol != suitSymbol ||
-      oldDelegate.ink != ink ||
-      oldDelegate.accent != accent;
-}
 
+
+}
