@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'game/engine/loris_audio_service.dart';
 import 'game/widgets/loris_portrait_avatar.dart';
