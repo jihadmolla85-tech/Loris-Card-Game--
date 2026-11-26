@@ -36,3 +36,8 @@ GitHub Actions runs Flutter analysis, automated tests, and an Android debug APK 
 ## Current scope and planned work
 
 The current playable mode is one human player against AI opponents, with offline local save/resume. Offline Bluetooth multiplayer, richer AI strategy, audio, and final production polish remain development tasks and are not represented as completed features.
+
+
+<!-- CI refresh: validate gender-separated player portrait assets. -->
+
+<!-- Re-run CI after portrait analyzer fix. -->

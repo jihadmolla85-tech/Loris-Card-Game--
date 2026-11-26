@@ -15,7 +15,7 @@ class TrickEngine {
   final List<List<Card>> hands;
   final int playerCount;
   final int dealerIndex;
-  final Suit trumpSuit;
+  final Suit? trumpSuit;
 
   final List<TrickPlay> plays = [];
 
@@ -44,7 +44,7 @@ class TrickEngine {
     }
 
     _firstPlayerIndex =
-        restoredFirstPlayerIndex ?? (dealerIndex + 1) % playerCount;
+        restoredFirstPlayerIndex ?? (dealerIndex - 1 + playerCount) % playerCount;
 
     if (_firstPlayerIndex < 0 || _firstPlayerIndex >= playerCount) {
       throw ArgumentError('Invalid first player index.');
@@ -59,7 +59,7 @@ class TrickEngine {
     for (var i = 0; i < initialPlays.length; i++) {
       final play = initialPlays[i];
       final expectedPlayer =
-          (_firstPlayerIndex + i) % playerCount;
+          (_firstPlayerIndex - i + playerCount) % playerCount;
 
       if (play.playerIndex != expectedPlayer) {
         throw ArgumentError('Invalid restored trick play order.');
@@ -85,7 +85,7 @@ class TrickEngine {
   int get firstPlayerIndex => _firstPlayerIndex;
 
   int get currentPlayerIndex =>
-      (_firstPlayerIndex + plays.length) % playerCount;
+      (_firstPlayerIndex - plays.length + playerCount) % playerCount;
 
   bool get isComplete => plays.length == playerCount;
 
@@ -94,7 +94,7 @@ class TrickEngine {
 
     final firstCard = plays.first.card;
 
-    // LORIS প্রথমে খেললে Spades স্যুট ধরা হবে।
+    // In a suit-trump round, a leading LORIS follows the legacy Spades lead.
     return firstCard.isLoris ? Suit.spades : firstCard.suit;
   }
 
@@ -126,54 +126,14 @@ class TrickEngine {
         .toList();
 
     if (ledSuitCards.isNotEmpty) {
-      // When trump was led, follow suit and overtrump if possible.
-      if (currentLedSuit == trumpSuit) {
-        final highestTrump = _highestTrumpRankAlreadyPlayed();
-        if (highestTrump != null && !plays.any((play) => play.card.isLoris)) {
-          final higher = ledSuitCards
-              .where((card) => (card.rank ?? 0) > highestTrump)
-              .toList();
-          if (higher.isNotEmpty) {
-            return List.unmodifiable([...higher, ...lorisCards]);
-          }
-        }
-      }
+      // Following the led suit remains mandatory, but players are never
+      // forced to overtrump: any card of the led suit (or LORIS) is legal.
       return List.unmodifiable([...ledSuitCards, ...lorisCards]);
     }
 
-    // The player is void in the led suit. Trump is compulsory when held.
-    final trumps = hand
-        .where((card) => !card.isLoris && card.suit == trumpSuit)
-        .toList();
-    if (trumps.isEmpty) {
-      return List.unmodifiable(hand);
-    }
-
-    // LORIS is already unbeatable, so no ordinary trump can overtrump it.
-    if (plays.any((play) => play.card.isLoris)) {
-      return List.unmodifiable([...trumps, ...lorisCards]);
-    }
-
-    final highestTrump = _highestTrumpRankAlreadyPlayed();
-    if (highestTrump != null) {
-      final higher = trumps
-          .where((card) => (card.rank ?? 0) > highestTrump)
-          .toList();
-      if (higher.isNotEmpty) {
-        return List.unmodifiable([...higher, ...lorisCards]);
-      }
-    }
-
-    return List.unmodifiable([...trumps, ...lorisCards]);
-  }
-
-  int? _highestTrumpRankAlreadyPlayed() {
-    final ranks = plays
-        .where((play) => !play.card.isLoris && play.card.suit == trumpSuit)
-        .map((play) => play.card.rank ?? 0)
-        .toList();
-    if (ranks.isEmpty) return null;
-    return ranks.reduce((a, b) => a > b ? a : b);
+    // If void in the led suit, the player may discard any card.
+    // Trumping and overtrumping are optional in every suit-trump round.
+    return List.unmodifiable(hand);
   }
 
   void playCard(int playerIndex, Card card) {
@@ -193,31 +153,44 @@ class TrickEngine {
     }
 
     final lorisPlay = plays.where((p) => p.card.isLoris).firstOrNull;
+    final lorisLedAsOrdinarySpades =
+        completedTricks == 7 && plays.first.card.isLoris;
 
-    if (lorisPlay != null) {
+    // LORIS is normally unbeatable. The sole exception is when it is
+    // led on the eighth (final) trick: it then behaves as its replaced
+    // low Spades card, and can be beaten by a higher Spade or a trump.
+    if (lorisPlay != null && !lorisLedAsOrdinarySpades) {
       return lorisPlay.playerIndex;
     }
 
     final currentLedSuit = ledSuit;
 
-    final trumpPlays =
-        plays.where((p) => p.card.suit == trumpSuit).toList();
+    if (trumpSuit == null) {
+      // Without a selected trump suit, only the led suit can win.
+      final ledSuitPlays =
+          plays.where((p) => _effectiveSuit(p) == currentLedSuit).toList();
+      return _highestRankPlay(ledSuitPlays).playerIndex;
+    }
 
+    final trumpPlays =
+        plays.where((p) => _effectiveSuit(p) == trumpSuit).toList();
     if (trumpPlays.isNotEmpty) {
       return _highestRankPlay(trumpPlays).playerIndex;
     }
-
     final ledSuitPlays =
-        plays.where((p) => p.card.suit == currentLedSuit).toList();
-
+        plays.where((p) => _effectiveSuit(p) == currentLedSuit).toList();
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }
 
+  Suit? _effectiveSuit(TrickPlay play) =>
+      play.card.isLoris ? Suit.spades : play.card.suit;
+
+  int _effectiveRank(TrickPlay play) =>
+      play.card.isLoris ? (play.card.replacesRank ?? 0) : (play.card.rank ?? 0);
+
   TrickPlay _highestRankPlay(List<TrickPlay> candidates) {
     return candidates.reduce((a, b) {
-      final aRank = a.card.rank ?? 0;
-      final bRank = b.card.rank ?? 0;
-      return bRank > aRank ? b : a;
+      return _effectiveRank(b) > _effectiveRank(a) ? b : a;
     });
   }
 

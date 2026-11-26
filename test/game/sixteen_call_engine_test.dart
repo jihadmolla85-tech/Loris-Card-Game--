@@ -9,11 +9,13 @@ void main() {
       int bid = 4,
       int team = 0,
       int players = 4,
+      int teamScore = 0,
     }) {
       return SixteenCallEngine(
         playerCount: players,
         biddingTeam: team,
         bidAmount: bid,
+        biddingTeamScore: teamScore,
       );
     }
 
@@ -69,6 +71,34 @@ void main() {
       );
     });
 
+    test('Cannot call 16 when bidding team score is 16 or higher', () {
+      engine = createEngine(bid: 4, teamScore: 16);
+      winFirstFour(engine);
+      expect(engine.canCall, isFalse);
+      expect(
+        () => engine.call16(callerPlayerIndex: 2),
+        throwsStateError,
+      );
+    });
+
+    test('Can call immediately after winning the bid number of consecutive tricks', () {
+      engine = createEngine();
+      winFirstFour(engine);
+      expect(engine.canCall, isTrue);
+      engine.call16(callerPlayerIndex: 2);
+      expect(engine.status, SixteenCallStatus.inProgress);
+    });
+
+    test('An opponent trick prevents 16 call eligibility', () {
+      engine = createEngine(bid: 4);
+      engine.recordTrickWinner(0);
+      engine.recordTrickWinner(1);
+      engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
+      expect(engine.canCall, isFalse);
+      expect(() => engine.call16(callerPlayerIndex: 0), throwsStateError);
+    });
+
     test('Only previous trick winner can call', () {
       engine = createEngine();
       winFirstFour(engine);
@@ -86,10 +116,26 @@ void main() {
       engine.recordTrickWinner(1);
       engine.recordTrickWinner(3);
       engine.recordTrickWinner(1);
+      engine.recordTrickWinner(3);
       engine.recordTrickWinner(0);
 
+      expect(engine.canCall, isFalse);
       expect(
         () => engine.call16(callerPlayerIndex: 0),
+        throwsStateError,
+      );
+    });
+
+    test('Previous trick winner can pass the one-time 16 decision', () {
+      engine = createEngine();
+      winFirstFour(engine);
+
+      engine.pass16(callerPlayerIndex: 2);
+
+      expect(engine.status, SixteenCallStatus.passed);
+      expect(engine.canCall, isFalse);
+      expect(
+        () => engine.call16(callerPlayerIndex: 2),
         throwsStateError,
       );
     });
@@ -111,10 +157,10 @@ void main() {
       winFirstFour(engine);
       engine.call16(callerPlayerIndex: 2);
 
-      engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
       engine.recordTrickWinner(0);
       engine.recordTrickWinner(2);
+      engine.recordTrickWinner(0);
 
       expect(
         engine.status,

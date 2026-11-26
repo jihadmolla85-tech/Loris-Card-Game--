@@ -33,11 +33,15 @@ dependencies:
   material_ui: ^1.1.0
   shared_preferences: ^2.5.3
   audioplayers: ^6.5.1
+  flutter_tts: ^4.2.3
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_scene: ^0.24.3
+  vector_math: ^2.4.4
 
 dev_dependencies:
+  test: ^1.25.0
   flutter_test:
     sdk: flutter
 
@@ -47,6 +51,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -54,7 +60,16 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
+    - assets/
     - assets/sounds/
+    - assets/images/loris_logo.jpg
+    - 'assets/Splash Screen and back page of card.jpg'
+    - assets/images/file_00000000f9f882119c70821c3044291b.png
+    - assets/images/loris_icon.jpg
+    - assets/images/loris_portrait_atlas.jpg
+    - assets/portraits/men/
+    - assets/portraits/women/
+
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -91,3 +106,21 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Keep the native opening screen artwork consistent with the supplied card back.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/file_00000000f9f882119c70821c3044291b.png
+  adaptive_icon_background: "#07366B"
+  adaptive_icon_foreground: assets/images/file_00000000f9f882119c70821c3044291b.png
+
+flutter_native_splash:
+  color: "#16070D"
+  image: 'assets/Splash Screen and back page of card.jpg'
+  android: true
+  ios: true
+  android_12:
+    color: "#16070D"
+    image: 'assets/Splash Screen and back page of card.jpg'
+    icon_background_color: "#16070D"

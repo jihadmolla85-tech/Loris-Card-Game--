@@ -60,7 +60,7 @@ void main() {
       expect(hands.expand((hand) => hand).length, 48);
     });
 
-    test('Starts dealing from the dealer right', () {
+    test('Starts dealing from the dealer left', () {
       final hands = controller.deal(
         deck: createDeck(4),
         playerCount: 4,
@@ -74,14 +74,14 @@ void main() {
         random: Random(42),
       ).shuffle(createDeck(4));
 
-      expect(hands[2].take(4).toList(), [
+      expect(hands[0].take(4).toList(), [
         shuffledDeck[0],
         shuffledDeck[4],
         shuffledDeck[8],
         shuffledDeck[12],
       ]);
 
-      expect(hands[2].skip(4).toList(), [
+      expect(hands[0].skip(4).toList(), [
         shuffledDeck[16],
         shuffledDeck[20],
         shuffledDeck[24],

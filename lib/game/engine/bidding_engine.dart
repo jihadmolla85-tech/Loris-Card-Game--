@@ -34,7 +34,7 @@ class BiddingEngine {
       throw ArgumentError('Invalid dealer index.');
     }
 
-    currentPlayerIndex = (dealerIndex + 1) % playerCount;
+    currentPlayerIndex = (dealerIndex - 1 + playerCount) % playerCount;
   }
 
   bool get isComplete => history.length == playerCount;
@@ -77,7 +77,7 @@ class BiddingEngine {
 
     if (!isComplete) {
       currentPlayerIndex =
-          (currentPlayerIndex + 1) % playerCount;
+          (currentPlayerIndex - 1 + playerCount) % playerCount;
     }
   }
 }

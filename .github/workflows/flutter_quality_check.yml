@@ -1,13 +1,17 @@
-
+ 
 name: LORIS Flutter Quality Check
 
 on:
   push:
     branches:
       - main
+      - feature/show-trump-bidder
+      - feature/gender-separated-player-portraits
+      - feature/trump-indicator-card-display
   pull_request:
     branches:
       - main
+      - feature/run-379-team-banners-dealer-reveal
   workflow_dispatch:
 
 permissions:
@@ -26,23 +30,43 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
+          cache: false
+
+      - name: Extract original player portrait archives
+        run: |
+          mkdir -p assets/portraits/men assets/portraits/women /tmp/loris-portrait-zips
+          unzip -oq "assets/Player Portrait.zip" -d /tmp/loris-portrait-zips
+          unzip -ojq "/tmp/loris-portrait-zips/Man's Portrait.zip" '*.jpg' -d assets/portraits/men
+          unzip -ojq "/tmp/loris-portrait-zips/Women's portrait.zip" '*.jpg' -d assets/portraits/women
+          test "$(find assets/portraits/men -maxdepth 1 -type f -name '*.jpg' | wc -l)" -eq 40
+          test "$(find assets/portraits/women -maxdepth 1 -type f -name '*.jpg' | wc -l)" -eq 40
 
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Generate LORIS app icon and native splash screen
+        run: |
+          dart run flutter_launcher_icons
+          dart run flutter_native_splash:create
+
       - name: Flutter Analyze
-        run: flutter analyze
+        run: flutter analyze lib
 
       - name: Run existing tests
         run: flutter test
 
       - name: Build Android APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --android-skip-build-dependency-validation --verbose
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4

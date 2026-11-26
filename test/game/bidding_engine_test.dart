@@ -3,13 +3,13 @@ import 'package:loris_card_game/game/engine/bidding_engine.dart';
 
 void main() {
   group('LORIS Bidding Engine', () {
-    test('bidding starts from dealer right', () {
+    test('bidding starts from dealer left', () {
       final game = BiddingEngine(
         playerCount: 4,
         dealerIndex: 0,
       );
 
-      expect(game.currentPlayerIndex, 1);
+      expect(game.currentPlayerIndex, 3);
     });
 
     test('players act only once in order', () {
@@ -22,7 +22,7 @@ void main() {
       expect(game.currentPlayerIndex, 2);
 
       game.submitBid(null);
-      expect(game.currentPlayerIndex, 3);
+      expect(game.currentPlayerIndex, 1);
 
       game.submitBid(5);
       expect(game.currentPlayerIndex, 0);
@@ -31,7 +31,7 @@ void main() {
 
       expect(game.isComplete, true);
       expect(game.highestBid, 5);
-      expect(game.highestBidder, 3);
+      expect(game.highestBidder, 1);
     });
 
     test('pass cannot be taken back', () {
@@ -91,7 +91,7 @@ void main() {
         dealerIndex: 2,
       );
 
-      expect(game.currentPlayerIndex, 3);
+      expect(game.currentPlayerIndex, 1);
 
       game.submitBid(4);
       game.submitBid(null);

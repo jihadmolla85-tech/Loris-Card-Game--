@@ -41,7 +41,7 @@ class InitialDealerSelector {
     for (var i = 0; i < deck.length; i++) {
       final card = deck[i];
       final currentPlayer =
-          (firstPlayerIndex + i) % playerCount;
+          (firstPlayerIndex - i + playerCount) % playerCount;
 
       drawnCards.add(card);
 

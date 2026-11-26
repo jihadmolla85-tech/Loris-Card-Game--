@@ -91,7 +91,7 @@ class GameMatchController {
 
   void startRound({
     required List<List<Card>> hands,
-    required Suit trumpSuit,
+    required Suit? trumpSuit,
     required int biddingTeam,
     required int bidAmount,
   }) {
@@ -128,7 +128,7 @@ class GameMatchController {
   List<List<Card>> startRoundWithDeal({
     required List<Card> deck,
     required int playerCount,
-    required Suit trumpSuit,
+    required Suit? trumpSuit,
     required int biddingTeam,
     required int bidAmount,
   }) {
@@ -209,7 +209,7 @@ class GameMatchController {
   }
 
   void startRoundWithCurrentDeal({
-    required Suit trumpSuit,
+    required Suit? trumpSuit,
     required int biddingTeam,
     required int bidAmount,
   }) {
@@ -243,6 +243,19 @@ class GameMatchController {
     currentRound.call16(
       callerPlayerIndex: callerPlayerIndex,
     );
+  }
+
+  void pass16({required int callerPlayerIndex}) {
+    currentRound.pass16(callerPlayerIndex: callerPlayerIndex);
+  }
+
+  void skipRemainingTricks() {
+    final round = currentRound;
+    round.skipRemainingTricks();
+    if (round.isRoundEnded && !_dealerAdvanced) {
+      dealerIndex = round.getNextDealerIndex();
+      _dealerAdvanced = true;
+    }
   }
 
   int completeTrick() {
@@ -362,7 +375,6 @@ class GameMatchController {
     _currentRound = null;
 
     if (snapshot.hands.isEmpty ||
-        snapshot.trumpSuit == null ||
         snapshot.biddingTeam == null ||
         snapshot.bidAmount == null) {
       return;
@@ -385,7 +397,7 @@ class GameMatchController {
           .map((hand) => List<Card>.from(hand))
           .toList(),
       dealerIndex: snapshot.dealerIndex,
-      trumpSuit: snapshot.trumpSuit!,
+      trumpSuit: snapshot.trumpSuit,
       biddingTeam: snapshot.biddingTeam!,
       bidAmount: snapshot.bidAmount!,
       matchScoreEngine: matchScoreEngine,
