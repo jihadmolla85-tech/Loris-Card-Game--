@@ -47,6 +47,23 @@ void main() {
     expect(men.length, 40);
     expect(women.length, 40);
   });
+
+  test('original splash, logo, and source art archives remain bundled', () async {
+    final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+    final assets = manifest.listAssets().toSet();
+
+    for (final path in [
+      'assets/Splash Screen and back page of card.jpg',
+      'assets/Player Portrait.zip',
+      'assets/all_playing_cards.zip',
+      'assets/images/loris_icon.jpg',
+      'assets/images/loris_logo.jpg',
+      'assets/images/loris_portrait_atlas.jpg',
+      'assets/images/file_00000000f9f882119c70821c3044291b.png',
+    ]) {
+      expect(assets, contains(path), reason: 'Missing restored artwork: $path');
+    }
+  });
 }
 
 String _suitName(Suit suit) => switch (suit) {
