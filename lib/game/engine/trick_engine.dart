@@ -16,6 +16,9 @@ class TrickEngine {
   final int playerCount;
   final int dealerIndex;
   final Suit trumpSuit;
+  /// When true, the special LORIS card is the selected trump option;
+  /// ordinary suits do not trump one another in this mode.
+  final bool lorisTrump;
 
   final List<TrickPlay> plays = [];
 
@@ -27,6 +30,7 @@ class TrickEngine {
     required this.hands,
     required this.dealerIndex,
     required this.trumpSuit,
+    this.lorisTrump = false,
     this.completedTricks = 0,
     List<TrickPlay> initialPlays = const [],
     int? restoredFirstPlayerIndex,
@@ -101,7 +105,8 @@ class TrickEngine {
   /// Returns every card the player is allowed to play on this turn.
   ///
   /// LORIS is always playable. Otherwise players must follow the led suit.
-  /// If void in the led suit, they must trump when they hold a trump card.
+  /// In ordinary-suit trump mode, a void player must trump when holding one;
+/// in LORIS-trump mode, a void player may discard any card.
   /// Whenever a trump has already been played, a higher trump must be used
   /// when the player is void in the led suit (or when trump itself was led)
   /// and such a higher trump is held.
@@ -127,7 +132,7 @@ class TrickEngine {
 
     if (ledSuitCards.isNotEmpty) {
       // When trump was led, follow suit and overtrump if possible.
-      if (currentLedSuit == trumpSuit) {
+      if (!lorisTrump && currentLedSuit == trumpSuit) {
         final highestTrump = _highestTrumpRankAlreadyPlayed();
         if (highestTrump != null && !plays.any((play) => play.card.isLoris)) {
           final higher = ledSuitCards
@@ -139,6 +144,12 @@ class TrickEngine {
         }
       }
       return List.unmodifiable([...ledSuitCards, ...lorisCards]);
+    }
+
+    // LORIS mode has no ordinary trump suit. A player who is void in the
+    // led suit may discard any card (or play the always-legal LORIS card).
+    if (lorisTrump) {
+      return List.unmodifiable(hand);
     }
 
     // The player is void in the led suit. Trump is compulsory when held.
@@ -187,28 +198,70 @@ class TrickEngine {
     plays.add(TrickPlay(playerIndex: playerIndex, card: card));
   }
 
+  /// The provisional winner among cards already played in this trick.
+  ///
+  /// This is useful to a player deciding whether to overtake an existing play;
+  /// it is not a promise that later players cannot beat the current leader.
+  int get currentWinnerIndex {
+    if (plays.isEmpty) {
+      throw StateError('No cards have been played in this trick.');
+    }
+    return _winnerForPlays(plays);
+  }
+
+  /// Returns the provisional winner if the current player plays [card].
+  ///
+  /// The card must be legal now. The same comparison routine is used by the
+  /// completed-trick result, preventing AI and rules-engine ranking from
+  /// drifting apart.
+  int currentWinnerIfPlayed(int playerIndex, Card card) {
+    if (isComplete) {
+      throw StateError('Trick is already complete.');
+    }
+    if (playerIndex != currentPlayerIndex) {
+      throw StateError('It is not this player’s turn.');
+    }
+    if (!legalCardsFor(playerIndex).contains(card)) {
+      throw ArgumentError('This card cannot be played under LORIS rules.');
+    }
+
+    return _winnerForPlays([
+      ...plays,
+      TrickPlay(playerIndex: playerIndex, card: card),
+    ]);
+  }
+
   int get winnerIndex {
     if (!isComplete) {
       throw StateError('Trick is not complete.');
     }
+    return _winnerForPlays(plays);
+  }
 
-    final lorisPlay = plays.where((p) => p.card.isLoris).firstOrNull;
-
+  int _winnerForPlays(List<TrickPlay> trickPlays) {
+    final lorisPlay = trickPlays.where((play) => play.card.isLoris).firstOrNull;
     if (lorisPlay != null) {
       return lorisPlay.playerIndex;
     }
 
-    final currentLedSuit = ledSuit;
+    final firstCard = trickPlays.first.card;
+    final currentLedSuit = firstCard.isLoris ? Suit.spades : firstCard.suit;
+    final ledSuitPlays = trickPlays
+        .where((play) => play.card.suit == currentLedSuit)
+        .toList();
 
-    final trumpPlays =
-        plays.where((p) => p.card.suit == trumpSuit).toList();
+    if (lorisTrump) {
+      // LORIS is the only trump in this mode. If it was not played, the
+      // highest card of the led suit wins; off-suit honours cannot overtake.
+      return _highestRankPlay(ledSuitPlays).playerIndex;
+    }
 
+    final trumpPlays = trickPlays
+        .where((play) => play.card.suit == trumpSuit)
+        .toList();
     if (trumpPlays.isNotEmpty) {
       return _highestRankPlay(trumpPlays).playerIndex;
     }
-
-    final ledSuitPlays =
-        plays.where((p) => p.card.suit == currentLedSuit).toList();
 
     return _highestRankPlay(ledSuitPlays).playerIndex;
   }

@@ -11,6 +11,7 @@ class GameRoundController {
     required List<List<Card>> hands,
     required this.dealerIndex,
     required Suit trumpSuit,
+    this.lorisTrump = false,
     required this.biddingTeam,
     required this.bidAmount,
     required this.matchScoreEngine,
@@ -55,10 +56,39 @@ class GameRoundController {
       throw ArgumentError('Invalid bidding team tricks count.');
     }
 
+    if (restoredBiddingTeamTricks > restoredCompletedTricks) {
+      throw ArgumentError(
+        'Bidding-team tricks cannot exceed completed tricks.',
+      );
+    }
+
+    if (bidAmount < 8 &&
+        (restoredSixteenCompletedTricks != restoredCompletedTricks ||
+            restoredSixteenBiddingTeamTricks !=
+                restoredBiddingTeamTricks)) {
+      throw ArgumentError(
+        'Restored 16-call counters must match the round counters.',
+      );
+    }
+
+    if (bidAmount < 8) {
+      for (final restoredPlayerIndex in [
+        restoredSixteenLastTrickWinnerIndex,
+        restoredSixteenCallerIndex,
+      ]) {
+        if (restoredPlayerIndex != null &&
+            (restoredPlayerIndex < 0 ||
+                restoredPlayerIndex >= hands.length)) {
+          throw ArgumentError('Invalid restored 16-call player index.');
+        }
+      }
+    }
+
     trickEngine = TrickEngine(
       hands: hands,
       dealerIndex: dealerIndex,
       trumpSuit: trumpSuit,
+      lorisTrump: lorisTrump,
       completedTricks: restoredCompletedTricks,
       initialPlays: initialTrickPlays,
       restoredFirstPlayerIndex: restoredFirstPlayerIndex,
@@ -95,6 +125,7 @@ class GameRoundController {
   }
 
   final int dealerIndex;
+  final bool lorisTrump;
   final int biddingTeam;
   final int bidAmount;
   final MatchScoreEngine matchScoreEngine;
@@ -170,6 +201,21 @@ class GameRoundController {
     engine.call16(
       callerPlayerIndex: callerPlayerIndex,
     );
+  }
+
+  void pass16({
+    required int passerPlayerIndex,
+  }) {
+    if (isRoundEnded) {
+      throw StateError('The round has ended.');
+    }
+
+    final engine = sixteenCallEngine;
+    if (engine == null) {
+      throw StateError('16 Call is not allowed on an 8 bid.');
+    }
+
+    engine.pass16(passerPlayerIndex: passerPlayerIndex);
   }
 
   void _applyRoundScore() {

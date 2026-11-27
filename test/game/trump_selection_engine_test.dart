@@ -87,19 +87,22 @@ void main() {
     );
   });
 
-  test('LORIS cannot select trump', () {
+  test('LORIS card selects the special LORIS trump mode', () {
     hands[0].add(loris);
 
-    expect(
-      () => TrumpSelectionEngine.select(
-        hands: hands,
-        bidderIndex: 0,
-        highestBidderIndex: 0,
-        cardOwnerIndex: 0,
-        selectedCard: loris,
-      ),
-      throwsArgumentError,
+    final result = TrumpSelectionEngine.select(
+      hands: hands,
+      bidderIndex: 0,
+      highestBidderIndex: 0,
+      cardOwnerIndex: 0,
+      selectedCard: loris,
     );
+
+    expect(result.trumpSuit, Suit.spades);
+    expect(result.lorisTrump, isTrue);
+    expect(result.bidderHasTrumpSuit, isFalse);
+    expect(result.revealedToEveryone, isFalse);
+    expect(result.selectedCard, loris);
   });
 
   test('card not in selected owner hand is rejected', () {

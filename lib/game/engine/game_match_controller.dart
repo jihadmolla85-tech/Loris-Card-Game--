@@ -67,31 +67,38 @@ class GameMatchController {
       );
     }
 
+    return _selectDealerFromDraw(deck: deck, playerCount: playerCount, random: random);
+  }
+
+  DealerSelectionResult _selectDealerFromDraw({
+    required List<Card> deck,
+    required int playerCount,
+    Random? random,
+  }) {
     if (playerCount != 4 && playerCount != 6) {
       throw ArgumentError('Player count must be 4 or 6.');
     }
+    if (deck.length != playerCount * 8) {
+      throw ArgumentError('Invalid deck size.');
+    }
 
     final rng = random ?? Random();
-
     final firstPlayerIndex = rng.nextInt(playerCount);
-
     final drawDeck = List<Card>.from(deck)..shuffle(rng);
-
     final result = InitialDealerSelector.select(
       deck: drawDeck,
       playerCount: playerCount,
       firstPlayerIndex: firstPlayerIndex,
       random: rng,
     );
-
     dealerIndex = result.dealerIndex;
-
     return result;
   }
 
   void startRound({
     required List<List<Card>> hands,
     required Suit trumpSuit,
+    bool lorisTrump = false,
     required int biddingTeam,
     required int bidAmount,
   }) {
@@ -116,6 +123,7 @@ class GameMatchController {
       hands: hands,
       dealerIndex: dealerIndex,
       trumpSuit: trumpSuit,
+      lorisTrump: lorisTrump,
       biddingTeam: biddingTeam,
       bidAmount: bidAmount,
       matchScoreEngine: matchScoreEngine,
@@ -129,6 +137,7 @@ class GameMatchController {
     required List<Card> deck,
     required int playerCount,
     required Suit trumpSuit,
+    bool lorisTrump = false,
     required int biddingTeam,
     required int bidAmount,
   }) {
@@ -164,6 +173,7 @@ class GameMatchController {
     startRound(
       hands: hands,
       trumpSuit: trumpSuit,
+      lorisTrump: lorisTrump,
       biddingTeam: biddingTeam,
       bidAmount: bidAmount,
     );
@@ -245,11 +255,19 @@ class GameMatchController {
     );
   }
 
+  void pass16({
+    required int passerPlayerIndex,
+  }) {
+    currentRound.pass16(passerPlayerIndex: passerPlayerIndex);
+  }
+
   int completeTrick() {
     final round = currentRound;
     final winnerIndex = round.completeTrick();
 
-    if (round.isRoundEnded && !_dealerAdvanced) {
+    // The dealer changes only after their own team has a positive
+    // cumulative match score, and never after the match itself has ended.
+    if (round.isRoundEnded && !_dealerAdvanced && !isMatchOver) {
       dealerIndex = round.getNextDealerIndex();
       _dealerAdvanced = true;
     }
@@ -281,6 +299,7 @@ class GameMatchController {
           .map((hand) => List<Card>.from(hand))
           .toList(),
       trumpSuit: round?.trickEngine.trumpSuit,
+      lorisTrump: round?.trickEngine.lorisTrump ?? false,
       biddingTeam: round?.biddingTeam,
       bidAmount: round?.bidAmount,
       // A completed trick has already been scored. Do not serialize its
@@ -368,10 +387,52 @@ class GameMatchController {
       return;
     }
 
-    final restoredStatus = SixteenCallStatus.values.firstWhere(
+    var restoredStatus = SixteenCallStatus.values.firstWhere(
       (status) => status.name == snapshot.sixteenCallStatus,
       orElse: () => SixteenCallStatus.notCalled,
     );
+    var restoredSixteenCompletedTricks =
+        snapshot.sixteenCompletedTricks;
+    var restoredSixteenBiddingTeamTricks =
+        snapshot.sixteenBiddingTeamTricks;
+    var restoredSixteenLastTrickWinnerIndex =
+        snapshot.sixteenLastTrickWinnerIndex;
+    var restoredSixteenCallerIndex = snapshot.sixteenCallerIndex;
+    var restoredSixteenBiddingTeamPoints =
+        snapshot.sixteenBiddingTeamPoints;
+    var restoredSixteenOpposingTeamPoints =
+        snapshot.sixteenOpposingTeamPoints;
+
+    // Older v1 saves omitted 16-call decision history. Before the bid is
+    // reached, PASS cannot have happened yet, so preserve eligibility when
+    // every completed trick belongs to the bidding team. At the exact bid or
+    // later, PASS/CALL may already have happened; fail closed to avoid reopening.
+    if (snapshot.bidAmount! < 8 && !snapshot.hasSixteenCallState) {
+      restoredSixteenCompletedTricks = snapshot.completedTricks;
+      restoredSixteenBiddingTeamTricks = snapshot.biddingTeamTricks;
+      restoredSixteenCallerIndex = null;
+      restoredSixteenBiddingTeamPoints = 0;
+      restoredSixteenOpposingTeamPoints = 0;
+
+      if (snapshot.completedTricks == 0) {
+        restoredStatus = SixteenCallStatus.notCalled;
+        restoredSixteenLastTrickWinnerIndex = null;
+      } else if (snapshot.completedTricks < snapshot.bidAmount! &&
+          snapshot.biddingTeamTricks == snapshot.completedTricks) {
+        restoredStatus = SixteenCallStatus.notCalled;
+        final previousWinner = snapshot.firstPlayerIndex;
+        final winnerIsKnown = previousWinner != null &&
+            previousWinner >= 0 &&
+            previousWinner < (snapshot.playerCount ?? snapshot.hands.length);
+        restoredSixteenLastTrickWinnerIndex =
+            winnerIsKnown && previousWinner % 2 == snapshot.biddingTeam
+                ? previousWinner
+                : null;
+      } else {
+        restoredStatus = SixteenCallStatus.passed;
+        restoredSixteenLastTrickWinnerIndex = null;
+      }
+    }
 
     final restoredPlays = snapshot.trickPlays
         .map((play) => TrickPlay(
@@ -386,6 +447,7 @@ class GameMatchController {
           .toList(),
       dealerIndex: snapshot.dealerIndex,
       trumpSuit: snapshot.trumpSuit!,
+      lorisTrump: snapshot.lorisTrump,
       biddingTeam: snapshot.biddingTeam!,
       bidAmount: snapshot.bidAmount!,
       matchScoreEngine: matchScoreEngine,
@@ -397,17 +459,17 @@ class GameMatchController {
       restoredFirstPlayerIndex: snapshot.firstPlayerIndex,
       restoredSixteenCallStatus: restoredStatus,
       restoredSixteenCompletedTricks:
-          snapshot.sixteenCompletedTricks,
+          restoredSixteenCompletedTricks,
       restoredSixteenBiddingTeamTricks:
-          snapshot.sixteenBiddingTeamTricks,
+          restoredSixteenBiddingTeamTricks,
       restoredSixteenLastTrickWinnerIndex:
-          snapshot.sixteenLastTrickWinnerIndex,
+          restoredSixteenLastTrickWinnerIndex,
       restoredSixteenCallerIndex:
-          snapshot.sixteenCallerIndex,
+          restoredSixteenCallerIndex,
       restoredSixteenBiddingTeamPoints:
-          snapshot.sixteenBiddingTeamPoints,
+          restoredSixteenBiddingTeamPoints,
       restoredSixteenOpposingTeamPoints:
-          snapshot.sixteenOpposingTeamPoints,
+          restoredSixteenOpposingTeamPoints,
     );
   }
 

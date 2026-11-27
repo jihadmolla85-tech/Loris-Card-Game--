@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loris_card_game/game/engine/game_match_controller.dart';
+import 'package:loris_card_game/game/engine/sixteen_call_engine.dart';
 import 'package:loris_card_game/game/engine/match_score_engine.dart';
 import 'package:loris_card_game/game/engine/bid_scoring_engine.dart';
 import 'package:loris_card_game/game/engine/deal_controller.dart';
@@ -11,6 +12,7 @@ import 'package:loris_card_game/game/engine/deck_validation_engine.dart';
 import 'package:loris_card_game/game/engine/redeal_controller.dart';
 import 'package:loris_card_game/game/engine/redeal_validation_engine.dart';
 import 'package:loris_card_game/game/models/loris_card.dart';
+import 'package:loris_card_game/game/engine/game_state_snapshot.dart';
 
 void main() {
   group('LORIS Game Match Controller', () {
@@ -161,14 +163,14 @@ void main() {
       expect(match.dealerIndex, 0);
     });
 
-    test('Detects match winner and prevents another round', () {
-      matchScore.teamAScore = 28;
-      matchScore.teamBScore = -28;
+    test('Ends the match without advancing the dealer again', () {
+      matchScore.teamAScore = -28;
+      matchScore.teamBScore = 28;
 
       match.startRound(
-        hands: createHands(),
+        hands: createHands(teamBWins: true),
         trumpSuit: Suit.spades,
-        biddingTeam: 0,
+        biddingTeam: 1,
         bidAmount: 4,
       );
 
@@ -177,7 +179,8 @@ void main() {
       }
 
       expect(match.isMatchOver, isTrue);
-      expect(match.matchWinner, MatchWinner.teamA);
+      expect(match.matchWinner, MatchWinner.teamB);
+      expect(match.dealerIndex, 3);
 
       expect(
         () => match.startRound(
@@ -361,6 +364,186 @@ void main() {
       expect(newHands.length, 4);
       expect(newHands.every((hand) => hand.length == 8), isTrue);
       expect(match.dealerIndex, 3);
+    });
+
+    test('Preserves legacy 16-call eligibility before the bid is reached', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 2; i++) {
+        playOneTrick();
+      }
+
+      final legacyJson = match.createSnapshot().toJson()
+        ..remove('sixteenCallStatus')
+        ..remove('sixteenCompletedTricks')
+        ..remove('sixteenBiddingTeamTricks')
+        ..remove('sixteenLastTrickWinnerIndex')
+        ..remove('sixteenCallerIndex')
+        ..remove('sixteenBiddingTeamPoints')
+        ..remove('sixteenOpposingTeamPoints');
+      final legacySnapshot = GameStateSnapshot.fromJson(legacyJson);
+
+      final restored = GameMatchController(
+        initialDealerIndex: legacySnapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(legacySnapshot);
+
+      final sixteen = restored.currentRound.sixteenCallEngine!;
+      expect(sixteen.status, SixteenCallStatus.notCalled);
+      expect(sixteen.canCall, isFalse);
+      expect(sixteen.completedTricks, 2);
+      expect(sixteen.biddingTeamTricks, 2);
+
+      for (var i = 0; i < 2; i++) {
+        final round = restored.currentRound;
+        for (var play = 0; play < 4; play++) {
+          final player = round.trickEngine.currentPlayerIndex;
+          final card = round.trickEngine.hands[player].first;
+          restored.playCard(player, card);
+        }
+        restored.completeTrick();
+      }
+
+      expect(sixteen.completedTricks, 4);
+      expect(sixteen.biddingTeamTricks, 4);
+      expect(sixteen.canCall, isTrue);
+      expect(sixteen.lastTrickWinnerIndex, 0);
+    });
+
+    test('Preserves legacy 16-call eligibility before the bid is reached', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 2; i++) {
+        playOneTrick();
+      }
+
+      final legacyJson = match.createSnapshot().toJson()
+        ..remove('sixteenCallStatus')
+        ..remove('sixteenCompletedTricks')
+        ..remove('sixteenBiddingTeamTricks')
+        ..remove('sixteenLastTrickWinnerIndex')
+        ..remove('sixteenCallerIndex')
+        ..remove('sixteenBiddingTeamPoints')
+        ..remove('sixteenOpposingTeamPoints');
+      final legacySnapshot = GameStateSnapshot.fromJson(legacyJson);
+
+      final restored = GameMatchController(
+        initialDealerIndex: legacySnapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(legacySnapshot);
+
+      final sixteen = restored.currentRound.sixteenCallEngine!;
+      expect(sixteen.status, SixteenCallStatus.notCalled);
+      expect(sixteen.canCall, isFalse);
+      expect(sixteen.completedTricks, 2);
+      expect(sixteen.biddingTeamTricks, 2);
+
+      for (var i = 0; i < 2; i++) {
+        final round = restored.currentRound;
+        for (var play = 0; play < 4; play++) {
+          final player = round.trickEngine.currentPlayerIndex;
+          final card = round.trickEngine.hands[player].first;
+          restored.playCard(player, card);
+        }
+        restored.completeTrick();
+      }
+
+      expect(sixteen.completedTricks, 4);
+      expect(sixteen.biddingTeamTricks, 4);
+      expect(sixteen.canCall, isTrue);
+      expect(sixteen.lastTrickWinnerIndex, 0);
+    });
+
+    test('Safely closes legacy 16-call state when trick history is missing', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        playOneTrick();
+      }
+
+      expect(match.currentRound.sixteenCallEngine!.canCall, isTrue);
+
+      final legacyJson = match.createSnapshot().toJson()
+        ..remove('sixteenCallStatus')
+        ..remove('sixteenCompletedTricks')
+        ..remove('sixteenBiddingTeamTricks')
+        ..remove('sixteenLastTrickWinnerIndex')
+        ..remove('sixteenCallerIndex')
+        ..remove('sixteenBiddingTeamPoints')
+        ..remove('sixteenOpposingTeamPoints');
+      final legacySnapshot = GameStateSnapshot.fromJson(legacyJson);
+      expect(legacySnapshot.hasSixteenCallState, isFalse);
+
+      final restored = GameMatchController(
+        initialDealerIndex: legacySnapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(legacySnapshot);
+
+      final sixteen = restored.currentRound.sixteenCallEngine!;
+      expect(sixteen.status, SixteenCallStatus.passed);
+      expect(sixteen.canCall, isFalse);
+      expect(sixteen.completedTricks, 4);
+      expect(sixteen.biddingTeamTricks, 4);
+      expect(restored.currentRound.completedTricks, 4);
+      expect(restored.currentRound.biddingTeamTricks, 4);
+      expect(restored.currentRound.isRoundEnded, isFalse);
+      expect(
+        GameStateSnapshot.fromJson(restored.createSnapshot().toJson())
+            .hasSixteenCallState,
+        isTrue,
+      );
+    });
+
+    test('Restores a passed 16-call window without reopening it', () {
+      match.startRound(
+        hands: createHands(),
+        trumpSuit: Suit.spades,
+        biddingTeam: 0,
+        bidAmount: 4,
+      );
+
+      for (var i = 0; i < 4; i++) {
+        playOneTrick();
+      }
+
+      expect(match.currentRound.sixteenCallEngine!.canCall, isTrue);
+      match.pass16(passerPlayerIndex: 0);
+
+      final snapshot = match.createSnapshot();
+      final restored = GameMatchController(
+        initialDealerIndex: snapshot.dealerIndex,
+        matchScoreEngine: MatchScoreEngine(),
+        bidScoringEngine: BidScoringEngine(),
+      );
+      restored.restoreSnapshot(snapshot);
+
+      expect(
+        restored.currentRound.sixteenCallEngine!.status,
+        SixteenCallStatus.passed,
+      );
+      expect(restored.currentRound.sixteenCallEngine!.canCall, isFalse);
+      expect(restored.currentRound.isRoundEnded, isFalse);
     });
 
     test('Restores a saved match in the middle of a trick', () {
